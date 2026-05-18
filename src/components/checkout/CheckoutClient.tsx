@@ -150,6 +150,7 @@ export function CheckoutClient({ program }: { program: Program }) {
       </div>
 
       <div
+        className="checkout-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "1.25fr 1fr",

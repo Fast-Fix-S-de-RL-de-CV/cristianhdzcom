@@ -48,6 +48,7 @@ export default async function CommunityPage() {
       {!user && <Nav />}
       <CommunityShell user={user ? { name: user.name, role: user.role, level: user.level } : null}>
         <div
+          className="community-grid"
           style={{
             padding: "32px 56px",
             display: "grid",

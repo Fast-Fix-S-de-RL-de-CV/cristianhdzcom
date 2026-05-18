@@ -28,6 +28,7 @@ export function CommunityShell({
     <div style={{ background: "var(--bg-2)", minHeight: "100vh" }}>
       <div style={{ background: "white", borderBottom: "1px solid var(--line)" }}>
         <div
+          className="community-header-grid"
           style={{
             padding: "24px 56px 0",
             display: "grid",
@@ -55,7 +56,7 @@ export function CommunityShell({
           </div>
           <div>
             <div className="row" style={{ gap: 12, marginBottom: 4, flexWrap: "wrap" }}>
-              <h1 className="serif" style={{ fontSize: 32 }}>
+              <h1 className="serif community-title" style={{ fontSize: 32 }}>
                 CH · Negocios con IA
               </h1>
               <Chip variant="accent">PRIVADA</Chip>

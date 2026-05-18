@@ -33,7 +33,7 @@ const COLS: [string, [string, string][]][] = [
 export function Footer() {
   return (
     <footer className="ch-foot">
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
+      <div className="footer-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
         <div>
           <div className="ch-logo">
             <span className="ch-logo-mark">C</span>

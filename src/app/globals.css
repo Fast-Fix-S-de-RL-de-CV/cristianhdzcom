@@ -662,6 +662,12 @@ html { scroll-behavior: smooth; }
 ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
+/* Generic responsive 2-col split that stacks on small viewports */
+.split-cols {
+  display: grid;
+  gap: 32px;
+}
+
 /* Responsive (basic mobile collapse) */
 @media (max-width: 1024px) {
   .sec { padding: 64px 24px; }
@@ -671,13 +677,145 @@ html { scroll-behavior: smooth; }
   .grid-4 { grid-template-columns: 1fr 1fr; }
   .plat { grid-template-columns: 80px 1fr; }
   .plat-aside { display: none; }
+
+  /* Stack all split layouts on tablet & below */
+  .split-cols,
+  .hero-grid,
+  .sales-grid,
+  .checkout-grid,
+  .book-grid,
+  .blog-featured-grid,
+  .community-grid,
+  .admin-grid,
+  .footer-grid,
+  .final-cta-grid,
+  .programs-header-grid,
+  .saas-showcase-header,
+  .paths-header-grid,
+  .faq-grid,
+  .instructor-grid,
+  .newsletter-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+
+  /* Sales page sticky pricing card → relative on tablet */
+  .sales-pricing-sticky { position: relative !important; top: auto !important; }
+
+  /* Hide hero floating quote card on tablet to avoid overflow */
+  .hero-quote-float { display: none !important; }
+
+  /* Hero credibility card → stack below portrait */
+  .hero-credibility-float {
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: auto !important;
+    margin-top: 16px;
+  }
+
+  /* Books bundle grid */
+  .books-bundle-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+
+  /* Admin layout: stack sidebar above main on tablet */
+  .admin-layout { grid-template-columns: 1fr !important; }
+  .admin-layout > aside {
+    border-right: none !important;
+    border-bottom: 1px solid var(--line);
+    padding: 16px 24px !important;
+  }
+  .admin-layout > aside .col { flex-direction: row !important; flex-wrap: wrap; gap: 6px !important; }
+  .admin-layout > main { padding: 24px !important; }
+
+  /* Admin KPI / 2-col charts stack */
+  .admin-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .admin-2col-row { grid-template-columns: 1fr !important; }
 }
+
 @media (max-width: 720px) {
   .sec { padding: 48px 20px; }
-  .ch-nav { padding: 16px 20px; }
+  .ch-nav { padding: 14px 20px; gap: 8px; }
   .ch-nav-links { display: none; }
+  .ch-nav-cta { flex: 0 1 auto; min-width: 0; }
+  .ch-nav-cta .btn-ghost { display: none; }  /* Hide "Iniciar sesión" on mobile */
+  .ch-nav-cta .btn { padding: 10px 14px; font-size: 13px; }
+  .ch-logo { font-size: 16px; white-space: nowrap; gap: 8px; }
+  .ch-logo-mark { width: 24px; height: 24px; font-size: 13px; }
+  .ch-logo span:not(.ch-logo-mark) { white-space: nowrap; }
+
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .num { font-size: 56px; }
   .plat { grid-template-columns: 1fr; }
   .plat-side { display: none; }
+
+  .admin-kpi-grid { grid-template-columns: 1fr !important; }
+  .admin-layout > aside .col { flex-direction: column !important; }
+
+  /* Smaller h1s on mobile so they don't clip — only break when truly needed */
+  h1 {
+    overflow-wrap: break-word;
+    font-size: clamp(36px, 11vw, 56px) !important;
+    line-height: 1.05 !important;
+  }
+  h2 {
+    font-size: clamp(32px, 9vw, 48px) !important;
+    line-height: 1.08 !important;
+  }
+  /* Hero portrait card padding shrunk so floats fit */
+  .hero-grid > div:first-child { min-width: 0; }
+
+  /* Allow hero columns to wrap and use full width */
+  .hero-floats-container { position: static !important; }
+
+  /* Make sales-page hero stats not horizontal scroll */
+  .sales-stats-row { flex-wrap: wrap !important; gap: 16px !important; }
+
+  /* Books book block content padding less */
+  .book-cover-padding { padding: 24px !important; }
+
+  /* Footer: stack columns vertically */
+  .footer-grid { gap: 32px !important; }
+  .ch-foot > div:last-child { flex-wrap: wrap; gap: 12px; }
+
+  /* Marquee mask gentler on mobile */
+  .marquee { gap: 32px !important; }
+
+  /* Community header: stack on mobile */
+  .community-header-grid {
+    grid-template-columns: 1fr !important;
+    padding: 16px 20px 0 !important;
+    gap: 12px !important;
+  }
+  .community-title {
+    font-size: 22px !important;
+  }
+  /* Community grid stack */
+  .community-grid {
+    padding: 20px !important;
+    gap: 20px !important;
+  }
+  /* Composer stays horizontal but with min-width for placeholder */
+  .composer-row > div:nth-child(2) {
+    min-width: 0;
+  }
+
+  /* Trust strip on checkout: tighter wrap */
+  .checkout-trust-strip { padding: 10px 20px !important; gap: 8px !important; }
+
+  /* Admin header: stack on mobile */
+  .admin-header-grid {
+    grid-template-columns: 1fr !important;
+    padding: 14px 20px !important;
+    gap: 10px !important;
+  }
+  .admin-header-grid h2 { font-size: 20px !important; }
 }
+
+@media (max-width: 1024px) {
+  /* Community header sits tighter on tablet too */
+  .community-header-grid { padding-left: 24px !important; padding-right: 24px !important; }
+  .community-grid { padding: 24px !important; }
+}
+
+/* Prevent body horizontal scroll always */
+html, body { overflow-x: hidden; }

@@ -14,6 +14,7 @@ export function AdminShell({
     <div style={{ background: "var(--bg-2)", minHeight: "100vh" }}>
       <div style={{ background: "white", borderBottom: "1px solid var(--line)" }}>
         <div
+          className="admin-header-grid"
           style={{
             padding: "18px 40px",
             display: "grid",

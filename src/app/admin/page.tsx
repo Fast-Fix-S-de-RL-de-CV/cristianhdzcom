@@ -70,7 +70,7 @@ export default async function AdminDashboard() {
 
   return (
     <AdminShell user={user}>
-      <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", minHeight: "calc(100vh - 130px)" }}>
+      <div className="admin-layout" style={{ display: "grid", gridTemplateColumns: "240px 1fr", minHeight: "calc(100vh - 130px)" }}>
         {/* Sidebar */}
         <aside style={{ padding: "24px 16px", background: "var(--bg)", borderRight: "1px solid var(--line)" }}>
           <Eyebrow style={{ padding: "0 12px 12px" }}>Operación</Eyebrow>
@@ -154,7 +154,7 @@ export default async function AdminDashboard() {
           </div>
 
           {/* KPIs */}
-          <div className="grid-4" style={{ gap: 14, marginBottom: 20 }}>
+          <div className="grid-4 admin-kpi-grid" style={{ gap: 14, marginBottom: 20 }}>
             {[
               { tag: "MRR", val: `$ ${Math.round((counts.revenueCents || 0) / 100).toLocaleString("es-MX")}`, delta: "+12%" },
               { tag: "Alumnos activos", val: counts.users.toLocaleString("es-MX"), delta: "+184" },
@@ -178,7 +178,7 @@ export default async function AdminDashboard() {
           </div>
 
           {/* Charts row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 14, marginBottom: 20 }}>
+          <div className="admin-2col-row" style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 14, marginBottom: 20 }}>
             <Card style={{ padding: 24 }}>
               <div className="between" style={{ marginBottom: 20 }}>
                 <div>
@@ -258,7 +258,7 @@ export default async function AdminDashboard() {
           </div>
 
           {/* Tables row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+          <div className="admin-2col-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
             <Card style={{ padding: 0, overflow: "hidden" }}>
               <div className="between" style={{ padding: "20px 24px", borderBottom: "1px solid var(--line)" }}>
                 <h3 className="serif" style={{ fontSize: 20 }}>

@@ -157,6 +157,7 @@ export default function HomePage() {
         </div>
 
         <div
+          className="hero-grid"
           style={{ display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: 56, alignItems: "center", position: "relative" }}
         >
           <div>
@@ -258,6 +259,7 @@ export default function HomePage() {
 
             {/* Floating credibility card */}
             <Card
+              className="hero-credibility-float"
               style={{
                 position: "absolute",
                 bottom: -28,
@@ -289,6 +291,7 @@ export default function HomePage() {
 
             {/* Floating quote */}
             <Card
+              className="hero-quote-float"
               style={{ position: "absolute", top: 32, right: -28, padding: 16, width: 230, borderLeft: "3px solid var(--accent)" }}
             >
               <span className="serif" style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: "var(--ink)" }}>
@@ -330,7 +333,7 @@ export default function HomePage() {
 
       {/* TRES CAMINOS */}
       <section className="sec">
-        <div style={{ display: "grid", gridTemplateColumns: "0.8fr 1fr", gap: 56, marginBottom: 64 }}>
+        <div className="paths-header-grid" style={{ display: "grid", gridTemplateColumns: "0.8fr 1fr", gap: 56, marginBottom: 64 }}>
           <div>
             <Eyebrow>Lo que hago</Eyebrow>
             <h2 style={{ fontSize: "clamp(48px, 6vw, 72px)", marginTop: 16 }}>
@@ -668,6 +671,7 @@ export default function HomePage() {
         <Card style={{ padding: 64, position: "relative", overflow: "hidden", background: "var(--bg-2)" }}>
           <div className="mesh" />
           <div
+            className="final-cta-grid"
             style={{
               position: "relative",
               display: "grid",

@@ -65,7 +65,7 @@ export default function BooksPage() {
             La forma más rápida de aplicar lo que leíste con Cristian en vivo.
           </span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 0.8fr", gap: 24 }}>
+        <div className="books-bundle-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 0.8fr", gap: 24 }}>
           <div style={{ border: "1px solid var(--line)", borderRadius: 18, padding: 28, background: "white" }}>
             <Chip>BUNDLE LIBROS</Chip>
             <div className="serif" style={{ fontSize: 56, color: "var(--ink)", marginTop: 16 }}>
@@ -258,6 +258,7 @@ function BookBlock({
   return (
     <section className="sec" style={{ paddingTop: 80 }}>
       <div
+        className="book-grid"
         style={{
           display: "grid",
           gridTemplateColumns: flip ? "1fr 0.85fr" : "0.85fr 1fr",

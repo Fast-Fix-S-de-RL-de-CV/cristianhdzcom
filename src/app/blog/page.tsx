@@ -43,6 +43,7 @@ export default async function BlogPage() {
           <Link href={`/blog/${featured.slug}`}>
             <Card
               hover
+              className="blog-featured-grid"
               style={{ padding: 0, overflow: "hidden", display: "grid", gridTemplateColumns: "1fr 1fr" }}
             >
               <div
@@ -204,6 +205,7 @@ function NewsletterSection() {
       <Card style={{ padding: 56, background: "var(--bg-2)", position: "relative", overflow: "hidden" }}>
         <div className="mesh" />
         <div
+          className="newsletter-grid"
           style={{
             position: "relative",
             display: "grid",

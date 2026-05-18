@@ -84,7 +84,7 @@ export function CommunityFeed({
       {/* Composer */}
       <Card style={{ padding: 16, marginBottom: 20 }}>
         {!composerOpen ? (
-          <div className="row" style={{ gap: 12, alignItems: "center" }}>
+          <div className="row composer-row" style={{ gap: 12, alignItems: "center" }}>
             <div
               className="av"
               style={{ width: 40, height: 40, fontSize: 13, background: currentUser ? "var(--accent)" : "var(--bg-2)", color: currentUser ? "white" : "var(--muted)" }}

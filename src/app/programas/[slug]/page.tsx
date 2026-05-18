@@ -53,6 +53,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
       <section className="sec" style={{ paddingBottom: 56, position: "relative", overflow: "hidden" }}>
         <div className="mesh" />
         <div
+          className="sales-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "1.2fr 1fr",
@@ -67,7 +68,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
               <span>/</span>
               <span style={{ color: "var(--ink)" }}>{program.title}</span>
             </div>
-            <div className="row" style={{ gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
               <Chip variant="accent" dot pulse style={{ color: "var(--accent)" }}>
                 Cohorte abierta · 14 cupos
               </Chip>
@@ -77,7 +78,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
             <p style={{ fontSize: 20, color: "var(--ink-2)", lineHeight: 1.5, maxWidth: 600 }}>
               {program.subtitle}
             </p>
-            <div style={{ display: "flex", gap: 24, marginTop: 32, paddingTop: 24, borderTop: "1px solid var(--line)" }}>
+            <div className="sales-stats-row" style={{ display: "flex", gap: 24, marginTop: 32, paddingTop: 24, borderTop: "1px solid var(--line)" }}>
               {[
                 ["32h", "En vivo"],
                 [`${program.modulesCount || 12}`, "Módulos"],
@@ -100,7 +101,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
           </div>
 
           <div>
-            <Card style={{ padding: 28, position: "sticky", top: 100, boxShadow: "0 12px 40px rgba(15,17,21,0.08)" }}>
+            <Card className="sales-pricing-sticky" style={{ padding: 28, position: "sticky", top: 100, boxShadow: "0 12px 40px rgba(15,17,21,0.08)" }}>
               <div className="between" style={{ marginBottom: 16 }}>
                 <Chip variant="ink">{program.type.toUpperCase()} · COHORTE</Chip>
                 <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
@@ -213,7 +214,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
 
       {/* INSTRUCTOR */}
       <section className="sec bdr-t" style={{ background: "var(--bg-2)" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "0.7fr 1fr", gap: 56 }}>
+        <div className="instructor-grid" style={{ display: "grid", gridTemplateColumns: "0.7fr 1fr", gap: 56 }}>
           <div>
             <div className="ph" style={{ aspectRatio: "4/5", borderRadius: 18 }}>
               RETRATO · CRISTIAN
@@ -252,7 +253,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
 
       {/* FAQ */}
       <section className="sec bdr-t">
-        <div style={{ display: "grid", gridTemplateColumns: "0.6fr 1.4fr", gap: 64 }}>
+        <div className="faq-grid" style={{ display: "grid", gridTemplateColumns: "0.6fr 1.4fr", gap: 64 }}>
           <div>
             <Eyebrow>Preguntas</Eyebrow>
             <h2 style={{ fontSize: 56, marginTop: 16 }}>
