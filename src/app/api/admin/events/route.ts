@@ -9,7 +9,10 @@ const body = z.object({
   title: z.string().min(2).max(200),
   description: z.string().max(5000).optional().nullable(),
   host: z.string().max(200).optional().nullable(),
-  startsAt: z.string().min(8),
+  startsAt: z
+    .string()
+    .datetime()
+    .refine((s) => new Date(s).getTime() > Date.now() - 60000, "startsAt_must_be_future"),
   durationMinutes: z.number().int().min(5).max(1440).default(60),
   capacity: z.number().int().min(1).default(300),
   isLive: z.boolean().optional(),

@@ -32,8 +32,14 @@ export async function POST(req: Request) {
       })
       .returning();
     return NextResponse.json({ category: row });
-  } catch (e) {
+  } catch (e: unknown) {
     if (e instanceof z.ZodError) return NextResponse.json({ error: "invalid", details: e.issues }, { status: 400 });
+    const code =
+      (e as { cause?: { code?: string }; code?: string })?.cause?.code ??
+      (e as { code?: string })?.code;
+    if (code === "23505") {
+      return NextResponse.json({ error: "slug_in_use" }, { status: 409 });
+    }
     console.error(e);
     return NextResponse.json({ error: "server_error" }, { status: 500 });
   }

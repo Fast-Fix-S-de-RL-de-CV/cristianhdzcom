@@ -12,6 +12,14 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
+  const existing = await db
+    .select({ id: schema.posts.id })
+    .from(schema.posts)
+    .where(eq(schema.posts.id, id))
+    .limit(1);
+  if (!existing[0]) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
   await db.delete(schema.posts).where(eq(schema.posts.id, id));
   return NextResponse.json({ ok: true });
 }

@@ -17,12 +17,13 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     .from(schema.comments)
     .where(eq(schema.comments.id, id))
     .limit(1);
-  await db.delete(schema.comments).where(eq(schema.comments.id, id));
-  if (found[0]) {
-    await db
-      .update(schema.posts)
-      .set({ commentsCount: sql`GREATEST(${schema.posts.commentsCount} - 1, 0)` })
-      .where(eq(schema.posts.id, found[0].postId));
+  if (!found[0]) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
+  await db.delete(schema.comments).where(eq(schema.comments.id, id));
+  await db
+    .update(schema.posts)
+    .set({ commentsCount: sql`GREATEST(${schema.posts.commentsCount} - 1, 0)` })
+    .where(eq(schema.posts.id, found[0].postId));
   return NextResponse.json({ ok: true });
 }
