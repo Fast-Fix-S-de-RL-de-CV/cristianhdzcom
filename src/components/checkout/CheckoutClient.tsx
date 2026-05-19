@@ -39,6 +39,8 @@ export function CheckoutClient({ program }: { program: Program }) {
   const [activeBumps, setActiveBumps] = useState<Record<string, boolean>>({ books: true });
   const [coupon, setCoupon] = useState("EMPIEZA");
   const [couponApplied, setCouponApplied] = useState(false);
+  const [couponInfo, setCouponInfo] = useState<{ kind: "amount" | "percent"; value: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(14 * 60 + 32);
@@ -53,17 +55,30 @@ export function CheckoutClient({ program }: { program: Program }) {
     [activeBumps],
   );
   const subtotalCents = program.priceUsd * 100 + bumpsTotal;
-  const discountCents = couponApplied ? 0 : 0;
-  const totalCents = subtotalCents - discountCents;
+  const discountCents = useMemo(() => {
+    if (!couponApplied || !couponInfo) return 0;
+    if (couponInfo.kind === "percent") return Math.round((subtotalCents * couponInfo.value) / 100);
+    return Math.min(subtotalCents, couponInfo.value);
+  }, [couponApplied, couponInfo, subtotalCents]);
+  const totalCents = Math.max(0, subtotalCents - discountCents);
 
   const fmt = (cents: number) => `$${(cents / 100).toFixed(0)}`;
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
 
   async function onApplyCoupon() {
+    setCouponError(null);
     if (!coupon.trim()) return;
     const res = await fetch(`/api/coupons/${encodeURIComponent(coupon.trim())}`);
-    setCouponApplied(res.ok);
+    if (!res.ok) {
+      setCouponApplied(false);
+      setCouponInfo(null);
+      setCouponError("Cupón no válido o expirado.");
+      return;
+    }
+    const j = await res.json();
+    setCouponInfo({ kind: j.kind, value: j.value });
+    setCouponApplied(true);
   }
 
   async function onSubmit() {
@@ -447,13 +462,22 @@ export function CheckoutClient({ program }: { program: Program }) {
                 <input
                   className="input"
                   value={coupon}
-                  onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    setCoupon(e.target.value.toUpperCase());
+                    if (couponApplied) {
+                      setCouponApplied(false);
+                      setCouponInfo(null);
+                    }
+                  }}
                   style={{ flex: 1, padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: 12 }}
                 />
-                <Button variant="ghost" size="sm" onClick={onApplyCoupon}>
+                <Button variant="ghost" size="sm" onClick={onApplyCoupon} type="button">
                   {couponApplied ? "✓ Aplicado" : "Aplicar"}
                 </Button>
               </div>
+              {couponError && (
+                <div style={{ color: "var(--red)", fontSize: 12, marginTop: 6 }}>{couponError}</div>
+              )}
 
               <div className="rule" style={{ margin: "16px 0" }} />
 
@@ -464,6 +488,19 @@ export function CheckoutClient({ program }: { program: Program }) {
                     {fmt(subtotalCents)}
                   </span>
                 </div>
+                {discountCents > 0 && (
+                  <div className="row">
+                    <span style={{ color: "oklch(48% 0.13 155)" }}>
+                      Cupón {coupon}
+                    </span>
+                    <span
+                      className="mono"
+                      style={{ marginLeft: "auto", color: "oklch(48% 0.13 155)" }}
+                    >
+                      −{fmt(discountCents)}
+                    </span>
+                  </div>
+                )}
                 <div className="row">
                   <span style={{ color: "var(--muted)" }}>Impuestos</span>
                   <span className="mono" style={{ marginLeft: "auto" }}>

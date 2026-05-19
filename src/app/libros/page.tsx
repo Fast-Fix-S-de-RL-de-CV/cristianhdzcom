@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Card } from "@/components/ui/Card";
@@ -72,9 +73,11 @@ export default function BooksPage() {
               $49
             </div>
             <div style={{ color: "var(--muted)", marginTop: 4 }}>Vol. I + Vol. II en digital · ahorra $14</div>
-            <Button size="lg" variant="ghost" style={{ marginTop: 24 }}>
-              Comprar bundle
-            </Button>
+            <Link href="/registro">
+              <Button size="lg" variant="ghost" style={{ marginTop: 24 }}>
+                Comprar bundle
+              </Button>
+            </Link>
           </div>
           <div
             style={{
@@ -108,9 +111,11 @@ export default function BooksPage() {
               $189
             </div>
             <div style={{ color: "var(--ink-2)", marginTop: 4 }}>Bundle + 2 talleres en vivo de Cristian (4h c/u)</div>
-            <Button size="lg" variant="accent" style={{ marginTop: 24 }}>
-              Quiero esto →
-            </Button>
+            <Link href="/programas">
+              <Button size="lg" variant="accent" style={{ marginTop: 24 }}>
+                Quiero esto →
+              </Button>
+            </Link>
           </div>
           <div style={{ border: "1px solid var(--line)", borderRadius: 18, padding: 28, background: "white" }}>
             <Chip>FÍSICOS</Chip>
@@ -118,9 +123,11 @@ export default function BooksPage() {
               $89
             </div>
             <div style={{ color: "var(--muted)", marginTop: 4 }}>2 libros físicos firmados + envío LATAM</div>
-            <Button size="lg" variant="ghost" style={{ marginTop: 24 }}>
-              Comprar físicos
-            </Button>
+            <Link href="/registro">
+              <Button size="lg" variant="ghost" style={{ marginTop: 24 }}>
+                Comprar físicos
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -246,10 +253,14 @@ function BookBlock({
           </div>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
-          <Button size="lg" variant="ghost">
-            Leer extracto
-          </Button>
-          <Button size="lg">Comprar →</Button>
+          <Link href="/blog">
+            <Button size="lg" variant="ghost">
+              Leer extracto
+            </Button>
+          </Link>
+          <Link href="/registro">
+            <Button size="lg">Comprar →</Button>
+          </Link>
         </div>
       </div>
     </div>

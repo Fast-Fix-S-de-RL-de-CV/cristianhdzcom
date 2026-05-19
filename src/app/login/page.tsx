@@ -18,19 +18,33 @@ function LoginInner() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      setError("Email o contraseña incorrectos.");
-      return;
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      setLoading(false);
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        if (res.status === 401 || j?.error === "invalid_credentials") {
+          setError("Email o contraseña incorrectos.");
+        } else if (res.status === 400 || j?.error === "invalid") {
+          setError("Revisa el email y la contraseña.");
+        } else if (res.status === 429) {
+          setError("Demasiados intentos. Inténtalo en unos minutos.");
+        } else {
+          setError("No pudimos iniciarte sesión. Inténtalo de nuevo.");
+        }
+        return;
+      }
+      const next = params.get("next") || "/comunidad";
+      router.push(next);
+      router.refresh();
+    } catch {
+      setLoading(false);
+      setError("No hay conexión. Revisa tu internet.");
     }
-    const next = params.get("next") || "/comunidad";
-    router.push(next);
-    router.refresh();
   }
 
   return (

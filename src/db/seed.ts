@@ -380,10 +380,10 @@ async function main() {
     ]);
   }
 
-  // ── COUPON
+  // ── COUPON · EMPIEZA = 100% off (total $0)
   await db
     .insert(s.coupons)
-    .values({ code: "EMPIEZA", kind: "amount", value: 0, active: true, usesLeft: 1000 })
+    .values({ code: "EMPIEZA", kind: "percent", value: 100, active: true, usesLeft: 1000 })
     .onConflictDoNothing();
 
   // ── ACTIVITY

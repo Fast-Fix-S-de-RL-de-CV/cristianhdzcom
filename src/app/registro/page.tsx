@@ -16,21 +16,36 @@ export default function RegisterPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j?.error === "email_in_use" ? "Ese email ya está registrado." : "No pudimos crear tu cuenta.");
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
-    router.push("/comunidad");
-    router.refresh();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      setLoading(false);
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        if (j?.error === "email_in_use" || res.status === 409) {
+          setError("Ya existe una cuenta con ese email. Intenta iniciar sesión.");
+        } else if (j?.error === "invalid" || res.status === 400) {
+          setError("Revisa que el email sea válido y la contraseña tenga 8+ caracteres.");
+        } else {
+          setError("No pudimos crear tu cuenta. Inténtalo de nuevo.");
+        }
+        return;
+      }
+      router.push("/comunidad");
+      router.refresh();
+    } catch {
+      setLoading(false);
+      setError("No hay conexión. Revisa tu internet.");
+    }
   }
 
   return (

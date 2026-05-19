@@ -1,11 +1,27 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { db, schema } from "@/db";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, gte } from "drizzle-orm";
+import { format, isSameDay } from "date-fns";
+import { es } from "date-fns/locale";
 import { getCurrentUser } from "@/lib/auth";
 import { PlatformPath } from "@/components/platform/PlatformPath";
+import { PlataformaSidebar } from "@/components/platform/PlataformaSidebar";
+import { CopilotoPanel } from "@/components/platform/CopilotoPanel";
 
 export const dynamic = "force-dynamic";
+
+type ModuleState = "done" | "current" | "in_progress" | "locked";
+
+const WEEKDAY_LABEL: Record<number, string> = {
+  0: "DOM",
+  1: "LUN",
+  2: "MAR",
+  3: "MIÉ",
+  4: "JUE",
+  5: "VIE",
+  6: "SÁB",
+};
 
 export default async function PlatformPage() {
   const user = await getCurrentUser();
@@ -29,10 +45,15 @@ export default async function PlatformPage() {
     .from(schema.moduleProgress)
     .where(eq(schema.moduleProgress.userId, user.id));
 
-  const progressMap = new Map(progress.map((p) => [p.moduleId, p.state]));
+  const progressMap = new Map(progress.map((p) => [p.moduleId, p.state as ModuleState]));
 
-  // Get first lesson of current module for "Continuar" link
-  const currentMod = mods.find((m) => progressMap.get(m.id) === "current");
+  // Current module = explicit "current"/"in_progress", or fallback to first non-done.
+  const currentMod =
+    mods.find((m) => {
+      const s = progressMap.get(m.id);
+      return s === "current" || s === "in_progress";
+    }) ?? mods.find((m) => progressMap.get(m.id) !== "done");
+
   let firstLessonId: string | undefined;
   if (currentMod) {
     const [lesson] = await db
@@ -46,72 +67,27 @@ export default async function PlatformPage() {
 
   const doneCount = Array.from(progressMap.values()).filter((s) => s === "done").length;
 
+  // Upcoming events from DB
+  const upcoming = await db
+    .select()
+    .from(schema.events)
+    .where(gte(schema.events.startsAt, new Date()))
+    .orderBy(asc(schema.events.startsAt))
+    .limit(3);
+
+  const today = new Date();
+  const eyebrow = `CARRIL · ${program.title.toUpperCase()}`;
+
   return (
     <div className="plat">
       {/* SIDEBAR */}
-      <aside className="plat-side">
-        <Link href="/" className="ch-logo" aria-label="Cristian Hernández — Inicio">
-          <img src="/logo.png" alt="Cristian Hernández" style={{ maxWidth: 180 }} />
-        </Link>
-        <div className="col" style={{ gap: 4 }}>
-          <div className="eyebrow" style={{ padding: "0 12px 8px" }}>
-            Aprender
-          </div>
-          <div className="nav-item active">
-            <span>◎</span> Mi sendero
-          </div>
-          <div className="nav-item">
-            <span>✦</span> Talleres en vivo
-          </div>
-          <div className="nav-item">
-            <span>≡</span> Biblioteca
-          </div>
-          <div className="nav-item">
-            <span>◇</span> Proyectos
-          </div>
-        </div>
-        <div className="col" style={{ gap: 4 }}>
-          <div className="eyebrow" style={{ padding: "0 12px 8px" }}>
-            Comunidad
-          </div>
-          <Link href="/comunidad" className="nav-item">
-            <span>○</span> Feed
-          </Link>
-          <Link href="/comunidad/calendario" className="nav-item">
-            <span>○</span> Eventos
-          </Link>
-          <Link href="/comunidad/ranking" className="nav-item">
-            <span>○</span> Ranking
-          </Link>
-        </div>
-        <div className="col" style={{ gap: 4, marginTop: "auto" }}>
-          <Link href="/cuenta" className="nav-item">
-            <span>⌂</span> Mi cuenta
-          </Link>
-          <div className="card" style={{ padding: 14, background: "var(--bg-2)" }}>
-            <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-              SIGUIENTE COHORTE
-            </div>
-            <div className="serif" style={{ fontSize: 22, marginTop: 4 }}>
-              04 Mar
-            </div>
-            <Link href="/programas">
-              <button
-                className="btn btn-primary"
-                style={{ width: "100%", justifyContent: "center", marginTop: 10, padding: "8px 12px", fontSize: 12 }}
-              >
-                Ver programas
-              </button>
-            </Link>
-          </div>
-        </div>
-      </aside>
+      <PlataformaSidebar />
 
       {/* MAIN */}
       <main className="plat-main">
         <div className="between" style={{ marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
           <div>
-            <div className="eyebrow">CARRIL · A · PROGRAMACIÓN CON IA</div>
+            <div className="eyebrow">{eyebrow}</div>
             <h2 className="serif" style={{ fontSize: 40, marginTop: 8 }}>
               {currentMod?.weekLabel || "Tu sendero"} — {currentMod?.title || "Empieza"}
             </h2>
@@ -129,7 +105,17 @@ export default async function PlatformPage() {
           </div>
         </div>
 
-        <div className="card" style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 20, marginBottom: 40, flexWrap: "wrap" }}>
+        <div
+          className="card"
+          style={{
+            padding: "16px 20px",
+            display: "flex",
+            alignItems: "center",
+            gap: 20,
+            marginBottom: 40,
+            flexWrap: "wrap",
+          }}
+        >
           <span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
             PROGRESO
           </span>
@@ -147,7 +133,8 @@ export default async function PlatformPage() {
             code: m.code,
             title: m.title,
             isBig: m.isBig,
-            state: (progressMap.get(m.id) as "done" | "current" | "locked") || "locked",
+            xpReward: m.xpReward,
+            state: (progressMap.get(m.id) as ModuleState) || "locked",
           }))}
           firstLessonId={firstLessonId}
         />
@@ -155,64 +142,81 @@ export default async function PlatformPage() {
 
       {/* ASIDE */}
       <aside className="plat-aside">
-        <div className="card" style={{ padding: 16, background: "var(--bg-2)" }}>
-          <div className="row" style={{ justifyContent: "space-between" }}>
-            <div className="ia-tag">Copiloto CH</div>
-            <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-              SIEMPRE ON
-            </span>
-          </div>
-          <p style={{ fontSize: 14, marginTop: 14, lineHeight: 1.45 }}>
-            <strong>Hola {user.name.split(" ")[0]} —</strong> noté que llevas {doneCount} módulos completos. Si querés, te
-            armo un repaso de 8 minutos antes del próximo.
-          </p>
-          {firstLessonId && (
-            <Link href={`/plataforma/leccion/${firstLessonId}`}>
-              <button
-                className="btn btn-primary"
-                style={{ width: "100%", justifyContent: "center", marginTop: 12, padding: "8px 12px", fontSize: 12 }}
-              >
-                Continuar lección
-              </button>
-            </Link>
-          )}
-        </div>
+        <CopilotoPanel />
 
         <div>
           <div className="between" style={{ marginBottom: 12 }}>
             <span className="eyebrow">Próximos eventos</span>
-            <Link href="/comunidad/calendario" className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
+            <Link
+              href="/comunidad/calendario"
+              className="mono"
+              style={{ fontSize: 11, color: "var(--muted)" }}
+            >
               VER TODO
             </Link>
           </div>
           <div className="col" style={{ gap: 8 }}>
-            {[
-              { d: "HOY", t: "Live · APIs con IA", tm: "19:00", dno: "04" },
-              { d: "JUE", t: "Taller: SaaS sin código", tm: "20:00", dno: "06" },
-              { d: "SÁB", t: "Demo Day · Cohorte 03", tm: "11:00", dno: "08" },
-            ].map((e, i) => (
-              <div
-                key={i}
-                className="card"
-                style={{ padding: 12, display: "grid", gridTemplateColumns: "44px 1fr auto", gap: 10, alignItems: "center" }}
-              >
-                <div style={{ background: "var(--ink)", color: "var(--bg)", borderRadius: 8, padding: 6, textAlign: "center" }}>
-                  <div className="mono" style={{ fontSize: 9, opacity: 0.7 }}>
-                    MAR
-                  </div>
-                  <div className="serif" style={{ fontSize: 16, lineHeight: 1 }}>
-                    {e.dno}
-                  </div>
+            {upcoming.length === 0 && (
+              <div className="card" style={{ padding: 12 }}>
+                <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
+                  Sin eventos próximos
                 </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{e.t}</div>
-                  <div className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>
-                    {e.d} · {e.tm}
-                  </div>
-                </div>
-                <span style={{ color: "var(--accent)" }}>→</span>
               </div>
-            ))}
+            )}
+            {upcoming.map((e) => {
+              const d = new Date(e.startsAt);
+              const monthLabel = format(d, "LLL", { locale: es }).toUpperCase().slice(0, 3);
+              const dayNumber = format(d, "dd");
+              const time = format(d, "HH:mm");
+              const dayLabel = isSameDay(d, today) ? "HOY" : WEEKDAY_LABEL[d.getDay()];
+              const inner = (
+                <div
+                  className="card"
+                  style={{
+                    padding: 12,
+                    display: "grid",
+                    gridTemplateColumns: "44px 1fr auto",
+                    gap: 10,
+                    alignItems: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "var(--ink)",
+                      color: "var(--bg)",
+                      borderRadius: 8,
+                      padding: 6,
+                      textAlign: "center",
+                    }}
+                  >
+                    <div className="mono" style={{ fontSize: 9, opacity: 0.7 }}>
+                      {monthLabel}
+                    </div>
+                    <div className="serif" style={{ fontSize: 16, lineHeight: 1 }}>
+                      {dayNumber}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{e.title}</div>
+                    <div className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>
+                      {dayLabel} · {time}
+                    </div>
+                  </div>
+                  <span style={{ color: "var(--accent)" }}>→</span>
+                </div>
+              );
+              return e.link ? (
+                <Link
+                  key={e.id}
+                  href={e.link}
+                  style={{ textDecoration: "none", color: "inherit" }}
+                >
+                  {inner}
+                </Link>
+              ) : (
+                <div key={e.id}>{inner}</div>
+              );
+            })}
           </div>
         </div>
       </aside>

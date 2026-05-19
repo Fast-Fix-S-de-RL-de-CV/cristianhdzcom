@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Card } from "@/components/ui/Card";
@@ -10,6 +10,15 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { FAQAccordion } from "@/components/marketing/FAQAccordion";
 import { CurriculumAccordion } from "@/components/marketing/CurriculumAccordion";
+
+export const dynamic = "force-dynamic";
+
+const MONTHS = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+function formatCohortRange(starts: Date, ends: Date) {
+  return `${String(starts.getUTCDate()).padStart(2, "0")} ${MONTHS[starts.getUTCMonth()]} — ${String(
+    ends.getUTCDate(),
+  ).padStart(2, "0")} ${MONTHS[ends.getUTCMonth()]}`;
+}
 
 const FAQS = [
   { q: "¿Necesito saber programar?", a: "No. Aceptamos profesionales sin código. Damos un onboarding de 5 días antes del kickoff." },
@@ -30,11 +39,20 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
   const [program] = await db.select().from(schema.programs).where(eq(schema.programs.slug, slug)).limit(1);
   if (!program) notFound();
 
-  const mods = await db
-    .select()
-    .from(schema.modules)
-    .where(eq(schema.modules.programId, program.id))
-    .orderBy(asc(schema.modules.sortOrder));
+  const [mods, openCohorts] = await Promise.all([
+    db.select().from(schema.modules).where(eq(schema.modules.programId, program.id)).orderBy(asc(schema.modules.sortOrder)),
+    db
+      .select()
+      .from(schema.cohorts)
+      .where(and(eq(schema.cohorts.programId, program.id), eq(schema.cohorts.isOpen, true)))
+      .orderBy(asc(schema.cohorts.startsOn))
+      .limit(1),
+  ]);
+  const nextCohort = openCohorts[0];
+  const seatsLeft = nextCohort ? Math.max(0, nextCohort.seatsTotal - nextCohort.seatsTaken) : null;
+  const cohortRange = nextCohort
+    ? formatCohortRange(new Date(nextCohort.startsOn), new Date(nextCohort.endsOn))
+    : null;
 
   // Group modules into 4 weeks of 3
   const weeks: { label: string; mods: typeof mods }[] = [];
@@ -69,10 +87,18 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
               <span style={{ color: "var(--ink)" }}>{program.title}</span>
             </div>
             <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
-              <Chip variant="accent" dot pulse style={{ color: "var(--accent)" }}>
-                Cohorte abierta · 14 cupos
-              </Chip>
-              <Chip>04 MAR — 02 ABR</Chip>
+              {nextCohort && seatsLeft !== null && seatsLeft > 0 ? (
+                <>
+                  <Chip variant="accent" dot pulse style={{ color: "var(--accent)" }}>
+                    Cohorte abierta · {seatsLeft} {seatsLeft === 1 ? "cupo" : "cupos"}
+                  </Chip>
+                  {cohortRange && <Chip>{cohortRange}</Chip>}
+                </>
+              ) : (
+                <Chip variant="warm" dot style={{ color: "var(--warm)" }}>
+                  Lista de espera · próxima cohorte pronto
+                </Chip>
+              )}
             </div>
             <h1 style={{ fontSize: "clamp(56px, 7vw, 88px)", marginBottom: 24 }}>{program.title}</h1>
             <p style={{ fontSize: 20, color: "var(--ink-2)", lineHeight: 1.5, maxWidth: 600 }}>

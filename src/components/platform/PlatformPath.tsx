@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type ModuleNode = {
@@ -7,18 +7,43 @@ type ModuleNode = {
   code: string;
   title: string;
   isBig: boolean;
-  state: "done" | "current" | "locked";
+  xpReward: number;
+  state: "done" | "current" | "in_progress" | "locked";
 };
 
 const OFFSETS = [-120, 80, 140, 40, -100, -60, 100, -40, 110, -120, 60, 140];
 
-export function PlatformPath({ modules, firstLessonId }: { modules: ModuleNode[]; firstLessonId?: string }) {
+export function PlatformPath({
+  modules,
+  firstLessonId,
+}: {
+  modules: ModuleNode[];
+  firstLessonId?: string;
+}) {
   const router = useRouter();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
+  async function startModule(m: ModuleNode) {
+    if (pendingId) return;
+    setPendingId(m.id);
+    try {
+      const res = await fetch(`/api/modules/${m.id}/start`, { method: "POST" });
+      const data: any = await res.json().catch(() => ({}));
+      const lessonId = data?.lessonId ?? firstLessonId;
+      if (lessonId) {
+        router.push(`/plataforma/leccion/${lessonId}`);
+      } else {
+        router.refresh();
+      }
+    } catch {
+      setPendingId(null);
+    }
+  }
 
   function onNodeClick(m: ModuleNode) {
     if (m.state === "locked") return;
-    if (m.state === "current" && firstLessonId) {
-      router.push(`/plataforma/leccion/${firstLessonId}`);
+    if (m.state === "current" || m.state === "in_progress") {
+      void startModule(m);
     }
   }
 
@@ -26,17 +51,20 @@ export function PlatformPath({ modules, firstLessonId }: { modules: ModuleNode[]
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 32, paddingBottom: 80 }}>
       {modules.map((n, i) => {
         const offset = OFFSETS[i % OFFSETS.length];
+        const isActive = n.state === "current" || n.state === "in_progress";
+        const pending = pendingId === n.id;
         return (
           <div key={n.id} style={{ transform: `translateX(${offset}px)`, position: "relative" }}>
             <button
               type="button"
               onClick={() => onNodeClick(n)}
-              className={`path-node ${n.state}`}
+              className={`path-node ${n.state === "in_progress" ? "current" : n.state}`}
               style={{ width: n.isBig ? 110 : 84, height: n.isBig ? 110 : 84 }}
               aria-label={`${n.code} · ${n.title}`}
+              disabled={n.state === "locked" || pending}
             >
               {n.state === "done" && "✓"}
-              {n.state === "current" && (n.isBig ? "★" : "▶")}
+              {isActive && (n.isBig ? "★" : "▶")}
               {n.state === "locked" && (n.isBig ? "◆" : "⌬")}
             </button>
             <div
@@ -59,7 +87,7 @@ export function PlatformPath({ modules, firstLessonId }: { modules: ModuleNode[]
                 {n.title}
               </span>
             </div>
-            {n.state === "current" && (
+            {isActive && (
               <div
                 className="card"
                 style={{
@@ -78,18 +106,24 @@ export function PlatformPath({ modules, firstLessonId }: { modules: ModuleNode[]
                   EMPIEZA AHORA
                 </div>
                 <div className="serif" style={{ fontSize: 18, marginTop: 4 }}>
-                  + 240 XP
+                  + {n.xpReward} XP
                 </div>
-                {firstLessonId && (
-                  <Link href={`/plataforma/leccion/${firstLessonId}`}>
-                    <button
-                      className="btn btn-accent"
-                      style={{ width: "100%", justifyContent: "center", marginTop: 8, padding: "6px 12px", fontSize: 12 }}
-                    >
-                      Continuar →
-                    </button>
-                  </Link>
-                )}
+                <button
+                  type="button"
+                  onClick={() => startModule(n)}
+                  disabled={pending}
+                  className="btn btn-accent"
+                  style={{
+                    width: "100%",
+                    justifyContent: "center",
+                    marginTop: 8,
+                    padding: "6px 12px",
+                    fontSize: 12,
+                    opacity: pending ? 0.6 : 1,
+                  }}
+                >
+                  {pending ? "Cargando…" : "Continuar →"}
+                </button>
               </div>
             )}
           </div>

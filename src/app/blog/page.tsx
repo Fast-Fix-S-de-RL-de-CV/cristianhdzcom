@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { db, schema } from "@/db";
-import { desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
+import { BlogList } from "@/components/marketing/BlogList";
 
 export const dynamic = "force-dynamic";
 
@@ -98,98 +99,17 @@ export default async function BlogPage() {
         </section>
       )}
 
-      {/* Filter */}
-      <section className="sec" style={{ paddingTop: 0 }}>
-        <div
-          className="row"
-          style={{
-            borderTop: "1px solid var(--line)",
-            borderBottom: "1px solid var(--line)",
-            padding: "16px 0",
-            gap: 8,
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-          }}
-        >
-          <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-            {["Todo", "IA · Ingeniería", "Negocios", "Casos reales", "Tutoriales", "Opinión"].map((f, i) => (
-              <Button key={f} size="sm" variant={i === 0 ? "primary" : "ghost"}>
-                {f}
-              </Button>
-            ))}
-          </div>
-          <div className="row" style={{ gap: 10 }}>
-            <span style={{ fontSize: 13, color: "var(--muted)" }}>Buscar</span>
-            <div
-              style={{
-                border: "1px solid var(--line-2)",
-                borderRadius: 999,
-                padding: "8px 14px",
-                minWidth: 200,
-                fontSize: 13,
-                color: "var(--muted)",
-                background: "white",
-              }}
-            >
-              ⌕ palabras clave…
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Posts grid */}
-      <section className="sec" style={{ paddingTop: 0 }}>
-        <div className="grid-3">
-          {rest.map((p, i) => (
-            <Link key={p.id} href={`/blog/${p.slug}`} className="lift" style={{ display: "block" }}>
-              <div
-                className="ph"
-                style={{
-                  aspectRatio: "4/3",
-                  borderRadius: 14,
-                  marginBottom: 16,
-                  background:
-                    i % 3 === 0
-                      ? "linear-gradient(135deg, oklch(95% 0.04 252), oklch(88% 0.05 252))"
-                      : i % 3 === 1
-                        ? "linear-gradient(135deg, oklch(95% 0.04 75), oklch(88% 0.06 75))"
-                        : "linear-gradient(135deg, var(--bg-2), var(--bg-3))",
-                  border: "none",
-                  color: "var(--ink-2)",
-                }}
-              >
-                <span className="serif" style={{ fontSize: 56, opacity: 0.5 }}>
-                  0{i + 1}
-                </span>
-              </div>
-              <div className="row" style={{ gap: 12, marginBottom: 12, fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--muted)" }}>
-                <span style={{ color: "var(--ink)" }}>{p.category?.toUpperCase()}</span>
-                <span>·</span>
-                <span>{p.readMinutes} MIN</span>
-                <span>·</span>
-                <span>
-                  {p.publishedAt
-                    ? new Date(p.publishedAt).toLocaleDateString("es-MX", { day: "2-digit", month: "short" }).toUpperCase()
-                    : ""}
-                </span>
-              </div>
-              <h3 className="serif" style={{ fontSize: 26, lineHeight: 1.1 }}>
-                {p.title}
-              </h3>
-              <div className="row" style={{ gap: 8, marginTop: 16, fontSize: 13 }}>
-                <span style={{ color: "var(--muted)" }}>Cristian Hernández</span>
-                <span style={{ marginLeft: "auto", color: "var(--accent)" }}>Leer →</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        <div className="center" style={{ marginTop: 56 }}>
-          <Button size="lg" variant="ghost">
-            Ver más artículos
-          </Button>
-        </div>
-      </section>
+      <BlogList
+        posts={rest.map((p) => ({
+          id: p.id,
+          slug: p.slug,
+          title: p.title,
+          excerpt: p.excerpt,
+          category: p.category,
+          readMinutes: p.readMinutes,
+          publishedAt: p.publishedAt ? new Date(p.publishedAt).toISOString() : null,
+        }))}
+      />
 
       {/* Newsletter */}
       <NewsletterSection />

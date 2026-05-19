@@ -1,10 +1,15 @@
 import Link from "next/link";
+import { db, schema } from "@/db";
+import { asc, eq } from "drizzle-orm";
+import { getCurrentUser } from "@/lib/auth";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
+
+export const dynamic = "force-dynamic";
 
 const PATHS = [
   {
@@ -140,7 +145,17 @@ const BRANDS = [
   "GRUPO·MODELO",
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [user, featured] = await Promise.all([
+    getCurrentUser(),
+    db
+      .select()
+      .from(schema.programs)
+      .where(eq(schema.programs.isActive, true))
+      .orderBy(asc(schema.programs.sortOrder))
+      .limit(3),
+  ]);
+
   return (
     <div>
       <Nav />
@@ -182,9 +197,9 @@ export default function HomePage() {
               equipo construya el tuyo — estás en casa.
             </p>
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-              <Link href="/sobre-mi">
+              <Link href={user ? "/plataforma" : "/registro"}>
                 <Button size="lg" shine>
-                  Conoce mi historia →
+                  {user ? "Ir a mi plataforma →" : "Empezar gratis →"}
                 </Button>
               </Link>
               <Link href="#saas">
@@ -407,6 +422,72 @@ export default function HomePage() {
           })}
         </div>
       </section>
+
+      <div className="rule" />
+
+      {/* PROGRAMAS DESTACADOS · desde DB */}
+      {featured.length > 0 && (
+        <section className="sec">
+          <div
+            className="between"
+            style={{ alignItems: "flex-end", marginBottom: 40, flexWrap: "wrap", gap: 24 }}
+          >
+            <div>
+              <Eyebrow>Programas en curso · 2026</Eyebrow>
+              <h2 style={{ fontSize: "clamp(40px, 5vw, 64px)", marginTop: 16 }}>
+                Próximos <span style={{ color: "var(--accent)" }}>talleres y cursos</span>.
+              </h2>
+            </div>
+            <Link href="/programas">
+              <Button variant="ghost">Ver todos los programas →</Button>
+            </Link>
+          </div>
+          <div className="grid-3">
+            {featured.map((p, i) => {
+              const accentColor =
+                p.accent === "warm" ? "var(--warm)" : p.accent === "ink" ? "var(--ink)" : "var(--accent)";
+              return (
+                <Link key={p.id} href={`/programas/${p.slug}`} style={{ display: "block" }}>
+                  <Card
+                    hover
+                    style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}
+                  >
+                    <div
+                      className="ph"
+                      style={{ height: 160, borderRadius: 0, border: "none", borderBottom: "1px solid var(--line)" }}
+                    >
+                      <div className="serif" style={{ fontSize: 64, color: accentColor, opacity: 0.55 }}>
+                        {String(i + 1).padStart(2, "0")}
+                      </div>
+                    </div>
+                    <div style={{ padding: 22, display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+                      <span className="mono" style={{ fontSize: 11, color: accentColor, letterSpacing: "0.08em" }}>
+                        {p.type.toUpperCase()}
+                        {p.durationLabel ? ` · ${p.durationLabel.toUpperCase()}` : ""}
+                      </span>
+                      <h3 className="serif" style={{ fontSize: 24, lineHeight: 1.1 }}>
+                        {p.title}
+                      </h3>
+                      <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.5, flex: 1 }}>
+                        {p.subtitle}
+                      </p>
+                      <div className="rule" />
+                      <div className="between">
+                        <span className="serif" style={{ fontSize: 26 }}>
+                          {p.priceUsd === 0 ? "Gratis" : `$${p.priceUsd}`}
+                        </span>
+                        <span className="mono" style={{ fontSize: 13, color: "var(--accent)" }}>
+                          Ver detalles →
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="rule" />
 
@@ -691,9 +772,9 @@ export default function HomePage() {
               </p>
             </div>
             <div className="col">
-              <Link href="/registro">
+              <Link href={user ? "/plataforma" : "/registro"}>
                 <Button size="lg" style={{ width: "100%", justifyContent: "center" }}>
-                  Reservar taller gratis →
+                  {user ? "Ir a mi plataforma →" : "Reservar taller gratis →"}
                 </Button>
               </Link>
               <Link href="/programas">
