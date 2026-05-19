@@ -538,7 +538,8 @@ button {
 .plat {
   display: grid;
   grid-template-columns: 240px 1fr 320px;
-  min-height: calc(100vh - 0px);
+  height: 100vh;
+  overflow: hidden;
 }
 .plat-side {
   background: var(--bg);
@@ -547,6 +548,11 @@ button {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  /* Stick to viewport; only the main column scrolls. */
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
 }
 .plat-side .nav-item {
   display: flex;
@@ -571,6 +577,8 @@ button {
 }
 .plat-main {
   overflow-x: hidden;
+  overflow-y: auto;
+  height: 100vh;
   background:
     radial-gradient(circle at 50% -20%, oklch(94% 0.05 252 / 0.4), transparent 60%),
     var(--bg);
@@ -584,6 +592,11 @@ button {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  /* Stick to viewport; scroll independently if content exceeds height. */
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
 }
 
 /* Path node */
