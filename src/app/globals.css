@@ -925,6 +925,9 @@ html { scroll-behavior: smooth; }
   .ch-logo { font-size: 16px; white-space: nowrap; gap: 8px; }
   .ch-logo img { height: 32px; }
   .ch-foot .ch-logo img { height: 44px; }
+  .profile-hero { grid-template-columns: 1fr !important; text-align: center; }
+  .profile-hero .av { margin: 0 auto; width: 96px !important; height: 96px !important; }
+  .profile-cols { grid-template-columns: 1fr !important; }
   .ch-logo-mark { width: 24px; height: 24px; font-size: 13px; }
   .ch-logo span:not(.ch-logo-mark) { white-space: nowrap; }
 
