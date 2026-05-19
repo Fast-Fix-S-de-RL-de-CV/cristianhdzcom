@@ -94,7 +94,7 @@ export default async function PlatformPage() {
           </div>
           <div className="row" style={{ gap: 12 }}>
             <span className="streak">{user.streakDays} días</span>
-            <span className="chip chip-accent mono">XP · {user.xp.toLocaleString("es-MX")}</span>
+            <span className="chip chip-gold mono">XP · {user.xp.toLocaleString("es-MX")}</span>
             <div className="av">
               {user.name
                 .split(" ")

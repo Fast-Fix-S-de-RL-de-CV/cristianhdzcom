@@ -7,19 +7,43 @@
    ============================================================ */
 
 :root {
-  --bg: #fafaf7;
-  --bg-2: #f4f2ec;
-  --bg-3: #eeebe2;
-  --ink: #0f1115;
-  --ink-2: #1f232b;
-  --muted: #6b6f77;
-  --line: #e3dfd5;
-  --line-2: #d6d2c6;
-  --accent: oklch(40% 0.13 252);
-  --accent-soft: oklch(95% 0.03 252);
-  --accent-strong: oklch(48% 0.18 252);
-  --warm: oklch(50% 0.1 195);
-  --warm-soft: oklch(95% 0.03 195);
+  /* Ivory / cream backgrounds — warm light, never pure white */
+  --bg: #FBFAF5;
+  --bg-2: #F5F1E6;
+  --bg-3: #ECE5D3;
+
+  /* Navy ink — replaces the old near-black; deep enough for body text
+     contrast (passes WCAG AA on --bg) but warm/blue instead of cold black */
+  --ink: #0A1E3A;
+  --ink-2: #1A3458;
+  --muted: #6E7A91;
+  --line: #E2DACA;
+  --line-2: #C9BDA3;
+
+  /* Brand navy spectrum */
+  --navy: #0A1E3A;
+  --navy-2: #143257;
+  --navy-3: #1F4576;
+  --navy-soft: #E8EDF6;
+
+  /* Gold spectrum — pulled from the logo gradient */
+  --gold: #C8A951;
+  --gold-light: #E8C766;
+  --gold-deep: #8B6914;
+  --gold-soft: #FAF3DC;
+  --gold-line: #E5D29E;
+
+  /* Linear gradients used by buttons, chips, decorative lines */
+  --gold-gradient: linear-gradient(135deg, #B8860B 0%, #E8C766 35%, #FFD86B 50%, #C8A951 70%, #8B6914 100%);
+  --gold-gradient-soft: linear-gradient(135deg, #F4E7B8 0%, #FAF3DC 50%, #E5D29E 100%);
+
+  /* Accent is now navy (was a cool azure) — used for links and "accent" chips */
+  --accent: #143257;
+  --accent-soft: #E8EDF6;
+  --accent-strong: #0A1E3A;
+
+  --warm: #B8860B;
+  --warm-soft: #FAF3DC;
   --green: oklch(58% 0.13 155);
   --green-soft: oklch(95% 0.04 155);
   --green-strong: oklch(48% 0.13 155);
@@ -97,6 +121,12 @@ button {
   height: 44px;
   width: auto;
   display: block;
+  /* Make the gold signature read on light ivory backgrounds without changing
+     the artwork itself — subtle navy shadow + faint outline. */
+  filter:
+    drop-shadow(0 0 1px rgba(10, 30, 58, 0.6))
+    drop-shadow(0 1px 2px rgba(10, 30, 58, 0.18))
+    drop-shadow(0 2px 8px rgba(139, 105, 20, 0.12));
 }
 .ch-foot .ch-logo img {
   height: 56px;
@@ -184,6 +214,18 @@ button {
 .btn-warm:hover:not(:disabled) {
   filter: brightness(1.08);
 }
+/* Premium gold CTA — use sparingly for highlight actions (upgrade, premium) */
+.btn-gold {
+  background: var(--gold-gradient);
+  color: #2A1D00;
+  border: none;
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.5);
+  box-shadow: 0 4px 14px rgba(184, 134, 11, 0.25);
+}
+.btn-gold:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: 0 6px 20px rgba(184, 134, 11, 0.35);
+}
 .btn-lg {
   padding: 16px 28px;
   font-size: 15px;
@@ -209,9 +251,23 @@ button {
   color: var(--accent);
   border-color: transparent;
 }
+/* Premium gold chip — used for XP, levels, badges destacados */
+.chip-gold {
+  background: var(--gold-soft);
+  color: var(--gold-deep);
+  border: 1px solid var(--gold-line);
+  font-weight: 600;
+}
+.chip-gold-filled {
+  background: var(--gold-gradient);
+  color: #2a1d00;
+  border: none;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.6);
+}
 .chip-warm {
   background: var(--warm-soft);
-  color: oklch(45% 0.12 75);
+  color: var(--gold-deep);
   border-color: transparent;
 }
 .chip-ink {
@@ -239,11 +295,32 @@ button {
   border: 1px solid var(--line);
   border-radius: 18px;
   transition: all 0.25s ease;
+  box-shadow: 0 1px 2px rgba(10, 30, 58, 0.04);
 }
 .card-hover:hover {
   transform: translateY(-3px);
-  border-color: var(--ink);
-  box-shadow: 0 12px 32px rgba(15, 17, 21, 0.08);
+  border-color: var(--gold);
+  box-shadow: 0 12px 32px rgba(10, 30, 58, 0.10), 0 0 0 1px rgba(200, 169, 81, 0.18);
+}
+/* Premium card variant — used on pricing highlights, featured items */
+.card-gold {
+  background: white;
+  border: 1px solid var(--gold-line);
+  border-radius: 18px;
+  position: relative;
+  box-shadow: 0 6px 24px rgba(184, 134, 11, 0.10);
+}
+.card-gold::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  padding: 1px;
+  background: var(--gold-gradient);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 .rule {
@@ -258,6 +335,22 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--muted);
+}
+/* Gradient gold text — for hero headlines and brand callouts */
+.gold-text {
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
+}
+/* Subtle gold underline used under section titles to hint brand */
+.gold-rule {
+  display: inline-block;
+  height: 2px;
+  width: 48px;
+  background: var(--gold-gradient);
+  border-radius: 2px;
 }
 
 .ph {
@@ -346,14 +439,17 @@ button {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--bg-3);
-  border: 1px solid var(--line);
+  background: var(--navy);
+  color: #FAF3DC;
+  border: 1px solid var(--gold-line);
+  box-shadow: 0 0 0 1px rgba(200, 169, 81, 0.25);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 .av-stack {
   display: flex;
@@ -465,11 +561,13 @@ button {
   transition: background 0.15s;
 }
 .plat-side .nav-item.active {
-  background: var(--ink);
-  color: var(--bg);
+  background: var(--navy);
+  color: #FAF3DC;
+  box-shadow: inset 3px 0 0 0 var(--gold), 0 1px 2px rgba(10, 30, 58, 0.15);
 }
 .plat-side .nav-item:not(.active):hover {
-  background: var(--bg-2);
+  background: var(--navy-soft);
+  color: var(--navy);
 }
 .plat-main {
   overflow-x: hidden;
@@ -551,7 +649,7 @@ button {
 .bar > i {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--gold-gradient);
   border-radius: 999px;
   transition: width 0.3s ease;
 }
@@ -562,18 +660,20 @@ button {
   gap: 6px;
   padding: 4px 10px 4px 6px;
   border-radius: 999px;
-  background: linear-gradient(135deg, oklch(94% 0.04 252), oklch(96% 0.04 75));
-  border: 1px solid var(--line);
+  background: linear-gradient(135deg, var(--navy-soft), var(--gold-soft));
+  border: 1px solid var(--gold-line);
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--ink-2);
+  color: var(--navy);
+  font-weight: 600;
 }
 .ia-tag::before {
   content: "";
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, var(--accent), var(--warm), var(--accent));
+  background: conic-gradient(from 0deg, var(--gold-light), var(--navy), var(--gold-deep), var(--gold-light));
+  box-shadow: 0 0 6px rgba(200, 169, 81, 0.5);
 }
 
 .code {
