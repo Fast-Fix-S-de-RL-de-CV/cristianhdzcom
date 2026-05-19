@@ -10,8 +10,12 @@ export const metadata: Metadata = {
     title: "Cristian Hernández",
     description: "Aprende a hacer negocios y software con IA.",
     type: "website",
+    images: [{ url: "/logo.png", width: 1260, height: 368, alt: "Cristian Hernández" }],
   },
-  icons: { icon: "/favicon.svg" },
+  icons: {
+    icon: [{ url: "/favicon.png", type: "image/png", sizes: "any" }],
+    apple: { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
