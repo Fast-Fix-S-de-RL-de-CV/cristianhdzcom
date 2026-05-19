@@ -16,7 +16,7 @@ const COLS: [string, [string, string][]][] = [
       ["Consultoría", "/programas?filtro=consultoria"],
       ["Agencia de software", "/programas?filtro=agencia"],
       ["Casos", "/blog"],
-      ["Empresas", "/contacto"],
+      ["Empresas", "mailto:hola@cristianhdz.com"],
     ],
   ],
   [
@@ -25,7 +25,7 @@ const COLS: [string, [string, string][]][] = [
       ["Libros", "/libros"],
       ["Blog", "/blog"],
       ["Comunidad", "/comunidad"],
-      ["Contacto", "/contacto"],
+      ["Contacto", "mailto:hola@cristianhdz.com"],
     ],
   ],
 ];
