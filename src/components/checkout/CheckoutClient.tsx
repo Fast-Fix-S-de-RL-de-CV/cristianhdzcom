@@ -24,7 +24,17 @@ const BUMPS = [
   { id: "1on1", title: "Mentoría 1:1 con Cristian (60 min)", desc: "Una sesión privada para revisar tu nicho, oferta y siguientes pasos.", price: 149, was: 299 },
 ];
 
-export function CheckoutClient({ program }: { program: Program }) {
+export function CheckoutClient({
+  program,
+  recentSales,
+  seatsLeft,
+  cohortRange,
+}: {
+  program: Program;
+  recentSales: number;
+  seatsLeft: number | null;
+  cohortRange: string | null;
+}) {
   const router = useRouter();
   const [step, setStep] = useState<"info" | "pay">("info");
   const [name, setName] = useState("");
@@ -127,17 +137,25 @@ export function CheckoutClient({ program }: { program: Program }) {
           gap: 16,
         }}
       >
-        <span>
-          <strong style={{ fontFamily: "var(--font-mono)", color: "var(--accent)" }}>1.247 alumnos</strong> ya se inscribieron
-          en los últimos 7 días
-        </span>
-        <span>
-          <span
-            className="pulse"
-            style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", marginRight: 6 }}
-          />
-          14 cupos restantes en esta cohorte
-        </span>
+        {recentSales > 0 ? (
+          <span>
+            <strong style={{ fontFamily: "var(--font-mono)", color: "var(--accent)" }}>
+              {recentSales.toLocaleString("es-MX")} {recentSales === 1 ? "alumno" : "alumnos"}
+            </strong>{" "}
+            {recentSales === 1 ? "se inscribió" : "ya se inscribieron"} en los últimos 7 días
+          </span>
+        ) : (
+          <span style={{ color: "var(--muted)" }}>Sé el primero de esta cohorte.</span>
+        )}
+        {seatsLeft !== null && (
+          <span>
+            <span
+              className="pulse"
+              style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", marginRight: 6 }}
+            />
+            {seatsLeft} {seatsLeft === 1 ? "cupo restante" : "cupos restantes"} en esta cohorte
+          </span>
+        )}
         <span style={{ color: "var(--muted)" }}>🔒 Pago 100% seguro · Stripe + PayPal</span>
       </div>
 
@@ -431,9 +449,11 @@ export function CheckoutClient({ program }: { program: Program }) {
                   <h4 className="serif" style={{ fontSize: 17, lineHeight: 1.15 }}>
                     {program.title}
                   </h4>
-                  <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
-                    04 MAR — 02 ABR · 4 SEMANAS
-                  </div>
+                  {cohortRange && (
+                    <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
+                      {cohortRange}
+                    </div>
+                  )}
                 </div>
                 <div className="serif" style={{ fontSize: 22 }}>
                   ${program.priceUsd}

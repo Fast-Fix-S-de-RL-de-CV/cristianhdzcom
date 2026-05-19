@@ -38,6 +38,7 @@ export function CommunityFeed({
   const router = useRouter();
   const [posts, setPosts] = useState(initialPosts);
   const [filter, setFilter] = useState<string>("todo");
+  const [sort, setSort] = useState<"new" | "top" | "trending">("new");
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerTitle, setComposerTitle] = useState("");
   const [composerBody, setComposerBody] = useState("");
@@ -46,7 +47,24 @@ export function CommunityFeed({
   const [pending, startTransition] = useTransition();
   const [liked, setLiked] = useState<Record<string, boolean>>({});
 
-  const filtered = filter === "todo" ? posts : posts.filter((p) => p.categoryName?.toLowerCase() === filter.toLowerCase());
+  const byCategory = filter === "todo" ? posts : posts.filter((p) => p.categoryName?.toLowerCase() === filter.toLowerCase());
+
+  const filtered = (() => {
+    if (sort === "new") {
+      return [...byCategory].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+    }
+    if (sort === "top") {
+      const since = Date.now() - 24 * 60 * 60 * 1000;
+      return byCategory
+        .filter((p) => new Date(p.createdAt).getTime() >= since)
+        .sort((a, b) => b.likesCount - a.likesCount);
+    }
+    // trending
+    const score = (p: Post) => p.likesCount + p.commentsCount * 2 + p.viewsCount * 0.1;
+    return [...byCategory].sort((a, b) => score(b) - score(a));
+  })();
 
   async function onPost(e: React.FormEvent) {
     e.preventDefault();
@@ -201,9 +219,33 @@ export function CommunityFeed({
       {/* Sort row */}
       <div className="row" style={{ marginBottom: 16, justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div className="row" style={{ gap: 16, fontSize: 13 }}>
-          <span style={{ fontWeight: 600 }}>Nuevo</span>
-          <span style={{ color: "var(--muted)" }}>Top hoy</span>
-          <span style={{ color: "var(--muted)" }}>Trending</span>
+          {(
+            [
+              ["new", "Nuevo"],
+              ["top", "Top hoy"],
+              ["trending", "Trending"],
+            ] as const
+          ).map(([key, label]) => {
+            const active = sort === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSort(key)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  fontSize: 13,
+                  fontWeight: active ? 600 : 500,
+                  color: active ? "var(--ink)" : "var(--muted)",
+                  cursor: "pointer",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
         <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
           {filtered.length} PUBLICACIONES
@@ -332,9 +374,12 @@ export function CommunityFeed({
                   <span style={{ fontSize: 16 }}>👁</span>
                   <span>{p.viewsCount}</span>
                 </div>
-                <span style={{ marginLeft: "auto", color: "var(--accent)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+                <Link
+                  href={`/comunidad/posts/${p.id}`}
+                  style={{ marginLeft: "auto", color: "var(--accent)", fontSize: 13, fontWeight: 500, textDecoration: "none" }}
+                >
                   Abrir hilo →
-                </span>
+                </Link>
               </div>
             </div>
           </Card>

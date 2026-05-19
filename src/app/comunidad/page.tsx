@@ -68,6 +68,7 @@ export default async function CommunityPage() {
           <CommunitySidebar
             leaderboard={leaderboard.map((u) => ({ ...u }))}
             currentUserId={user?.id}
+            currentUser={user ? { xp: user.xp, level: user.level } : null}
             events={events.map((e) => ({
               ...e,
               startsAt: (e.startsAt as Date).toISOString(),

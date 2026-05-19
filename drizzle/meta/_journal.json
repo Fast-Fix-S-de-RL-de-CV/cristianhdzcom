@@ -15,6 +15,13 @@
       "when": 1779159952282,
       "tag": "0001_loud_psylocke",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779178617205,
+      "tag": "0002_slimy_speedball",
+      "breakpoints": true
     }
   ]
 }

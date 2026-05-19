@@ -1,18 +1,41 @@
 import Link from "next/link";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
-import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
+import { db, schema } from "@/db";
+import { asc, eq } from "drizzle-orm";
 
-export default function BooksPage() {
+export const dynamic = "force-dynamic";
+
+const COVER_GRADIENTS = [
+  "linear-gradient(135deg, oklch(35% 0.05 50), oklch(20% 0.04 60))",
+  "linear-gradient(135deg, oklch(40% 0.12 252), oklch(22% 0.08 245))",
+  "linear-gradient(135deg, oklch(38% 0.10 150), oklch(22% 0.05 160))",
+];
+
+const ACCENTS: Array<"warm" | "accent"> = ["warm", "accent"];
+
+function formatRating(avg: number | null, count: number) {
+  if (avg == null) return `${count.toLocaleString("es-MX")} reseñas`;
+  const stars = (avg / 10).toFixed(1);
+  return `★ ${stars} · ${count.toLocaleString("es-MX")} reseñas`;
+}
+
+export default async function BooksPage() {
+  const books = await db
+    .select()
+    .from(schema.books)
+    .where(eq(schema.books.isActive, true))
+    .orderBy(asc(schema.books.sortOrder));
+
   return (
     <div>
       <Nav />
 
       <section className="sec" style={{ paddingTop: 64, paddingBottom: 64 }}>
-        <Eyebrow>Biblioteca CH · 2 títulos</Eyebrow>
+        <Eyebrow>Biblioteca CH · {books.length} {books.length === 1 ? "título" : "títulos"}</Eyebrow>
         <h1 style={{ fontSize: "clamp(64px, 9vw, 96px)", marginTop: 16, maxWidth: 1100 }}>
           El arte de hacer <span style={{ color: "var(--warm)" }}>negocios</span>.
         </h1>
@@ -24,36 +47,30 @@ export default function BooksPage() {
 
       <div className="rule" />
 
-      {/* Book 1 */}
-      <BookBlock
-        vol="VOLUMEN I"
-        accent="warm"
-        title="El arte de hacer negocios sin dinero."
-        desc="Un manual brutalmente práctico para empezar un negocio sin capital. Validación, oferta, primera venta y caja — sin humo y sin teoría. La base que todo emprendedor necesita antes de gastar un peso."
-        bullets={["12 capítulos prácticos", "Plantillas + ejercicios", "Casos reales LATAM", "Audio narrado por Cristian"]}
-        digital={29}
-        physical={49}
-        rating="★ 4.9 · 1.284 reseñas"
-        meta="324 págs · 12 caps"
-        coverGradient="linear-gradient(135deg, oklch(35% 0.05 50), oklch(20% 0.04 60))"
-      />
+      {books.map((b, idx) => {
+        const accent = ACCENTS[idx % ACCENTS.length];
+        const gradient = COVER_GRADIENTS[idx % COVER_GRADIENTS.length];
+        const volLabel = `VOLUMEN ${toRoman(idx + 1)}`;
+        const metaLabel = b.pages ? `${b.pages} págs` : `${idx + 1} de ${books.length}`;
+        return (
+          <BookBlock
+            key={b.id}
+            vol={volLabel}
+            accent={accent}
+            flip={idx % 2 === 1}
+            title={b.title}
+            desc={b.description ?? b.subtitle ?? ""}
+            bullets={b.bullets ?? []}
+            digital={b.priceDigitalUsd ?? 0}
+            physical={b.pricePrintUsd ?? 0}
+            rating={formatRating(b.ratingAvg, b.ratingCount)}
+            meta={metaLabel}
+            coverGradient={gradient}
+          />
+        );
+      })}
 
-      {/* Book 2 */}
-      <BookBlock
-        vol="VOLUMEN II"
-        accent="accent"
-        flip
-        title="El arte de hacer negocios por internet."
-        desc="La continuación. Cómo construir presencia, vender en automático y escalar tu negocio aprovechando IA, automatización y comunidades. Para quien ya empezó y quiere escala real."
-        bullets={["11 capítulos + 4 anexos", "IA aplicada a ventas", "Funnels y comunidad", "Anexo: agencia con IA"]}
-        digital={34}
-        physical={54}
-        rating="★ 4.9 · 968 reseñas"
-        meta="348 págs · 11 caps + anexos"
-        coverGradient="linear-gradient(135deg, oklch(40% 0.12 252), oklch(22% 0.08 245))"
-      />
-
-      {/* Bundle */}
+      {/* Bundle / oferta editorial */}
       <section className="sec" style={{ background: "var(--bg-2)", borderRadius: 32, margin: "0 56px 96px" }}>
         <div className="between" style={{ alignItems: "flex-end", marginBottom: 48, flexWrap: "wrap", gap: 24 }}>
           <div>
@@ -135,6 +152,24 @@ export default function BooksPage() {
       <Footer />
     </div>
   );
+}
+
+function toRoman(n: number): string {
+  const map: Array<[number, string]> = [
+    [10, "X"],
+    [9, "IX"],
+    [5, "V"],
+    [4, "IV"],
+    [1, "I"],
+  ];
+  let out = "";
+  for (const [val, sym] of map) {
+    while (n >= val) {
+      out += sym;
+      n -= val;
+    }
+  }
+  return out || "I";
 }
 
 function BookBlock({

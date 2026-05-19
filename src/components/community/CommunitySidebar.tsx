@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
@@ -6,15 +7,112 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { initials } from "@/lib/utils";
 import Link from "next/link";
 
+type SidebarStats = {
+  members: number;
+  online: number;
+  countries: number;
+  founder: { id: string; name: string } | null;
+};
+
+type LeaderboardEntry = {
+  id: string;
+  name: string;
+  level: number;
+  xp: number;
+  periodXp?: number;
+  rank?: number;
+  streakDays?: number;
+};
+
+type Range = "7d" | "30d" | "all";
+
+const NIVELES: { min: number; title: string }[] = [
+  { min: 0, title: "Curioso" },
+  { min: 1000, title: "Constructor" },
+  { min: 5000, title: "Operador" },
+  { min: 15000, title: "Senior" },
+  { min: 50000, title: "Maestro" },
+];
+
+function formatPts(n: number) {
+  if (n >= 1000) return `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k pts`;
+  return `${n} pts`;
+}
+
 export function CommunitySidebar({
   leaderboard,
   currentUserId,
+  currentUser,
   events,
 }: {
-  leaderboard: { id: string; name: string; level: number; xp: number }[];
+  leaderboard: LeaderboardEntry[];
   currentUserId?: string;
+  currentUser?: { xp: number; level: number } | null;
   events: { id: string; title: string; host: string | null; startsAt: string; hot?: boolean | null }[];
 }) {
+  const [stats, setStats] = useState<SidebarStats | null>(null);
+  const [range, setRange] = useState<Range>("7d");
+  const [board, setBoard] = useState<LeaderboardEntry[]>(leaderboard);
+  const [boardLoading, setBoardLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/community/stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: SidebarStats | null) => {
+        if (!cancelled && data) setStats(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setBoardLoading(true);
+    fetch(`/api/leaderboard?range=${range}&limit=7`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: LeaderboardEntry[] | null) => {
+        if (!cancelled && Array.isArray(data)) setBoard(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setBoardLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [range]);
+
+  const membersK =
+    stats?.members != null
+      ? stats.members >= 1000
+        ? `${(stats.members / 1000).toFixed(1)}k`
+        : String(stats.members)
+      : "—";
+  const onlineLabel = stats?.online != null ? String(stats.online) : "—";
+  const countriesLabel = stats?.countries != null ? String(stats.countries) : "—";
+
+  // Levels progress
+  const userXp = currentUser?.xp ?? 0;
+  const currentIdx = (() => {
+    let idx = 0;
+    for (let i = 0; i < NIVELES.length; i++) {
+      if (userXp >= NIVELES[i].min) idx = i;
+    }
+    return idx;
+  })();
+  const currentRange = NIVELES[currentIdx];
+  const nextRange = NIVELES[currentIdx + 1];
+  const pointsToNext = nextRange ? Math.max(0, nextRange.min - userXp) : 0;
+  const progressPct = nextRange
+    ? Math.max(
+        0,
+        Math.min(100, ((userXp - currentRange.min) / (nextRange.min - currentRange.min)) * 100),
+      )
+    : 100;
+
   return (
     <aside className="col" style={{ gap: 16, alignSelf: "flex-start", position: "sticky", top: 20 }}>
       {/* Cover */}
@@ -50,7 +148,7 @@ export function CommunitySidebar({
           <div className="grid-3" style={{ marginTop: 16, gap: 8 }}>
             <div>
               <div className="serif" style={{ fontSize: 22 }}>
-                2.8k
+                {membersK}
               </div>
               <div className="mono" style={{ fontSize: 9, color: "var(--muted)" }}>
                 MIEMBROS
@@ -58,7 +156,7 @@ export function CommunitySidebar({
             </div>
             <div>
               <div className="serif" style={{ fontSize: 22, color: "var(--green)" }}>
-                184
+                {onlineLabel}
               </div>
               <div className="mono" style={{ fontSize: 9, color: "var(--muted)" }}>
                 EN LÍNEA
@@ -66,7 +164,7 @@ export function CommunitySidebar({
             </div>
             <div>
               <div className="serif" style={{ fontSize: 22 }}>
-                14
+                {countriesLabel}
               </div>
               <div className="mono" style={{ fontSize: 9, color: "var(--muted)" }}>
                 PAÍSES
@@ -104,29 +202,43 @@ export function CommunitySidebar({
           </span>
         </div>
         <div className="row" style={{ gap: 4, marginBottom: 14, padding: 3, background: "var(--bg-2)", borderRadius: 999 }}>
-          {["7 días", "30 días", "Histórico"].map((l, i) => (
-            <div
-              key={l}
-              style={{
-                flex: 1,
-                textAlign: "center",
-                padding: "6px 10px",
-                background: i === 0 ? "white" : "transparent",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: i === 0 ? 600 : 500,
-                color: i === 0 ? "var(--ink)" : "var(--muted)",
-                cursor: "pointer",
-                boxShadow: i === 0 ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-              }}
-            >
-              {l}
-            </div>
-          ))}
+          {(
+            [
+              ["7d", "7 días"],
+              ["30d", "30 días"],
+              ["all", "Histórico"],
+            ] as const
+          ).map(([key, label]) => {
+            const active = range === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setRange(key)}
+                style={{
+                  flex: 1,
+                  textAlign: "center",
+                  padding: "6px 10px",
+                  background: active ? "white" : "transparent",
+                  border: "none",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: active ? 600 : 500,
+                  color: active ? "var(--ink)" : "var(--muted)",
+                  cursor: "pointer",
+                  boxShadow: active ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
-        <div className="col" style={{ gap: 4 }}>
-          {leaderboard.map((u, i) => {
+        <div className="col" style={{ gap: 4, opacity: boardLoading ? 0.6 : 1, transition: "opacity 0.15s" }}>
+          {board.map((u, i) => {
             const isMe = u.id === currentUserId;
+            const displayedXp =
+              range === "all" ? u.xp : (u.periodXp ?? u.xp);
             return (
               <div
                 key={u.id}
@@ -142,7 +254,7 @@ export function CommunitySidebar({
                     fontWeight: 600,
                   }}
                 >
-                  #{i + 1}
+                  #{u.rank ?? i + 1}
                 </span>
                 <div className="av" style={{ width: 28, height: 28, fontSize: 10 }}>
                   {initials(u.name)}
@@ -160,7 +272,7 @@ export function CommunitySidebar({
                   className="mono"
                   style={{ fontSize: 10, color: "var(--muted)", minWidth: 40, textAlign: "right" }}
                 >
-                  {u.xp.toLocaleString("es-MX")}
+                  {displayedXp.toLocaleString("es-MX")}
                 </span>
               </div>
             );
@@ -177,36 +289,31 @@ export function CommunitySidebar({
           Ganas puntos por aportar valor. Sube de nivel para desbloquear material y oportunidades.
         </p>
         <div className="col" style={{ gap: 6 }}>
-          {[
-            [1, "Curioso", "0 pts", "✓"],
-            [3, "Constructor", "500 pts", "✓"],
-            [5, "Operador", "2k pts", "←"],
-            [7, "Senior", "5k pts", ""],
-            [9, "Maestro", "20k pts", ""],
-          ].map(([lvl, name, pts, mark]) => {
-            const m = String(mark);
+          {NIVELES.map((lvl, idx) => {
+            const isCurrent = idx === currentIdx;
+            const isPast = idx < currentIdx;
             return (
-              <div key={String(lvl)} className="row" style={{ padding: "6px 0" }}>
+              <div key={lvl.title} className="row" style={{ padding: "6px 0" }}>
                 <span
                   className="mono"
-                  style={{ fontSize: 11, width: 36, color: m === "←" ? "var(--accent)" : "var(--muted)" }}
+                  style={{ fontSize: 11, width: 36, color: isCurrent ? "var(--accent)" : "var(--muted)" }}
                 >
-                  Lv.{String(lvl)}
+                  Lv.{idx + 1}
                 </span>
                 <span
                   style={{
                     fontSize: 13,
-                    fontWeight: m === "←" ? 600 : 500,
+                    fontWeight: isCurrent ? 600 : 500,
                     flex: 1,
-                    color: m === "←" ? "var(--accent)" : "var(--ink)",
+                    color: isCurrent ? "var(--accent)" : isPast ? "var(--muted)" : "var(--ink)",
                   }}
                 >
-                  {String(name)}
+                  {lvl.title}
                 </span>
                 <span className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>
-                  {String(pts)}
+                  {formatPts(lvl.min)}
                 </span>
-                {m === "←" && (
+                {isCurrent && (
                   <span className="mono" style={{ fontSize: 10, color: "var(--accent)", marginLeft: 8 }}>
                     TÚ
                   </span>
@@ -215,10 +322,14 @@ export function CommunitySidebar({
             );
           })}
         </div>
-        <ProgressBar value={64} className="!mt-3" />
+        <ProgressBar value={progressPct} className="!mt-3" />
         <div className="row" style={{ marginTop: 6, fontSize: 11, color: "var(--muted)" }}>
-          <span>1.840 pts</span>
-          <span style={{ marginLeft: "auto" }}>→ Lv.5 en 160 pts</span>
+          <span>{userXp.toLocaleString("es-MX")} pts</span>
+          <span style={{ marginLeft: "auto" }}>
+            {nextRange
+              ? `→ ${nextRange.title} en ${pointsToNext.toLocaleString("es-MX")} pts`
+              : "Nivel máximo alcanzado"}
+          </span>
         </div>
       </Card>
 

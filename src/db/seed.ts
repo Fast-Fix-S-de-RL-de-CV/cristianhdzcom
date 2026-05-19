@@ -3,7 +3,7 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import bcrypt from "bcryptjs";
 import * as s from "./schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 
 const url = process.env.DATABASE_URL!;
 const client = postgres(url, { max: 1 });
@@ -397,6 +397,203 @@ async function main() {
       { kind: "publish", icon: "📚", text: 'Cristian publicó "Era del programador empresario"', color: "var(--ink)" },
       { kind: "enroll", icon: "🎙️", text: "Taller MAR 11 alcanzó 247/300 cupos", color: "var(--warm)" },
     ]);
+  }
+
+  // ── BOOKS
+  const booksData = [
+    {
+      slug: "negocios-sin-dinero",
+      title: "El arte de hacer negocios sin dinero.",
+      subtitle: "Manual brutalmente práctico para empezar sin capital.",
+      description:
+        "Un manual brutalmente práctico para empezar un negocio sin capital. Validación, oferta, primera venta y caja — sin humo y sin teoría. La base que todo emprendedor necesita antes de gastar un peso.",
+      pages: 324,
+      priceDigitalUsd: 29,
+      pricePrintUsd: 49,
+      ratingAvg: 49,
+      ratingCount: 1284,
+      bullets: [
+        "12 capítulos prácticos",
+        "Plantillas + ejercicios",
+        "Casos reales LATAM",
+        "Audio narrado por Cristian",
+      ],
+      sortOrder: 1,
+    },
+    {
+      slug: "negocios-por-internet",
+      title: "El arte de hacer negocios por internet.",
+      subtitle: "La continuación: presencia, automatización y escala con IA.",
+      description:
+        "Cómo construir presencia, vender en automático y escalar tu negocio aprovechando IA, automatización y comunidades. Para quien ya empezó y quiere escala real.",
+      pages: 348,
+      priceDigitalUsd: 34,
+      pricePrintUsd: 54,
+      ratingAvg: 49,
+      ratingCount: 968,
+      bullets: [
+        "11 capítulos + 4 anexos",
+        "IA aplicada a ventas",
+        "Funnels y comunidad",
+        "Anexo: agencia con IA",
+      ],
+      sortOrder: 2,
+    },
+  ];
+  for (const b of booksData) {
+    await db.insert(s.books).values(b as any).onConflictDoNothing({ target: s.books.slug });
+  }
+
+  // ── RESOURCES
+  const resourcesExisting = await db.select({ c: sql<number>`count(*)::int` }).from(s.resources);
+  if ((resourcesExisting[0]?.c ?? 0) === 0) {
+    await db.insert(s.resources).values([
+      {
+        title: "Manual del programador con IA",
+        description:
+          "Guía completa de 120 páginas para integrar Claude, GPT y herramientas de IA en tu flujo diario de desarrollo.",
+        category: "PDFs",
+        fileType: "pdf",
+        requiredLevel: 0,
+        sortOrder: 1,
+      },
+      {
+        title: "De idea a SaaS en 30 días",
+        description:
+          "Roadmap probado para lanzar un micro-SaaS rentable usando stacks modernos y IA generativa.",
+        category: "PDFs",
+        fileType: "pdf",
+        requiredLevel: 0,
+        sortOrder: 2,
+      },
+      {
+        title: "Starter Next.js 15 + Drizzle + Stripe",
+        description:
+          "Template profesional con auth, base de datos, pagos y panel admin listo para customizar.",
+        category: "Plantillas",
+        fileType: "zip",
+        requiredLevel: 1,
+        sortOrder: 3,
+      },
+      {
+        title: "Pack de prompts maestros",
+        description:
+          "60 prompts probados para arquitectura, code review, refactor, debugging y documentación.",
+        category: "Plantillas",
+        fileType: "zip",
+        requiredLevel: 2,
+        sortOrder: 4,
+      },
+      {
+        title: "Análisis de datos con Claude API",
+        description:
+          "Notebook Python que demuestra cómo usar Claude para EDA, limpieza y visualización de datasets reales.",
+        category: "Notebooks",
+        fileType: "ipynb",
+        requiredLevel: 3,
+        sortOrder: 5,
+      },
+      {
+        title: "Fine-tuning práctico con Anthropic",
+        description:
+          "Ejemplo end-to-end de tool use, structured output y batch API para casos de negocio reales.",
+        category: "Notebooks",
+        fileType: "ipynb",
+        requiredLevel: 3,
+        sortOrder: 6,
+      },
+      {
+        title: "Cheatsheet de Drizzle ORM",
+        description:
+          "Referencia visual de queries comunes: joins, filtros, transacciones y migraciones.",
+        category: "Cheatsheets",
+        fileType: "md",
+        requiredLevel: 5,
+        sortOrder: 7,
+      },
+      {
+        title: "TypeScript estricto · patrones esenciales",
+        description:
+          "Tipos genéricos, utility types, branded types y narrowing aplicado a APIs reales.",
+        category: "Cheatsheets",
+        fileType: "md",
+        requiredLevel: 7,
+        sortOrder: 8,
+      },
+      {
+        title: "Precios para freelancers de software",
+        description:
+          "Cómo cobrar por proyecto, por valor y por retainer cuando trabajas con IA como copiloto.",
+        category: "PDFs",
+        fileType: "pdf",
+        requiredLevel: 7,
+        sortOrder: 9,
+      },
+      {
+        title: "Pack de contratos para devs",
+        description:
+          "MSA, SOW, NDA y propuesta lista para enviar — versión en español y en inglés.",
+        category: "Plantillas",
+        fileType: "zip",
+        requiredLevel: 9,
+        sortOrder: 10,
+      },
+    ]);
+  }
+
+  // ── USER PROJECTS (featured comunidad)
+  const [mariaP] = await db.select().from(s.users).where(eq(s.users.email, "maria@example.com"));
+  const [dianaP] = await db.select().from(s.users).where(eq(s.users.email, "diana@example.com"));
+  const [luisP] = await db.select().from(s.users).where(eq(s.users.email, "luis@example.com"));
+
+  const featuredProjects: Array<{
+    userId: string;
+    title: string;
+    description: string;
+    url: string;
+    featured: boolean;
+  }> = [];
+  if (mariaP) {
+    featuredProjects.push({
+      userId: mariaP.id,
+      title: "Tarot AI",
+      description:
+        "Lectura de tarot conversacional con Claude. Cobra membresía mensual y ya factura $4k MRR con 312 suscriptores activos.",
+      url: "https://tarot.ai-demo.com",
+      featured: true,
+    });
+  }
+  if (dianaP) {
+    featuredProjects.push({
+      userId: dianaP.id,
+      title: "Inbox Zero Bot",
+      description:
+        "Agente que clasifica, responde y archiva email corporativo con políticas custom. Ahorra 6h/semana a equipos de soporte.",
+      url: "https://inboxzero.diana.dev",
+      featured: true,
+    });
+  }
+  if (luisP) {
+    featuredProjects.push({
+      userId: luisP.id,
+      title: "RifaBase Backoffice",
+      description:
+        "Panel de operación para rifas online: cobros Stripe, sorteo automático y notificaciones por WhatsApp. 14 rifas activas.",
+      url: "https://app.rifabase.com",
+      featured: true,
+    });
+  }
+
+  for (const p of featuredProjects) {
+    // Idempotent: skip if same user+title already exists
+    const exists = await db
+      .select({ id: s.userProjects.id })
+      .from(s.userProjects)
+      .where(and(eq(s.userProjects.userId, p.userId), eq(s.userProjects.title, p.title)))
+      .limit(1);
+    if (exists.length === 0) {
+      await db.insert(s.userProjects).values(p);
+    }
   }
 
   console.log("Done seeding.");

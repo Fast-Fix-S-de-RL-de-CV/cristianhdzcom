@@ -323,6 +323,62 @@ export const activity = pgTable(
   (t) => ({ createdIdx: index("activity_created_idx").on(t.createdAt) }),
 );
 
+/* ─────────── BOOKS ─────────── */
+export const books = pgTable(
+  "books",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    slug: varchar("slug", { length: 80 }).notNull(),
+    title: varchar("title", { length: 200 }).notNull(),
+    subtitle: varchar("subtitle", { length: 240 }),
+    description: text("description"),
+    coverUrl: text("cover_url"),
+    pages: integer("pages"),
+    priceDigitalUsd: integer("price_digital_usd"),
+    pricePrintUsd: integer("price_print_usd"),
+    ratingAvg: integer("rating_avg"), // 0-50 (4.9 stored as 49)
+    ratingCount: integer("rating_count").notNull().default(0),
+    bullets: jsonb("bullets").$type<string[]>().notNull().default([]),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ slugIdx: uniqueIndex("books_slug_idx").on(t.slug) }),
+);
+
+/* ─────────── RESOURCES (biblioteca) ─────────── */
+export const resources = pgTable("resources", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 40 }).notNull(), // "PDFs" | "Plantillas" | "Notebooks" | "Cheatsheets"
+  fileType: varchar("file_type", { length: 16 }), // "pdf" | "zip" | "ipynb" | "md"
+  fileUrl: text("file_url"),
+  thumbnailUrl: text("thumbnail_url"),
+  requiredLevel: integer("required_level").notNull().default(0),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/* ─────────── USER PROJECTS ─────────── */
+export const userProjects = pgTable(
+  "user_projects",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 200 }).notNull(),
+    description: text("description"),
+    url: text("url"),
+    thumbnailUrl: text("thumbnail_url"),
+    featured: boolean("featured").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userIdx: index("user_projects_user_idx").on(t.userId),
+    featuredIdx: index("user_projects_featured_idx").on(t.featured),
+  }),
+);
+
 /* ─────────── RELATIONS ─────────── */
 export const usersRelations = relations(users, ({ many }) => ({
   enrollments: many(enrollments),
@@ -330,6 +386,11 @@ export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
   attempts: many(lessonAttempts),
   progress: many(moduleProgress),
+  projects: many(userProjects),
+}));
+
+export const userProjectsRelations = relations(userProjects, ({ one }) => ({
+  author: one(users, { fields: [userProjects.userId], references: [users.id] }),
 }));
 
 export const programsRelations = relations(programs, ({ many }) => ({
