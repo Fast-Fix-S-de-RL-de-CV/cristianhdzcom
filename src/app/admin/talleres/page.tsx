@@ -1,0 +1,56 @@
+import { desc } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { getCurrentUser } from "@/lib/auth";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
+import { Card } from "@/components/ui/Card";
+import { TalleresManager } from "./TalleresManager";
+
+export const dynamic = "force-dynamic";
+
+export default async function TalleresPage() {
+  const user = (await getCurrentUser())!;
+
+  const rows = await db
+    .select({
+      id: schema.events.id,
+      title: schema.events.title,
+      description: schema.events.description,
+      host: schema.events.host,
+      startsAt: schema.events.startsAt,
+      durationMinutes: schema.events.durationMinutes,
+      isLive: schema.events.isLive,
+      capacity: schema.events.capacity,
+      attending: schema.events.attending,
+      hot: schema.events.hot,
+      link: schema.events.link,
+    })
+    .from(schema.events)
+    .orderBy(desc(schema.events.startsAt));
+
+  const data = rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description ?? "",
+    host: r.host ?? "",
+    startsAt: r.startsAt.toISOString(),
+    durationMinutes: r.durationMinutes,
+    isLive: r.isLive,
+    capacity: r.capacity ?? 300,
+    attending: r.attending,
+    hot: r.hot,
+    link: r.link ?? "",
+  }));
+
+  return (
+    <AdminPageShell
+      user={user}
+      active="/admin/talleres"
+      title="Talleres & Eventos"
+      subtitle={`${data.length} eventos · ${data.filter((d) => d.isLive).length} en vivo`}
+    >
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <TalleresManager rows={data} />
+      </Card>
+    </AdminPageShell>
+  );
+}
