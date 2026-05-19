@@ -17,8 +17,14 @@ export default async function CursosPage() {
       title: schema.programs.title,
       subtitle: schema.programs.subtitle,
       type: schema.programs.type,
-      priceUsd: schema.programs.priceUsd,
       durationLabel: schema.programs.durationLabel,
+      priceUsd: schema.programs.priceUsd,
+      priceCompareUsd: schema.programs.priceCompareUsd,
+      installmentPriceUsd: schema.programs.installmentPriceUsd,
+      installmentCount: schema.programs.installmentCount,
+      accent: schema.programs.accent,
+      description: schema.programs.description,
+      bullets: schema.programs.bullets,
       isActive: schema.programs.isActive,
       isFeatured: schema.programs.isFeatured,
       modulesCount: sql<number>`(SELECT COUNT(*)::int FROM ${schema.modules} WHERE program_id = ${schema.programs.id})`,
@@ -27,10 +33,17 @@ export default async function CursosPage() {
     .from(schema.programs)
     .orderBy(asc(schema.programs.sortOrder));
 
+  type Accent = "accent" | "warm" | "green" | "navy" | "gold";
   const data = rows.map((r) => ({
     ...r,
     subtitle: r.subtitle ?? "",
     durationLabel: r.durationLabel ?? "",
+    accent: ((r.accent as Accent) ?? "accent") as Accent,
+    description: r.description ?? "",
+    bullets: r.bullets ?? [],
+    priceCompareUsd: r.priceCompareUsd ?? null,
+    installmentPriceUsd: r.installmentPriceUsd ?? null,
+    installmentCount: r.installmentCount ?? null,
     modulesCount: Number(r.modulesCount),
     enrollmentsCount: Number(r.enrollmentsCount),
   }));

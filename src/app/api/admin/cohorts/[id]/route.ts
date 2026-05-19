@@ -1,28 +1,30 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-const body = z.object({
-  title: z.string().min(2).max(200).optional(),
-  slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/).optional(),
-  subtitle: z.string().max(2000).optional().nullable(),
-  type: z.string().min(2).max(40).optional(),
-  durationLabel: z.string().max(80).optional().nullable(),
-  priceUsd: z.number().int().min(0).optional(),
-  priceCompareUsd: z.number().int().positive().nullable().optional(),
-  installmentPriceUsd: z.number().int().positive().nullable().optional(),
-  installmentCount: z.number().int().positive().nullable().optional(),
-  accent: z.enum(["accent", "warm", "green", "navy", "gold"]).optional(),
-  description: z.string().max(5000).optional().nullable(),
-  bullets: z.array(z.string().min(1).max(140)).max(20).optional(),
-  isActive: z.boolean().optional(),
-  isFeatured: z.boolean().optional(),
-  sortOrder: z.number().int().optional(),
-});
+const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD");
+
+const body = z
+  .object({
+    code: z.string().max(40).optional().nullable(),
+    startsOn: dateStr.optional(),
+    endsOn: dateStr.optional(),
+    seatsTotal: z.number().int().positive().max(100000).optional(),
+    isOpen: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.startsOn && data.endsOn && !(data.startsOn < data.endsOn)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "startsOn must be before endsOn",
+        path: ["startsOn"],
+      });
+    }
+  });
 
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
@@ -33,13 +35,14 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const { id } = await ctx.params;
   try {
     const data = body.parse(await req.json());
+    // seatsTaken is intentionally excluded — derived from enrollments
     const [row] = await db
-      .update(schema.programs)
+      .update(schema.cohorts)
       .set(data)
-      .where(eq(schema.programs.id, id))
+      .where(eq(schema.cohorts.id, id))
       .returning();
     if (!row) return NextResponse.json({ error: "not_found" }, { status: 404 });
-    return NextResponse.json({ program: row });
+    return NextResponse.json({ cohort: row });
   } catch (e) {
     if (e instanceof z.ZodError) return NextResponse.json({ error: "invalid", details: e.issues }, { status: 400 });
     console.error(e);
@@ -54,6 +57,6 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
-  await db.delete(schema.programs).where(eq(schema.programs.id, id));
+  await db.delete(schema.cohorts).where(eq(schema.cohorts.id, id));
   return NextResponse.json({ ok: true });
 }

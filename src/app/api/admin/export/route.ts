@@ -33,12 +33,56 @@ export async function GET(req: Request) {
   }
 
   const url = new URL(req.url);
-  const type = (url.searchParams.get("type") || "orders") as "orders" | "users" | "leaderboard";
+  const type = (url.searchParams.get("type") || "orders") as
+    | "orders"
+    | "users"
+    | "leaderboard"
+    | "enrollments";
 
   let csv: string;
   let filename: string;
 
-  if (type === "users") {
+  if (type === "enrollments") {
+    const programId = url.searchParams.get("programId");
+    if (!programId) {
+      return NextResponse.json({ error: "programId is required" }, { status: 400 });
+    }
+    const rows = await db
+      .select({
+        id: schema.enrollments.id,
+        userName: schema.users.name,
+        userEmail: schema.users.email,
+        userLevel: schema.users.level,
+        cohortCode: schema.cohorts.code,
+        status: schema.enrollments.status,
+        enrolledAt: schema.enrollments.enrolledAt,
+        completedAt: schema.enrollments.completedAt,
+      })
+      .from(schema.enrollments)
+      .innerJoin(schema.users, eq(schema.users.id, schema.enrollments.userId))
+      .leftJoin(schema.cohorts, eq(schema.cohorts.id, schema.enrollments.cohortId))
+      .where(eq(schema.enrollments.programId, programId))
+      .orderBy(desc(schema.enrollments.enrolledAt));
+    const headers = [
+      "id",
+      "userName",
+      "userEmail",
+      "userLevel",
+      "cohortCode",
+      "status",
+      "enrolledAt",
+      "completedAt",
+    ];
+    csv = toCsv(
+      headers,
+      rows.map((r) => ({
+        ...r,
+        enrolledAt: r.enrolledAt ? (r.enrolledAt as Date).toISOString() : "",
+        completedAt: r.completedAt ? (r.completedAt as Date).toISOString() : "",
+      })),
+    );
+    filename = `enrollments-${programId}.csv`;
+  } else if (type === "users") {
     const rows = await db
       .select({
         id: schema.users.id,

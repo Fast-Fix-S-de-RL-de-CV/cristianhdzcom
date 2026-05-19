@@ -2,14 +2,22 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+type Accent = "accent" | "warm" | "green" | "navy" | "gold";
+
 type Row = {
   id: string;
   slug: string;
   title: string;
   subtitle: string;
   type: string;
-  priceUsd: number;
   durationLabel: string;
+  priceUsd: number;
+  priceCompareUsd: number | null;
+  installmentPriceUsd: number | null;
+  installmentCount: number | null;
+  accent: Accent;
+  description: string;
+  bullets: string[];
   isActive: boolean;
   isFeatured: boolean;
   modulesCount: number;
@@ -17,6 +25,7 @@ type Row = {
 };
 
 const TYPES = ["taller", "curso", "certificacion", "consultoria", "agencia"];
+const ACCENTS: Accent[] = ["accent", "warm", "green", "navy", "gold"];
 
 export function CursosManager({ rows }: { rows: Row[] }) {
   const router = useRouter();
@@ -25,7 +34,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  async function createProgram(data: Partial<Row>) {
+  async function createProgram(data: Record<string, unknown>) {
     setBusy(true);
     setErr(null);
     try {
@@ -47,7 +56,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
     }
   }
 
-  async function updateProgram(id: string, data: Partial<Row>) {
+  async function updateProgram(id: string, data: Record<string, unknown>) {
     setBusy(true);
     setErr(null);
     try {
@@ -127,7 +136,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
         <span style={{ width: 70, textAlign: "right" }}>Módulos</span>
         <span style={{ width: 70, textAlign: "right" }}>Alumnos</span>
         <span style={{ width: 80 }}>Status</span>
-        <span style={{ width: 160, textAlign: "right" }}>Acciones</span>
+        <span style={{ width: 260, textAlign: "right" }}>Acciones</span>
       </div>
 
       <div className="col" style={{ gap: 0 }}>
@@ -182,7 +191,41 @@ export function CursosManager({ rows }: { rows: Row[] }) {
                 {p.isActive ? "ACTIVE" : "DRAFT"}
               </span>
             </span>
-            <span className="row" style={{ width: 160, justifyContent: "flex-end", gap: 6 }}>
+            <span className="row" style={{ width: 260, justifyContent: "flex-end", gap: 6 }}>
+              <a
+                href={`/admin/cursos/${p.id}?tab=lessons`}
+                className="mono"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "5px 10px",
+                  borderRadius: 6,
+                  background: "var(--accent-soft)",
+                  color: "var(--accent)",
+                  border: "1px solid var(--line)",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                }}
+              >
+                Lecciones
+              </a>
+              <a
+                href={`/admin/cursos/${p.id}`}
+                className="mono"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "5px 10px",
+                  borderRadius: 6,
+                  background: "var(--bg-2)",
+                  color: "var(--ink)",
+                  border: "1px solid var(--line)",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                }}
+              >
+                Abrir
+              </a>
               <button
                 onClick={() => setEditing(p)}
                 className="mono"
@@ -252,7 +295,7 @@ function ProgramDialog({
 }: {
   program: Row | null;
   onClose: () => void;
-  onSave: (data: Partial<Row>) => void;
+  onSave: (data: Record<string, unknown>) => void;
   busy: boolean;
   err: string | null;
 }) {
@@ -261,11 +304,28 @@ function ProgramDialog({
     slug: program?.slug || "",
     subtitle: program?.subtitle || "",
     type: program?.type || "curso",
-    priceUsd: program?.priceUsd ?? 0,
     durationLabel: program?.durationLabel || "",
+    priceUsd: program?.priceUsd ?? 0,
+    priceCompareUsd: program?.priceCompareUsd ?? null,
+    installmentPriceUsd: program?.installmentPriceUsd ?? null,
+    installmentCount: program?.installmentCount ?? null,
+    accent: (program?.accent ?? "accent") as Accent,
+    description: program?.description || "",
+    bullets: program?.bullets ?? [],
     isActive: program?.isActive ?? true,
     isFeatured: program?.isFeatured ?? false,
   });
+
+  function handleSave() {
+    const cleaned = {
+      ...form,
+      subtitle: form.subtitle || null,
+      durationLabel: form.durationLabel || null,
+      description: form.description || null,
+      bullets: form.bullets.filter((b) => b.trim().length > 0),
+    };
+    onSave(cleaned);
+  }
 
   return (
     <div
@@ -287,7 +347,7 @@ function ProgramDialog({
           background: "white",
           borderRadius: 12,
           padding: 28,
-          maxWidth: 560,
+          maxWidth: 640,
           width: "100%",
           maxHeight: "90vh",
           overflow: "auto",
@@ -313,13 +373,80 @@ function ProgramDialog({
               placeholder="curso-ia"
             />
           </Field>
-          <Field label="Subtítulo">
+          <Field label="Subtítulo (max 240)">
             <textarea
               value={form.subtitle}
+              maxLength={240}
               onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
               style={{ ...input(), minHeight: 60 }}
             />
           </Field>
+          <Field label="Descripción larga (max 5000)">
+            <textarea
+              value={form.description}
+              maxLength={5000}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              style={{ ...input(), minHeight: 120 }}
+            />
+          </Field>
+
+          <Field label="Bullets">
+            <div className="col" style={{ gap: 6 }}>
+              {form.bullets.map((b, i) => (
+                <div key={i} className="row" style={{ gap: 6 }}>
+                  <input
+                    value={b}
+                    maxLength={140}
+                    onChange={(e) => {
+                      const next = [...form.bullets];
+                      next[i] = e.target.value;
+                      setForm({ ...form, bullets: next });
+                    }}
+                    style={{ ...input(), flex: 1 }}
+                    placeholder="Punto del programa..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, bullets: form.bullets.filter((_, j) => j !== i) })}
+                    className="mono"
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      padding: "0 12px",
+                      borderRadius: 6,
+                      background: "white",
+                      color: "var(--red)",
+                      border: "1px solid var(--line)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, bullets: [...form.bullets, ""] })}
+                disabled={form.bullets.length >= 20}
+                className="mono"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  background: "var(--bg-2)",
+                  color: "var(--ink-2)",
+                  border: "1px dashed var(--line-2)",
+                  cursor: form.bullets.length >= 20 ? "not-allowed" : "pointer",
+                  alignSelf: "flex-start",
+                  marginTop: 2,
+                }}
+              >
+                + Agregar bullet
+              </button>
+            </div>
+          </Field>
+
           <div className="row" style={{ gap: 12 }}>
             <div style={{ flex: 1 }}>
               <Field label="Tipo">
@@ -336,7 +463,35 @@ function ProgramDialog({
                 </select>
               </Field>
             </div>
-            <div style={{ width: 140 }}>
+            <div style={{ flex: 1 }}>
+              <Field label="Color acento">
+                <select
+                  value={form.accent}
+                  onChange={(e) => setForm({ ...form, accent: e.target.value as Accent })}
+                  style={input()}
+                >
+                  {ACCENTS.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <div style={{ flex: 1 }}>
+              <Field label="Duración">
+                <input
+                  value={form.durationLabel}
+                  onChange={(e) => setForm({ ...form, durationLabel: e.target.value })}
+                  placeholder="6 semanas"
+                  style={input()}
+                />
+              </Field>
+            </div>
+          </div>
+
+          <div className="row" style={{ gap: 12 }}>
+            <div style={{ flex: 1 }}>
               <Field label="Precio (USD)">
                 <input
                   type="number"
@@ -346,15 +501,59 @@ function ProgramDialog({
                 />
               </Field>
             </div>
+            <div style={{ flex: 1 }}>
+              <Field label="Precio comparativo (USD)">
+                <input
+                  type="number"
+                  value={form.priceCompareUsd ?? ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      priceCompareUsd: e.target.value ? parseInt(e.target.value, 10) : null,
+                    })
+                  }
+                  placeholder="opcional"
+                  style={input()}
+                />
+              </Field>
+            </div>
           </div>
-          <Field label="Duración">
-            <input
-              value={form.durationLabel}
-              onChange={(e) => setForm({ ...form, durationLabel: e.target.value })}
-              placeholder="6 semanas"
-              style={input()}
-            />
-          </Field>
+
+          <div className="row" style={{ gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <Field label="Precio mensualidad (USD)">
+                <input
+                  type="number"
+                  value={form.installmentPriceUsd ?? ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      installmentPriceUsd: e.target.value ? parseInt(e.target.value, 10) : null,
+                    })
+                  }
+                  placeholder="opcional"
+                  style={input()}
+                />
+              </Field>
+            </div>
+            <div style={{ flex: 1 }}>
+              <Field label="N° mensualidades">
+                <input
+                  type="number"
+                  value={form.installmentCount ?? ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      installmentCount: e.target.value ? parseInt(e.target.value, 10) : null,
+                    })
+                  }
+                  placeholder="opcional"
+                  style={input()}
+                />
+              </Field>
+            </div>
+          </div>
+
           <div className="row" style={{ gap: 18 }}>
             <label className="row" style={{ gap: 6, fontSize: 13, cursor: "pointer" }}>
               <input
@@ -370,7 +569,7 @@ function ProgramDialog({
                 checked={form.isFeatured}
                 onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })}
               />
-              Destacado
+              Destacado (featured)
             </label>
           </div>
         </div>
@@ -395,7 +594,7 @@ function ProgramDialog({
             Cancelar
           </button>
           <button
-            onClick={() => onSave(form)}
+            onClick={handleSave}
             disabled={busy || !form.title || !form.slug}
             className="btn btn-primary"
             style={{ padding: "8px 14px", fontSize: 12 }}
