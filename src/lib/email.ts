@@ -1,21 +1,26 @@
 import "server-only";
+import type { Transporter } from "nodemailer";
 
 /**
- * Tiny mail sender. Two backends:
+ * Mail sender. Three backends, picked in order:
  *
- *   1. Resend HTTPS API — if `RESEND_API_KEY` is set we POST to /emails. No
- *      extra dependency, no SMTP config. From address defaults to
- *      `Cristian Hernández <hola@cristianhdz.com>`; override with
- *      `MAIL_FROM`.
+ *   1. SMTP (nodemailer)    — if `SMTP_HOST` is set. Production default.
+ *      Other vars: SMTP_PORT (default 465), SMTP_SECURE ("true"/"false",
+ *      default true when port==465), SMTP_USER, SMTP_PASS.
  *
- *   2. Fallback — when no key is set we just log the message to the server
- *      console. Useful in dev and lets the rest of the system stay decoupled
- *      from a provider.
+ *   2. Resend HTTPS API     — if `RESEND_API_KEY` is set. Fallback for
+ *      teams that prefer Resend over their own SMTP.
+ *
+ *   3. Console stub         — when nothing is configured we just log the
+ *      message. Lets dev/preview environments work without real mail.
+ *
+ * From address: `MAIL_FROM` env var. Defaults to
+ * `Cristian Hernández <info@cristianhdz.com>`.
  *
  * Returns `{ ok, id?, reason? }`. Never throws.
  */
 
-const FROM = process.env.MAIL_FROM || "Cristian Hernández <hola@cristianhdz.com>";
+const FROM = process.env.MAIL_FROM || "Cristian Hernández <info@cristianhdz.com>";
 
 export interface SendEmailInput {
   to: string;
@@ -25,41 +30,97 @@ export interface SendEmailInput {
   replyTo?: string;
 }
 
+// Cache the nodemailer Transporter across invocations. Re-using the same TCP
+// connection pool is meaningfully faster than handshaking on every email.
+let cachedTransporter: Transporter | null = null;
+
+async function getTransporter(): Promise<Transporter | null> {
+  if (!process.env.SMTP_HOST) return null;
+  if (cachedTransporter) return cachedTransporter;
+  const nodemailer = await import("nodemailer");
+  const port = Number(process.env.SMTP_PORT ?? 465);
+  const secure =
+    process.env.SMTP_SECURE !== undefined
+      ? process.env.SMTP_SECURE === "true"
+      : port === 465;
+  cachedTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port,
+    secure,
+    auth:
+      process.env.SMTP_USER && process.env.SMTP_PASS
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        : undefined,
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 50,
+    // cPanel servers occasionally serve a self-signed cert on submission
+    // ports. Allow the connection but log if it's not strictly verifiable.
+    tls: { rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== "false" },
+  });
+  return cachedTransporter;
+}
+
 export async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean; id?: string; reason?: string }> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.log(
-      `[email:stub] would send to ${input.to}\n  subject: ${input.subject}\n  preview: ${input.text?.slice(0, 200) ?? input.html.slice(0, 200).replace(/<[^>]+>/g, " ")}`,
-    );
-    return { ok: false, reason: "no_sender_configured" };
-  }
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+  // 1) SMTP
+  const transporter = await getTransporter();
+  if (transporter) {
+    try {
+      const info = await transporter.sendMail({
         from: FROM,
         to: input.to,
         subject: input.subject,
         html: input.html,
         text: input.text,
-        reply_to: input.replyTo,
-      }),
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error(`[email] Resend ${res.status}: ${body}`);
-      return { ok: false, reason: `resend_${res.status}` };
+        replyTo: input.replyTo,
+      });
+      return { ok: true, id: info.messageId };
+    } catch (err: any) {
+      console.error("[email] SMTP send error:", err?.message ?? err);
+      // Drop the cached transporter so the next call rebuilds it after a
+      // transient network glitch.
+      cachedTransporter = null;
+      return { ok: false, reason: "smtp_error" };
     }
-    const j = (await res.json().catch(() => ({}))) as { id?: string };
-    return { ok: true, id: j.id };
-  } catch (err: any) {
-    console.error("[email] send error:", err?.message ?? err);
-    return { ok: false, reason: "send_error" };
   }
+
+  // 2) Resend
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: FROM,
+          to: input.to,
+          subject: input.subject,
+          html: input.html,
+          text: input.text,
+          reply_to: input.replyTo,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.error(`[email] Resend ${res.status}: ${body}`);
+        return { ok: false, reason: `resend_${res.status}` };
+      }
+      const j = (await res.json().catch(() => ({}))) as { id?: string };
+      return { ok: true, id: j.id };
+    } catch (err: any) {
+      console.error("[email] Resend send error:", err?.message ?? err);
+      return { ok: false, reason: "send_error" };
+    }
+  }
+
+  // 3) Stub
+  console.log(
+    `[email:stub] would send to ${input.to}\n  subject: ${input.subject}\n  preview: ${input.text?.slice(0, 200) ?? input.html.slice(0, 200).replace(/<[^>]+>/g, " ")}`,
+  );
+  return { ok: false, reason: "no_sender_configured" };
 }
 
 /* ─────────── Templates ─────────── */
@@ -82,7 +143,7 @@ function shell(title: string, body: string): string {
     ${body}
   </div>
   <p style="text-align:center;color:#6E7A91;font-size:11px;margin-top:24px;letter-spacing:0.06em;text-transform:uppercase;">
-    cristianhdz.com · <a href="mailto:hola@cristianhdz.com" style="color:${GOLD};text-decoration:none;font-weight:600;">hola@cristianhdz.com</a>
+    cristianhdz.com · <a href="mailto:info@cristianhdz.com" style="color:${GOLD};text-decoration:none;font-weight:600;">info@cristianhdz.com</a>
   </p>
 </div>
 </body></html>`;
@@ -109,7 +170,7 @@ export function welcomeEmailHtml(firstName: string): string {
       </a>
     </div>
     <p style="font-size:13px;color:#6E7A91;line-height:1.6;margin:16px 0 0;">
-      Si tienes alguna duda, escríbeme a <a href="mailto:hola@cristianhdz.com" style="color:${GOLD};font-weight:600;">hola@cristianhdz.com</a> y te respondo personalmente.
+      Si tienes alguna duda, escríbeme a <a href="mailto:info@cristianhdz.com" style="color:${GOLD};font-weight:600;">info@cristianhdz.com</a> y te respondo personalmente.
     </p>
   `;
   return shell("Tu cuenta está lista", body);

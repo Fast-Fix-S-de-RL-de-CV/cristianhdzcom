@@ -61,8 +61,8 @@ export default function ForgotPasswordPage() {
               </p>
               <p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginTop: 12 }}>
                 ¿No llegó? Revisa la carpeta de spam. Si tampoco, escríbenos a{" "}
-                <a href="mailto:hola@cristianhdz.com" style={{ color: "var(--gold-deep)", fontWeight: 600 }}>
-                  hola@cristianhdz.com
+                <a href="mailto:info@cristianhdz.com" style={{ color: "var(--gold-deep)", fontWeight: 600 }}>
+                  info@cristianhdz.com
                 </a>
                 .
               </p>

@@ -191,8 +191,8 @@ export default async function SobrePage() {
             }}
           >
             ¿DUDAS? ESCRIBE A{" "}
-            <a href="mailto:hola@cristianhdz.com" style={{ color: "var(--gold-deep)", fontWeight: 600 }}>
-              hola@cristianhdz.com
+            <a href="mailto:info@cristianhdz.com" style={{ color: "var(--gold-deep)", fontWeight: 600 }}>
+              info@cristianhdz.com
             </a>
           </p>
         </div>

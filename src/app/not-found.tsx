@@ -87,7 +87,7 @@ export default function NotFound() {
         >
           ¿Crees que es un bug?{" "}
           <a
-            href="mailto:hola@cristianhdz.com"
+            href="mailto:info@cristianhdz.com"
             style={{ color: "var(--gold-deep)", fontWeight: 600 }}
           >
             avísanos

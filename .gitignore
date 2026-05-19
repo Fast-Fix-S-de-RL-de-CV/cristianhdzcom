@@ -8,3 +8,4 @@ out
 .DS_Store
 drizzle/meta/_journal.json.bak
 tsconfig.tsbuildinfo
+.env.production.bak

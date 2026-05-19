@@ -156,8 +156,8 @@ export function CheckoutClient({ program }: { program: Program }) {
           </div>
           <div className="row" style={{ gap: 8, fontSize: 12, color: "var(--muted)" }}>
             <span>¿Dudas?</span>
-            <a href="mailto:hola@cristianhdz.com" style={{ color: "var(--accent)", fontWeight: 600 }}>
-              hola@cristianhdz.com
+            <a href="mailto:info@cristianhdz.com" style={{ color: "var(--accent)", fontWeight: 600 }}>
+              info@cristianhdz.com
             </a>
           </div>
         </div>
