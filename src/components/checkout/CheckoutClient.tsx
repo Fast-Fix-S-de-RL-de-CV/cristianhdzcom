@@ -129,9 +129,8 @@ export function CheckoutClient({ program }: { program: Program }) {
       {/* Header */}
       <div style={{ background: "white", borderBottom: "1px solid var(--line)", padding: "20px 56px" }}>
         <div className="between" style={{ flexWrap: "wrap", gap: 16 }}>
-          <Link href="/" className="ch-logo">
-            <span className="ch-logo-mark">C</span>
-            <span>Cristian Hernández</span>
+          <Link href="/" className="ch-logo" aria-label="Cristian Hernández — Inicio">
+            <img src="/logo.png" alt="Cristian Hernández" />
           </Link>
           <div className="row" style={{ gap: 24 }}>
             <Step n="1" label="Tu información" active={step === "info"} done={step === "pay"} />

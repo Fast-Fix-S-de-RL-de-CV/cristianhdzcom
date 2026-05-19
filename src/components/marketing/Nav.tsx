@@ -17,9 +17,8 @@ export function Nav() {
   const pathname = usePathname() || "/";
   return (
     <nav className="ch-nav">
-      <Link href="/" className="ch-logo">
-        <span className="ch-logo-mark">C</span>
-        <span>Cristian Hernández</span>
+      <Link href="/" className="ch-logo" aria-label="Cristian Hernández — Inicio">
+        <img src="/logo.png" alt="Cristian Hernández" />
       </Link>
       <div className="ch-nav-links">
         {ITEMS.map(([label, href]) => {

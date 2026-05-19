@@ -91,6 +91,15 @@ button {
   align-items: center;
   gap: 10px;
   font-weight: 500;
+  text-decoration: none;
+}
+.ch-logo img {
+  height: 44px;
+  width: auto;
+  display: block;
+}
+.ch-foot .ch-logo img {
+  height: 56px;
 }
 .ch-logo-mark {
   width: 28px;
@@ -740,6 +749,8 @@ html { scroll-behavior: smooth; }
   .ch-nav-cta .btn-ghost { display: none; }  /* Hide "Iniciar sesión" on mobile */
   .ch-nav-cta .btn { padding: 10px 14px; font-size: 13px; }
   .ch-logo { font-size: 16px; white-space: nowrap; gap: 8px; }
+  .ch-logo img { height: 32px; }
+  .ch-foot .ch-logo img { height: 44px; }
   .ch-logo-mark { width: 24px; height: 24px; font-size: 13px; }
   .ch-logo span:not(.ch-logo-mark) { white-space: nowrap; }
 

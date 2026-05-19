@@ -36,8 +36,7 @@ export function Footer() {
       <div className="footer-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
         <div>
           <div className="ch-logo">
-            <span className="ch-logo-mark">C</span>
-            <span>Cristian Hernández</span>
+            <img src="/logo.png" alt="Cristian Hernández" />
           </div>
           <p style={{ marginTop: 16, color: "var(--muted)", lineHeight: 1.6, maxWidth: 340 }}>
             Enseño a profesionales y empresarios a construir negocios y software con inteligencia artificial.

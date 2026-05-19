@@ -50,11 +50,8 @@ export default async function PlatformPage() {
     <div className="plat">
       {/* SIDEBAR */}
       <aside className="plat-side">
-        <Link href="/" className="ch-logo" style={{ fontSize: 20 }}>
-          <span className="ch-logo-mark" style={{ width: 24, height: 24, fontSize: 14 }}>
-            C
-          </span>
-          <span>CH · IA</span>
+        <Link href="/" className="ch-logo" aria-label="Cristian Hernández — Inicio">
+          <img src="/logo.png" alt="Cristian Hernández" style={{ maxWidth: 180 }} />
         </Link>
         <div className="col" style={{ gap: 4 }}>
           <div className="eyebrow" style={{ padding: "0 12px 8px" }}>
