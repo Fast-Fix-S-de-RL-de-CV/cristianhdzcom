@@ -7,7 +7,7 @@ const COLS: [string, [string, string][]][] = [
       ["Talleres gratis", "/programas?filtro=taller"],
       ["Cursos", "/programas?filtro=curso"],
       ["Certificación", "/programas?filtro=cert"],
-      ["Plataforma", "/plataforma"],
+      ["Empieza gratis", "/registro"],
     ],
   ],
   [

@@ -5,7 +5,17 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
-const ITEMS: [string, string][] = [
+// Public-facing nav: same order whether you're logged in or not, except we
+// only show "Plataforma" (private area) when there is a session. Anonymous
+// visitors see only marketing pages they can actually browse without auth.
+const PUBLIC_ITEMS: [string, string][] = [
+  ["Inicio", "/"],
+  ["Programas", "/programas"],
+  ["Libros", "/libros"],
+  ["Comunidad", "/comunidad"],
+  ["Blog", "/blog"],
+];
+const AUTH_ITEMS: [string, string][] = [
   ["Inicio", "/"],
   ["Programas", "/programas"],
   ["Plataforma", "/plataforma"],
@@ -58,7 +68,7 @@ export function Nav() {
         <img src="/logo.png" alt="Cristian Hernández" />
       </Link>
       <div className="ch-nav-links">
-        {ITEMS.map(([label, href]) => {
+        {(user ? AUTH_ITEMS : PUBLIC_ITEMS).map(([label, href]) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <Link
