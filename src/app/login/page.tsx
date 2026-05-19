@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Nav } from "@/components/marketing/Nav";
@@ -11,6 +12,7 @@ function LoginInner() {
   const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +24,7 @@ function LoginInner() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
       setLoading(false);
       if (!res.ok) {
@@ -38,7 +40,7 @@ function LoginInner() {
         }
         return;
       }
-      const next = params.get("next") || "/comunidad";
+      const next = params.get("next") || "/plataforma";
       router.push(next);
       router.refresh();
     } catch {
@@ -54,39 +56,64 @@ function LoginInner() {
         <div className="card" style={{ padding: 40, width: 460, maxWidth: "100%" }}>
           <Eyebrow>Acceso</Eyebrow>
           <h1 style={{ fontSize: 40, marginTop: 12, marginBottom: 24 }}>Inicia sesión.</h1>
-          <form onSubmit={onSubmit} className="col" style={{ gap: 16 }}>
+          <form onSubmit={onSubmit} className="col" style={{ gap: 20 }} noValidate>
             <div>
-              <label className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
+              <label htmlFor="email" className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
                 EMAIL
               </label>
               <input
-                className="input"
+                id="email"
+                className="input input-lg"
                 type="email"
                 required
+                inputMode="email"
                 autoComplete="email"
+                autoCapitalize="off"
+                spellCheck={false}
+                placeholder="tu@email.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{ marginTop: 6 }}
+                onChange={(e) => setEmail(e.target.value.toLowerCase().replace(/\s/g, ""))}
+                style={{ marginTop: 8 }}
               />
             </div>
             <div>
-              <label className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-                CONTRASEÑA
-              </label>
-              <input
-                className="input"
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{ marginTop: 6 }}
-              />
+              <div className="between" style={{ alignItems: "baseline", marginBottom: 8 }}>
+                <label htmlFor="password" className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
+                  CONTRASEÑA
+                </label>
+                <Link
+                  href="/recuperar"
+                  className="mono"
+                  style={{ fontSize: 11, color: "var(--gold-deep)", fontWeight: 600, textDecoration: "none" }}
+                >
+                  ¿La olvidaste?
+                </Link>
+              </div>
+              <div className="input-with-toggle">
+                <input
+                  id="password"
+                  className="input input-lg"
+                  type={showPwd ? "text" : "password"}
+                  required
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="input-toggle"
+                  onClick={() => setShowPwd((s) => !s)}
+                  aria-label={showPwd ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
             {error && (
-              <div style={{ color: "var(--red)", fontSize: 13 }}>{error}</div>
+              <div className="field-error" style={{ fontFamily: "var(--font-sans)", fontSize: 13 }}>{error}</div>
             )}
-            <Button type="submit" disabled={loading} size="lg" style={{ width: "100%", justifyContent: "center" }}>
+            <Button type="submit" disabled={loading} size="lg" style={{ width: "100%", justifyContent: "center", marginTop: 4 }}>
               {loading ? "Entrando…" : "Entrar →"}
             </Button>
           </form>

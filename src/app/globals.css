@@ -736,18 +736,79 @@ button {
   font-family: var(--font-sans);
   background: white;
   color: var(--ink);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 .input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
+.input:hover:not(:focus):not(:disabled) {
+  border-color: var(--gold-line);
+}
 .input::placeholder {
   color: var(--muted);
 }
 .input-mono {
   font-family: var(--font-mono);
+}
+/* Typeform-like big inputs for primary auth forms */
+.input-lg {
+  font-size: 18px;
+  padding: 18px 20px;
+  border-radius: 12px;
+}
+.input-lg:focus {
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+/* Container for input + eye/clear button to the right */
+.input-with-toggle {
+  position: relative;
+}
+.input-with-toggle .input {
+  padding-right: 48px;
+}
+.input-with-toggle .input-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+.input-with-toggle .input-toggle:hover {
+  background: var(--bg-2);
+  color: var(--navy);
+}
+.input-with-toggle .input-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.input-error {
+  border-color: var(--red) !important;
+}
+.input-error:focus {
+  box-shadow: 0 0 0 3px oklch(95% 0.04 25) !important;
+}
+.field-error {
+  color: var(--red);
+  font-size: 12px;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+}
+.field-help {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 6px;
 }
 
 /* Shake on wrong answer */
