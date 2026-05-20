@@ -133,6 +133,8 @@ export default async function CursoEditorPage({
             explanation: l.explanation ?? "",
             xpReward: l.xpReward,
             sortOrder: l.sortOrder,
+            videoProvider: l.videoProvider,
+            videoId: l.videoId,
           }))}
           cohorts={cohortsRows.map((c) => ({
             id: c.id,

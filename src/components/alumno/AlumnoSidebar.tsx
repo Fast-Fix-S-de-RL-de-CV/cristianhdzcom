@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
@@ -18,6 +19,7 @@ const COMUNIDAD: NavLink[] = [
   { key: "comunidad", href: "/comunidad", label: "Feed", icon: "○" },
   { key: "calendario", href: "/comunidad/calendario", label: "Calendario", icon: "○" },
   { key: "miembros", href: "/comunidad/miembros", label: "Miembros", icon: "○" },
+  { key: "mensajes", href: "/mensajes", label: "Mensajes", icon: "○" },
   { key: "ranking", href: "/comunidad/ranking", label: "Ranking", icon: "○" },
   { key: "sobre", href: "/comunidad/sobre", label: "Sobre CH", icon: "○" },
 ];
@@ -99,8 +101,10 @@ export function AlumnoSidebar({
             key={l.href}
             href={l.href}
             className={cn("nav-item", (isActiveKey(l.key) || isActiveByPath(l.href)) && "active")}
+            style={{ position: "relative" }}
           >
             <span>{l.icon}</span> {l.label}
+            {l.key === "mensajes" && <UnreadBadge />}
           </Link>
         ))}
       </div>
@@ -172,5 +176,46 @@ export function AlumnoSidebar({
         )}
       </div>
     </aside>
+  );
+}
+
+/**
+ * Tiny client component that polls /api/dm/unread every 30s.
+ * Renders nothing if there are no unread messages.
+ */
+function UnreadBadge() {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      fetch("/api/dm/unread")
+        .then((r) => (r.ok ? r.json() : { unread: 0 }))
+        .then((j) => {
+          if (!cancelled) setN(j.unread ?? 0);
+        })
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
+  if (n <= 0) return null;
+  return (
+    <span
+      style={{
+        marginLeft: "auto",
+        background: "var(--accent)",
+        color: "white",
+        borderRadius: 999,
+        padding: "2px 7px",
+        fontSize: 10,
+        fontWeight: 700,
+        fontFamily: "var(--font-mono)",
+      }}
+    >
+      {n > 99 ? "99+" : n}
+    </span>
   );
 }

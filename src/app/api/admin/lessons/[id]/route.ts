@@ -3,6 +3,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/auth";
+import { parseVideoUrl } from "@/lib/video";
 
 export const dynamic = "force-dynamic";
 
@@ -19,32 +20,32 @@ const body = z
   .object({
     code: z.string().min(1).max(20).optional(),
     title: z.string().min(1).max(200).optional(),
-    kind: z.string().min(1).max(30).optional(),
-    question: z.string().min(1).max(5000).optional(),
-    body: z.string().max(10000).optional().nullable(),
-    options: z.array(optionShape).min(2).max(6).optional(),
-    correctKey: z.string().min(1).max(10).optional(),
+    kind: z.enum(["multiple_choice", "true_false", "fill_blank", "open", "video"]).optional(),
+    question: z.string().max(5000).optional().nullable(),
+    body: z.string().max(20000).optional().nullable(),
+    options: z.array(optionShape).max(6).optional(),
+    correctKey: z.string().min(1).max(10).optional().nullable(),
     hint: z.string().max(1000).optional().nullable(),
     explanation: z.string().max(5000).optional().nullable(),
     xpReward: z.number().int().min(0).max(10000).optional(),
     sortOrder: z.number().int().optional(),
+    videoUrl: z.string().url().max(500).optional().nullable(),
+    videoDurationSeconds: z.number().int().min(1).max(60 * 60 * 12).optional().nullable(),
   })
   .superRefine((data, ctx) => {
     if (data.options && data.correctKey) {
       const keys = data.options.map((o) => (o.k ?? o.key)!);
       if (!keys.includes(data.correctKey)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "correctKey must match one of the options keys",
-          path: ["correctKey"],
-        });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "correctKey must match one of the option keys", path: ["correctKey"] });
       }
       if (new Set(keys).size !== keys.length) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "option keys must be unique",
-          path: ["options"],
-        });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "option keys must be unique", path: ["options"] });
+      }
+    }
+    if (data.kind === "video" && data.videoUrl !== undefined && data.videoUrl !== null) {
+      const parsed = parseVideoUrl(data.videoUrl);
+      if (!parsed) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "URL no es de Vimeo o YouTube válida", path: ["videoUrl"] });
       }
     }
   });
@@ -71,11 +72,12 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const { id } = await ctx.params;
   try {
     const data = body.parse(await req.json());
-    const update: Record<string, unknown> = { ...data };
+    const { videoUrl, ...rest } = data;
+    const update: Record<string, unknown> = { ...rest };
+
     if (data.options && data.correctKey) {
       update.options = normalizeOptions(data.options, data.correctKey);
     } else if (data.options) {
-      // need correctKey to mark correct; fall back to looking up current
       const [current] = await db
         .select({ correctKey: schema.lessons.correctKey })
         .from(schema.lessons)
@@ -84,6 +86,21 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
       const ck = current?.correctKey ?? "";
       update.options = normalizeOptions(data.options, ck);
     }
+
+    // Handle video URL if present.
+    if (videoUrl !== undefined) {
+      if (videoUrl === null || videoUrl === "") {
+        update.videoProvider = null;
+        update.videoId = null;
+      } else {
+        const parsed = parseVideoUrl(videoUrl);
+        if (parsed) {
+          update.videoProvider = parsed.provider;
+          update.videoId = parsed.id;
+        }
+      }
+    }
+
     const [row] = await db
       .update(schema.lessons)
       .set(update)

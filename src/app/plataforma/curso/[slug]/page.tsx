@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { DuolingoPath } from "@/components/platform/DuolingoPath";
 import type { PathModule, PathModuleState } from "@/components/platform/DuolingoPath";
+import { IssueCertificateButton } from "@/components/platform/IssueCertificateButton";
 import { Card } from "@/components/ui/Card";
 
 export const dynamic = "force-dynamic";
@@ -109,6 +110,23 @@ export default async function CursoSendero({
   const doneCount = Array.from(states.values()).filter((s) => s === "done").length;
   const totalLessons = Array.from(lessonCounts.values()).reduce((a, b) => a + b, 0);
 
+  // Certificate (if program is fully completed AND issued)
+  let certificateCode: string | null = null;
+  const programComplete = mods.length > 0 && doneCount === mods.length;
+  if (programComplete) {
+    const [cert] = await db
+      .select()
+      .from(schema.certificates)
+      .where(
+        and(
+          eq(schema.certificates.userId, user.id),
+          eq(schema.certificates.programId, program.id),
+        ),
+      )
+      .limit(1);
+    certificateCode = cert?.code ?? null;
+  }
+
   // XP earned in this course
   const xpRes = (await db.execute(sql`
     SELECT COALESCE(SUM(la.xp_earned), 0)::int AS total
@@ -210,6 +228,71 @@ export default async function CursoSendero({
             {doneCount} / {mods.length} módulos · {totalLessons} lecciones totales
           </span>
         </Card>
+
+        {/* Certificate banner (if complete) */}
+        {programComplete && (
+          <Card
+            style={{
+              padding: 24,
+              marginBottom: 28,
+              background: "linear-gradient(135deg, var(--navy) 0%, color-mix(in srgb, var(--navy) 80%, black) 100%)",
+              color: "white",
+              borderColor: "var(--gold)",
+              borderWidth: 2,
+              display: "grid",
+              gridTemplateColumns: "auto 1fr auto",
+              gap: 18,
+              alignItems: "center",
+            }}
+          >
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                background: "var(--gold)",
+                color: "var(--navy)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 32,
+                fontWeight: 700,
+                fontFamily: "var(--font-serif)",
+              }}
+            >
+              ★
+            </div>
+            <div>
+              <div className="mono" style={{ fontSize: 11, color: "var(--gold)", letterSpacing: "0.08em" }}>
+                CURSO COMPLETADO
+              </div>
+              <div className="serif" style={{ fontSize: 22, marginTop: 4 }}>
+                ¡Felicidades! Has terminado el curso.
+              </div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 4 }}>
+                Tu certificado oficial ya está disponible para descargar y compartir.
+              </div>
+            </div>
+            {certificateCode ? (
+              <Link
+                href={`/cert/${certificateCode}`}
+                style={{
+                  padding: "12px 22px",
+                  borderRadius: 999,
+                  background: "var(--gold)",
+                  color: "var(--navy)",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  textDecoration: "none",
+                }}
+              >
+                Ver mi certificado →
+              </Link>
+            ) : (
+              <IssueCertificateButton programId={program.id} />
+            )}
+          </Card>
+        )}
 
         {/* Path */}
         {mods.length === 0 ? (

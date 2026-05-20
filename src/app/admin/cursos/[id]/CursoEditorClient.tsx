@@ -46,7 +46,7 @@ export type LessonRow = {
   code: string;
   title: string;
   kind: string;
-  question: string;
+  question: string | null;
   body: string;
   options: { key: string; text: string }[];
   correctKey: string;
@@ -54,6 +54,8 @@ export type LessonRow = {
   explanation: string;
   xpReward: number;
   sortOrder: number;
+  videoProvider?: string | null;
+  videoId?: string | null;
 };
 
 export type CohortRow = {
@@ -1076,8 +1078,9 @@ function LessonsTab({
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>{l.title}</div>
               <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-                {l.question.slice(0, 90)}
-                {l.question.length > 90 ? "…" : ""}
+                {l.kind === "video"
+                  ? "🎬 Video"
+                  : (l.question ?? "").slice(0, 90) + ((l.question ?? "").length > 90 ? "…" : "")}
               </div>
             </div>
             <span style={{ width: 130 }}>
@@ -1174,6 +1177,7 @@ type LessonForm = {
   explanation: string;
   xpReward: number;
   sortOrder: number;
+  videoUrl: string;
 };
 
 const KEY_LETTERS = ["a", "b", "c", "d", "e", "f"];
@@ -1193,11 +1197,16 @@ function LessonDialog({
 }) {
   const [form, setForm] = useState<LessonForm>(() => {
     if (lesson) {
+      const existingVideoUrl = lesson.videoProvider === "vimeo" && lesson.videoId
+        ? `https://vimeo.com/${lesson.videoId}`
+        : lesson.videoProvider === "youtube" && lesson.videoId
+          ? `https://youtu.be/${lesson.videoId}`
+          : "";
       return {
         code: lesson.code,
         title: lesson.title,
         kind: lesson.kind,
-        question: lesson.question,
+        question: lesson.question ?? "",
         body: lesson.body,
         options: lesson.options.length > 0 ? lesson.options : [
           { key: "a", text: "" },
@@ -1208,6 +1217,7 @@ function LessonDialog({
         explanation: lesson.explanation,
         xpReward: lesson.xpReward,
         sortOrder: lesson.sortOrder,
+        videoUrl: existingVideoUrl,
       };
     }
     return {
@@ -1225,6 +1235,7 @@ function LessonDialog({
       explanation: "",
       xpReward: 15,
       sortOrder: existingCount,
+      videoUrl: "",
     };
   });
   const [busy, setBusy] = useState(false);
@@ -1252,20 +1263,26 @@ function LessonDialog({
     try {
       const url = lesson ? `/api/admin/lessons/${lesson.id}` : `/api/admin/lessons`;
       const method = lesson ? "PUT" : "POST";
-      const payload = {
+      const isVideo = form.kind === "video";
+      const payload: Record<string, unknown> = {
         ...(lesson ? {} : { moduleId }),
         code: form.code,
         title: form.title,
         kind: form.kind,
-        question: form.question,
         body: form.body || null,
-        options: form.options.map((o) => ({ key: o.key, text: o.text })),
-        correctKey: form.correctKey,
         hint: form.hint || null,
         explanation: form.explanation || null,
         xpReward: form.xpReward,
         sortOrder: form.sortOrder,
       };
+      if (isVideo) {
+        payload.videoUrl = form.videoUrl || null;
+        payload.question = form.question || null;
+      } else {
+        payload.question = form.question;
+        payload.options = form.options.map((o) => ({ key: o.key, text: o.text }));
+        payload.correctKey = form.correctKey;
+      }
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -1283,13 +1300,15 @@ function LessonDialog({
     }
   }
 
-  const canSave =
-    !!form.code &&
-    !!form.title &&
-    !!form.question &&
-    form.options.length >= 2 &&
-    form.options.every((o) => o.text.trim().length > 0) &&
-    form.options.some((o) => o.key === form.correctKey);
+  const isVideo = form.kind === "video";
+  const canSave = isVideo
+    ? !!form.code && !!form.title && !!form.videoUrl
+    : !!form.code &&
+      !!form.title &&
+      !!form.question &&
+      form.options.length >= 2 &&
+      form.options.every((o) => o.text.trim().length > 0) &&
+      form.options.some((o) => o.key === form.correctKey);
 
   return (
     <Modal title={lesson ? "Editar lección" : "Nueva lección"} onClose={onClose} maxWidth={700}>
@@ -1321,27 +1340,54 @@ function LessonDialog({
                 onChange={(e) => setForm({ ...form, kind: e.target.value })}
                 style={input()}
               >
-                <option value="multiple_choice">multiple_choice</option>
+                <option value="video">🎬 Video (Vimeo/YouTube)</option>
+                <option value="multiple_choice">Quiz: opción múltiple</option>
+                <option value="true_false">Quiz: verdadero/falso</option>
               </select>
             </Field>
           </div>
         </div>
-        <Field label="Pregunta (obligatoria)">
-          <textarea
-            value={form.question}
-            onChange={(e) => setForm({ ...form, question: e.target.value })}
-            style={{ ...input(), minHeight: 80 }}
-          />
-        </Field>
-        <Field label="Body (texto opcional antes de la pregunta)">
-          <textarea
-            value={form.body}
-            onChange={(e) => setForm({ ...form, body: e.target.value })}
-            style={{ ...input(), minHeight: 70 }}
-          />
-        </Field>
 
-        <Field label={`Opciones (${form.options.length}/6 — mínimo 2)`}>
+        {isVideo ? (
+          <>
+            <Field label="URL del video (Vimeo o YouTube)">
+              <input
+                value={form.videoUrl}
+                onChange={(e) => setForm({ ...form, videoUrl: e.target.value })}
+                style={input()}
+                placeholder="https://vimeo.com/123456789  ó  https://youtu.be/xyz"
+              />
+              <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>
+                Pega la URL completa de Vimeo o YouTube. Nosotros extraemos el ID.
+              </div>
+            </Field>
+            <Field label="Descripción (texto que aparece debajo del video)">
+              <textarea
+                value={form.body}
+                onChange={(e) => setForm({ ...form, body: e.target.value })}
+                style={{ ...input(), minHeight: 100 }}
+                placeholder="Notas, recursos, transcripción..."
+              />
+            </Field>
+          </>
+        ) : (
+          <>
+            <Field label="Pregunta (obligatoria)">
+              <textarea
+                value={form.question}
+                onChange={(e) => setForm({ ...form, question: e.target.value })}
+                style={{ ...input(), minHeight: 80 }}
+              />
+            </Field>
+            <Field label="Body (texto opcional antes de la pregunta)">
+              <textarea
+                value={form.body}
+                onChange={(e) => setForm({ ...form, body: e.target.value })}
+                style={{ ...input(), minHeight: 70 }}
+              />
+            </Field>
+
+            <Field label={`Opciones (${form.options.length}/6 — mínimo 2)`}>
           <div className="col" style={{ gap: 6 }}>
             {form.options.map((o, i) => (
               <div key={o.key} className="row" style={{ gap: 6, alignItems: "center" }}>
@@ -1433,6 +1479,8 @@ function LessonDialog({
             style={{ ...input(), minHeight: 70 }}
           />
         </Field>
+          </>
+        )}
         <div className="row" style={{ gap: 12 }}>
           <div style={{ width: 110 }}>
             <Field label="XP">

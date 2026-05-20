@@ -9,6 +9,7 @@ export type AlumnoActiveKey =
   | "comunidad"
   | "calendario"
   | "miembros"
+  | "mensajes"
   | "ranking"
   | "sobre"
   | "libros"

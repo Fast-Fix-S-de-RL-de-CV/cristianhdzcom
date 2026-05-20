@@ -142,16 +142,50 @@ export const lessons = pgTable("lessons", {
   moduleId: uuid("module_id").notNull().references(() => modules.id, { onDelete: "cascade" }),
   code: varchar("code", { length: 20 }).notNull(),
   title: varchar("title", { length: 200 }).notNull(),
-  kind: varchar("kind", { length: 30 }).notNull().default("multiple_choice"), // multiple_choice | fill_blank | true_false | open
-  question: text("question").notNull(),
+  // multiple_choice | fill_blank | true_false | open | video
+  kind: varchar("kind", { length: 30 }).notNull().default("multiple_choice"),
+  // Question is now optional — video lessons don't have one.
+  question: text("question"),
   body: text("body"),
   options: jsonb("options").$type<{ k: string; t: string; correct?: boolean }[]>().default([]),
   correctKey: varchar("correct_key", { length: 10 }),
   hint: text("hint"),
   explanation: text("explanation"),
+  // Video support — Vimeo today, YouTube reserved for later.
+  videoProvider: varchar("video_provider", { length: 20 }), // "vimeo" | "youtube" | null
+  videoId: varchar("video_id", { length: 60 }),             // numeric id for Vimeo
+  videoDurationSeconds: integer("video_duration_seconds"),
   xpReward: integer("xp_reward").notNull().default(15),
   sortOrder: integer("sort_order").notNull().default(0),
 });
+
+/* Per-lesson comments (Skool-style discussion under each lesson). */
+export const lessonComments = pgTable(
+  "lesson_comments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    lessonId: uuid("lesson_id").notNull().references(() => lessons.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    parentId: uuid("parent_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    lessonIdx: index("lesson_comments_lesson_idx").on(t.lessonId),
+  }),
+);
+
+/* Per-lesson private notes (study notes, only visible to the author). */
+export const lessonNotes = pgTable(
+  "lesson_notes",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    lessonId: uuid("lesson_id").notNull().references(() => lessons.id, { onDelete: "cascade" }),
+    body: text("body").notNull().default(""),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.userId, t.lessonId] }) }),
+);
 
 export const lessonAttempts = pgTable("lesson_attempts", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -376,6 +410,70 @@ export const userProjects = pgTable(
   (t) => ({
     userIdx: index("user_projects_user_idx").on(t.userId),
     featuredIdx: index("user_projects_featured_idx").on(t.featured),
+  }),
+);
+
+/* ─────────── LESSON PROGRESS (per-lesson completion) ─────────── */
+export const lessonProgress = pgTable(
+  "lesson_progress",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    lessonId: uuid("lesson_id").notNull().references(() => lessons.id, { onDelete: "cascade" }),
+    completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
+    xpEarned: integer("xp_earned").notNull().default(0),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.userId, t.lessonId] }) }),
+);
+
+/* ─────────── DIRECT MESSAGES ─────────── */
+/**
+ * Conversations are between exactly two users. We always store userA < userB
+ * (lexicographic on uuid) so we can enforce a unique constraint and find the
+ * conversation between two users without a double lookup.
+ */
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userAId: uuid("user_a_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    userBId: uuid("user_b_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pairIdx: uniqueIndex("conversations_pair_idx").on(t.userAId, t.userBId),
+  }),
+);
+
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    conversationId: uuid("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    convoIdx: index("messages_conversation_idx").on(t.conversationId, t.createdAt),
+  }),
+);
+
+/* ─────────── CERTIFICATES ─────────── */
+export const certificates = pgTable(
+  "certificates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    programId: uuid("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+    // Short public code used in /cert/[code] for verification.
+    code: varchar("code", { length: 16 }).notNull(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    codeIdx: uniqueIndex("certificates_code_idx").on(t.code),
+    userProgramIdx: uniqueIndex("certificates_user_program_idx").on(t.userId, t.programId),
   }),
 );
 

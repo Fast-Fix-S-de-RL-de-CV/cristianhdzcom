@@ -7,6 +7,7 @@ import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { initials } from "@/lib/utils";
+import { StartDmButton } from "@/components/community/StartDmButton";
 
 export const dynamic = "force-dynamic";
 
@@ -123,15 +124,7 @@ export default async function MiembrosPage() {
                       >
                         Ver perfil
                       </Link>
-                      {!isMe && (
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          style={{ flex: 1, fontSize: 12, padding: "8px 12px" }}
-                        >
-                          Mensaje
-                        </button>
-                      )}
+                      {!isMe && <StartDmButton userId={m.id} />}
                     </div>
                   </Card>
                 );
