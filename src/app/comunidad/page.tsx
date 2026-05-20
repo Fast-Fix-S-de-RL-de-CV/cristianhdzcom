@@ -3,10 +3,10 @@ import { desc, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
-import { CommunityShell } from "@/components/community/CommunityShell";
 import { CommunityFeed } from "@/components/community/CommunityFeed";
 import { CommunitySidebar } from "@/components/community/CommunitySidebar";
 import { CommunityPreview } from "@/components/community/CommunityPreview";
+import { AlumnoShell, AlumnoHeader } from "@/components/alumno/AlumnoShell";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +44,6 @@ export default async function CommunityPage() {
 
   // ──────── Anonymous → Nav + Skool-style preview + Footer ────────
   if (!user) {
-    // Stats (kept inline so we don't double-fetch)
     const [{ members }] = await db
       .select({ members: sql<number>`count(*)::int` })
       .from(schema.users);
@@ -76,19 +75,24 @@ export default async function CommunityPage() {
     );
   }
 
-  // ──────── Logged user → full community shell (no top Nav) ────────
+  // ──────── Logged user → AlumnoShell with sidebar + feed ────────
   const cats = await db.select().from(schema.categories);
   const events = await db.select().from(schema.events).orderBy(schema.events.startsAt).limit(3);
 
   return (
-    <CommunityShell user={{ name: user.name, role: user.role, level: user.level }}>
+    <AlumnoShell user={user} active="comunidad">
+      <AlumnoHeader
+        eyebrow="COMUNIDAD · CH NEGOCIOS CON IA"
+        title="Feed"
+        subtitle="Conversaciones, victorias y preguntas de la cohorte."
+        user={{ name: user.name, level: user.level, xp: user.xp, streakDays: user.streakDays }}
+      />
       <div
         className="community-grid"
         style={{
-          padding: "32px 56px",
           display: "grid",
           gridTemplateColumns: "1fr 340px",
-          gap: 32,
+          gap: 28,
           alignItems: "flex-start",
         }}
       >
@@ -110,6 +114,6 @@ export default async function CommunityPage() {
           }))}
         />
       </div>
-    </CommunityShell>
+    </AlumnoShell>
   );
 }

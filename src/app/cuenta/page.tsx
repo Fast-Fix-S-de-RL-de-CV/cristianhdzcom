@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { PlatformSidebar } from "@/components/platform/PlatformSidebar";
+import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { LogoutButton, PasswordForm, ProfileForm } from "./AccountForms";
@@ -12,11 +12,8 @@ export default async function CuentaPage() {
   if (!user) redirect("/login?next=/cuenta");
 
   return (
-    <div className="plat">
-      <PlatformSidebar activeHref="/cuenta" />
-
-      <main className="plat-main" style={{ gridColumn: "span 2" }}>
-        <div style={{ maxWidth: 720, margin: "0 auto" }}>
+    <AlumnoShell user={user} active="cuenta">
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
           <div style={{ marginBottom: 32 }}>
             <Eyebrow>Ajustes</Eyebrow>
             <h1 className="serif" style={{ fontSize: 40, marginTop: 8 }}>
@@ -68,9 +65,8 @@ export default async function CuentaPage() {
                 <LogoutButton />
               </div>
             </Card>
-          </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AlumnoShell>
   );
 }

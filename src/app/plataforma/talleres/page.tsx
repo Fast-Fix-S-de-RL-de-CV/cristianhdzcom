@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { asc, gte } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
-import { PlatformSidebar } from "@/components/platform/PlatformSidebar";
+import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -52,11 +52,8 @@ export default async function TalleresPage() {
   const now = new Date();
 
   return (
-    <div className="plat">
-      <PlatformSidebar activeHref="/plataforma/talleres" />
-
-      <main className="plat-main" style={{ gridColumn: "span 2" }}>
-        <div style={{ maxWidth: 920, margin: "0 auto" }}>
+    <AlumnoShell user={user} active="talleres">
+      <div style={{ maxWidth: 920, margin: "0 auto" }}>
           <div style={{ marginBottom: 24 }}>
             <Eyebrow>Plataforma</Eyebrow>
             <h1 className="serif" style={{ fontSize: 40, marginTop: 8 }}>
@@ -281,8 +278,7 @@ export default async function TalleresPage() {
               </div>
             </>
           )}
-        </div>
-      </main>
-    </div>
+      </div>
+    </AlumnoShell>
   );
 }

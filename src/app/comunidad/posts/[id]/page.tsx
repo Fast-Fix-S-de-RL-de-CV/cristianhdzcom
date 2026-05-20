@@ -3,7 +3,7 @@ import Link from "next/link";
 import { eq, asc, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
-import { CommunityShell } from "@/components/community/CommunityShell";
+import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { initials } from "@/lib/utils";
@@ -77,10 +77,8 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     .orderBy(asc(schema.comments.createdAt));
 
   return (
-    <CommunityShell
-      user={{ name: user.name, role: user.role, level: user.level }}
-    >
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 24px" }}>
+    <AlumnoShell user={user} active="comunidad">
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "12px 24px 32px" }}>
         <Link
           href="/comunidad"
           className="mono"
@@ -216,7 +214,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
           />
         </div>
       </div>
-    </CommunityShell>
+    </AlumnoShell>
   );
 }
 

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { PlatformSidebar } from "@/components/platform/PlatformSidebar";
+import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 
@@ -50,11 +50,8 @@ export default async function SobrePage() {
   if (!user) redirect("/login?next=/comunidad/sobre");
 
   return (
-    <div className="plat">
-      <PlatformSidebar activeHref="/comunidad/sobre" />
-
-      <main className="plat-main" style={{ gridColumn: "span 2" }}>
-        <div style={{ maxWidth: 880, margin: "0 auto" }}>
+    <AlumnoShell user={user} active="sobre">
+      <div style={{ maxWidth: 880, margin: "0 auto" }}>
           {/* Hero */}
           <div style={{ marginBottom: 40 }}>
             <Eyebrow>Comunidad</Eyebrow>
@@ -195,8 +192,7 @@ export default async function SobrePage() {
               info@cristianhdz.com
             </a>
           </p>
-        </div>
-      </main>
-    </div>
+      </div>
+    </AlumnoShell>
   );
 }

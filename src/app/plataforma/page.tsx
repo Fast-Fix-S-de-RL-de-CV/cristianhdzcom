@@ -6,8 +6,8 @@ import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { getCurrentUser } from "@/lib/auth";
 import { PlatformPath } from "@/components/platform/PlatformPath";
-import { PlataformaSidebar } from "@/components/platform/PlataformaSidebar";
 import { CopilotoPanel } from "@/components/platform/CopilotoPanel";
+import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 
 export const dynamic = "force-dynamic";
 
@@ -78,32 +78,109 @@ export default async function PlatformPage() {
   const today = new Date();
   const eyebrow = `CARRIL · ${program.title.toUpperCase()}`;
 
-  return (
-    <div className="plat">
-      {/* SIDEBAR */}
-      <PlataformaSidebar />
+  const rightAside = (
+    <>
+      <CopilotoPanel />
 
-      {/* MAIN */}
-      <main className="plat-main">
-        <div className="between" style={{ marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div className="eyebrow">{eyebrow}</div>
-            <h2 className="serif" style={{ fontSize: 40, marginTop: 8 }}>
-              {currentMod?.weekLabel || "Tu sendero"} — {currentMod?.title || "Empieza"}
-            </h2>
-          </div>
-          <div className="row" style={{ gap: 12 }}>
-            <span className="streak">{user.streakDays} días</span>
-            <span className="chip chip-gold mono">XP · {user.xp.toLocaleString("es-MX")}</span>
-            <div className="av">
-              {user.name
-                .split(" ")
-                .map((w) => w[0])
-                .slice(0, 2)
-                .join("")}
+      <div>
+        <div className="between" style={{ marginBottom: 12 }}>
+          <span className="eyebrow">Próximos eventos</span>
+          <Link
+            href="/comunidad/calendario"
+            className="mono"
+            style={{ fontSize: 11, color: "var(--muted)" }}
+          >
+            VER TODO
+          </Link>
+        </div>
+        <div className="col" style={{ gap: 8 }}>
+          {upcoming.length === 0 && (
+            <div className="card" style={{ padding: 12 }}>
+              <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
+                Sin eventos próximos
+              </div>
             </div>
+          )}
+          {upcoming.map((e) => {
+            const d = new Date(e.startsAt);
+            const monthLabel = format(d, "LLL", { locale: es }).toUpperCase().slice(0, 3);
+            const dayNumber = format(d, "dd");
+            const time = format(d, "HH:mm");
+            const dayLabel = isSameDay(d, today) ? "HOY" : WEEKDAY_LABEL[d.getDay()];
+            const inner = (
+              <div
+                className="card"
+                style={{
+                  padding: 12,
+                  display: "grid",
+                  gridTemplateColumns: "44px 1fr auto",
+                  gap: 10,
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    background: "var(--ink)",
+                    color: "var(--bg)",
+                    borderRadius: 8,
+                    padding: 6,
+                    textAlign: "center",
+                  }}
+                >
+                  <div className="mono" style={{ fontSize: 9, opacity: 0.7 }}>
+                    {monthLabel}
+                  </div>
+                  <div className="serif" style={{ fontSize: 16, lineHeight: 1 }}>
+                    {dayNumber}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{e.title}</div>
+                  <div className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>
+                    {dayLabel} · {time}
+                  </div>
+                </div>
+                <span style={{ color: "var(--accent)" }}>→</span>
+              </div>
+            );
+            return e.link ? (
+              <Link
+                key={e.id}
+                href={e.link}
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                {inner}
+              </Link>
+            ) : (
+              <div key={e.id}>{inner}</div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <AlumnoShell user={user} active="sendero" rightAside={rightAside}>
+      <div className="between" style={{ marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
+        <div>
+          <div className="eyebrow">{eyebrow}</div>
+          <h2 className="serif" style={{ fontSize: 40, marginTop: 8 }}>
+            {currentMod?.weekLabel || "Tu sendero"} — {currentMod?.title || "Empieza"}
+          </h2>
+        </div>
+        <div className="row" style={{ gap: 12 }}>
+          <span className="streak">{user.streakDays} días</span>
+          <span className="chip chip-gold mono">XP · {user.xp.toLocaleString("es-MX")}</span>
+          <div className="av">
+            {user.name
+              .split(" ")
+              .map((w) => w[0])
+              .slice(0, 2)
+              .join("")}
           </div>
         </div>
+      </div>
 
         <div
           className="card"
@@ -138,88 +215,6 @@ export default async function PlatformPage() {
           }))}
           firstLessonId={firstLessonId}
         />
-      </main>
-
-      {/* ASIDE */}
-      <aside className="plat-aside">
-        <CopilotoPanel />
-
-        <div>
-          <div className="between" style={{ marginBottom: 12 }}>
-            <span className="eyebrow">Próximos eventos</span>
-            <Link
-              href="/comunidad/calendario"
-              className="mono"
-              style={{ fontSize: 11, color: "var(--muted)" }}
-            >
-              VER TODO
-            </Link>
-          </div>
-          <div className="col" style={{ gap: 8 }}>
-            {upcoming.length === 0 && (
-              <div className="card" style={{ padding: 12 }}>
-                <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-                  Sin eventos próximos
-                </div>
-              </div>
-            )}
-            {upcoming.map((e) => {
-              const d = new Date(e.startsAt);
-              const monthLabel = format(d, "LLL", { locale: es }).toUpperCase().slice(0, 3);
-              const dayNumber = format(d, "dd");
-              const time = format(d, "HH:mm");
-              const dayLabel = isSameDay(d, today) ? "HOY" : WEEKDAY_LABEL[d.getDay()];
-              const inner = (
-                <div
-                  className="card"
-                  style={{
-                    padding: 12,
-                    display: "grid",
-                    gridTemplateColumns: "44px 1fr auto",
-                    gap: 10,
-                    alignItems: "center",
-                  }}
-                >
-                  <div
-                    style={{
-                      background: "var(--ink)",
-                      color: "var(--bg)",
-                      borderRadius: 8,
-                      padding: 6,
-                      textAlign: "center",
-                    }}
-                  >
-                    <div className="mono" style={{ fontSize: 9, opacity: 0.7 }}>
-                      {monthLabel}
-                    </div>
-                    <div className="serif" style={{ fontSize: 16, lineHeight: 1 }}>
-                      {dayNumber}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{e.title}</div>
-                    <div className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>
-                      {dayLabel} · {time}
-                    </div>
-                  </div>
-                  <span style={{ color: "var(--accent)" }}>→</span>
-                </div>
-              );
-              return e.link ? (
-                <Link
-                  key={e.id}
-                  href={e.link}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  {inner}
-                </Link>
-              ) : (
-                <div key={e.id}>{inner}</div>
-              );
-            })}
-          </div>
-        </div>
-      </aside>
-    </div>
+    </AlumnoShell>
   );
 }

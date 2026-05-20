@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { desc } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
-import { PlatformSidebar } from "@/components/platform/PlatformSidebar";
+import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { initials } from "@/lib/utils";
@@ -34,11 +34,8 @@ export default async function RankingPage() {
     .limit(50);
 
   return (
-    <div className="plat">
-      <PlatformSidebar activeHref="/comunidad/ranking" />
-
-      <main className="plat-main" style={{ gridColumn: "span 2" }}>
-        <div style={{ maxWidth: 920, margin: "0 auto" }}>
+    <AlumnoShell user={user} active="ranking">
+      <div style={{ maxWidth: 920, margin: "0 auto" }}>
           <div style={{ marginBottom: 24 }}>
             <Eyebrow>Comunidad</Eyebrow>
             <h1 className="serif" style={{ fontSize: 40, marginTop: 8 }}>
@@ -183,8 +180,7 @@ export default async function RankingPage() {
               )}
             </div>
           </Card>
-        </div>
-      </main>
-    </div>
+      </div>
+    </AlumnoShell>
   );
 }

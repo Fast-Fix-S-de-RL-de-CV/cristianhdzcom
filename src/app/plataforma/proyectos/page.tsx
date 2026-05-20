@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { PlatformSidebar } from "@/components/platform/PlatformSidebar";
+import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -48,11 +48,8 @@ export default async function ProyectosPage() {
     .limit(9);
 
   return (
-    <div className="plat">
-      <PlatformSidebar activeHref="/plataforma/proyectos" />
-
-      <main className="plat-main" style={{ gridColumn: "span 2" }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+    <AlumnoShell user={user} active="proyectos">
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
           <div style={{ marginBottom: 32 }}>
             <Eyebrow>Plataforma</Eyebrow>
             <h1 className="serif" style={{ fontSize: 40, marginTop: 8 }}>
@@ -232,8 +229,7 @@ export default async function ProyectosPage() {
               ))}
             </div>
           )}
-        </div>
-      </main>
-    </div>
+      </div>
+    </AlumnoShell>
   );
 }

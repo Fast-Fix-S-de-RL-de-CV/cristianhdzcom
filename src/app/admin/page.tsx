@@ -194,8 +194,11 @@ export default async function AdminDashboard() {
         <main style={{ padding: "28px 32px" }}>
           <div className="between" style={{ marginBottom: 20, flexWrap: "wrap", gap: 16 }}>
             <div>
-              <h1 style={{ fontSize: 36 }}>Dashboard</h1>
-              <p style={{ color: "var(--muted)", fontSize: 14 }}>Resumen ejecutivo · últimos 30 días</p>
+              <div className="eyebrow">Operación · resumen ejecutivo</div>
+              <h1 style={{ fontSize: 36, marginTop: 4 }}>Dashboard</h1>
+              <p style={{ color: "var(--muted)", fontSize: 14 }}>
+                Métricas reales del negocio · últimos 30 días
+              </p>
             </div>
             <div className="row" style={{ gap: 8 }}>
               <a
@@ -274,13 +277,21 @@ export default async function AdminDashboard() {
             </Card>
 
             <Card style={{ padding: 24 }}>
-              <div className="between" style={{ marginBottom: 16 }}>
-                <h3 className="serif" style={{ fontSize: 22 }}>
-                  Actividad
-                </h3>
-                <span className="mono" style={{ fontSize: 10, color: "oklch(48% 0.13 155)" }}>
-                  ● EN VIVO
-                </span>
+              <div style={{ marginBottom: 16 }}>
+                <div className="between">
+                  <h3 className="serif" style={{ fontSize: 22 }}>
+                    Actividad de la plataforma
+                  </h3>
+                  <span className="mono" style={{ fontSize: 10, color: "oklch(48% 0.13 155)" }}>
+                    ● LOG EN VIVO
+                  </span>
+                </div>
+                <p style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>
+                  Eventos automáticos: posts, RSVPs, lecciones completadas.{" "}
+                  <a href="/admin/comunidad" style={{ color: "var(--accent)", fontWeight: 600 }}>
+                    Moderar →
+                  </a>
+                </p>
               </div>
               <div className="col" style={{ gap: 14 }}>
                 {activity.map((a) => (

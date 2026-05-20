@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { asc, gte } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
-import { PlatformSidebar } from "@/components/platform/PlatformSidebar";
+import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -64,11 +64,8 @@ export default async function CalendarioPage() {
   const ONE_HOUR_MS = 60 * 60 * 1000;
 
   return (
-    <div className="plat">
-      <PlatformSidebar activeHref="/comunidad/calendario" />
-
-      <main className="plat-main" style={{ gridColumn: "span 2" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+    <AlumnoShell user={user} active="calendario">
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div
             className="between"
             style={{ marginBottom: 24, alignItems: "flex-end", flexWrap: "wrap", gap: 16 }}
@@ -234,7 +231,6 @@ export default async function CalendarioPage() {
             ))}
           </div>
         </div>
-      </main>
-    </div>
+    </AlumnoShell>
   );
 }
