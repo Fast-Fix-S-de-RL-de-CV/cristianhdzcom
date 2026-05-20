@@ -18,10 +18,13 @@ export default async function CursosPage() {
       subtitle: schema.programs.subtitle,
       type: schema.programs.type,
       durationLabel: schema.programs.durationLabel,
+      currency: schema.programs.currency,
       priceUsd: schema.programs.priceUsd,
       priceCompareUsd: schema.programs.priceCompareUsd,
       installmentPriceUsd: schema.programs.installmentPriceUsd,
       installmentCount: schema.programs.installmentCount,
+      pricePerMonth: schema.programs.pricePerMonth,
+      pricePerYear: schema.programs.pricePerYear,
       accent: schema.programs.accent,
       description: schema.programs.description,
       bullets: schema.programs.bullets,
@@ -36,6 +39,7 @@ export default async function CursosPage() {
     .orderBy(asc(schema.programs.sortOrder));
 
   type Accent = "accent" | "warm" | "green" | "navy" | "gold";
+  type Currency = "USD" | "MXN" | "EUR";
   const data = rows.map((r) => ({
     ...r,
     subtitle: r.subtitle ?? "",
@@ -45,9 +49,12 @@ export default async function CursosPage() {
     bullets: r.bullets ?? [],
     coverUrl: r.coverUrl ?? null,
     coverKind: (r.coverKind as "image" | "video" | null) ?? null,
+    currency: ((r.currency as Currency) ?? "USD") as Currency,
     priceCompareUsd: r.priceCompareUsd ?? null,
     installmentPriceUsd: r.installmentPriceUsd ?? null,
     installmentCount: r.installmentCount ?? null,
+    pricePerMonth: r.pricePerMonth ?? null,
+    pricePerYear: r.pricePerYear ?? null,
     modulesCount: Number(r.modulesCount),
     enrollmentsCount: Number(r.enrollmentsCount),
   }));

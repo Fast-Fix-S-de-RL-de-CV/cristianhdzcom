@@ -80,10 +80,17 @@ export const programs = pgTable(
     subtitle: text("subtitle"),
     type: varchar("type", { length: 40 }).notNull(), // taller | curso | certificacion | consultoria | agencia
     durationLabel: varchar("duration_label", { length: 80 }),
-    priceUsd: integer("price_usd").notNull().default(0),
-    priceCompareUsd: integer("price_compare_usd"),
-    installmentPriceUsd: integer("installment_price_usd"),
-    installmentCount: integer("installment_count"),
+    // Currency the priceXxx columns are denominated in. Legacy columns keep
+    // their "Usd" suffix in the DB but they're now used for ANY currency —
+    // the meaning is "amount in <currency>". We pretend the column name is
+    // just legacy nomenclature.
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+    priceUsd: integer("price_usd").notNull().default(0), // pago único / precio de referencia
+    priceCompareUsd: integer("price_compare_usd"),       // precio tachado (must be > priceUsd)
+    installmentPriceUsd: integer("installment_price_usd"), // precio por mensualidad del plan
+    installmentCount: integer("installment_count"),        // # de mensualidades del plan
+    pricePerMonth: integer("price_per_month"),             // suscripción mensual recurrente
+    pricePerYear: integer("price_per_year"),               // suscripción anual recurrente
     accent: varchar("accent", { length: 20 }).default("accent"),
     description: text("description"),
     bullets: jsonb("bullets").$type<string[]>().default([]),

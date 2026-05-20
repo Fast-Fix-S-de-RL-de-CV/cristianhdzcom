@@ -1,7 +1,16 @@
 "use client";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isValidSlug, sanitizeSlugInput, slugify } from "@/lib/slug";
+import {
+  type Currency,
+  SUPPORTED_CURRENCIES,
+  CURRENCY_META,
+  formatMoney,
+  formatGrouping,
+  parseAmount,
+  suggestPricing,
+} from "@/lib/money";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 
 type Accent = "accent" | "warm" | "green" | "navy" | "gold";
@@ -13,10 +22,13 @@ type Row = {
   subtitle: string;
   type: string;
   durationLabel: string;
+  currency: Currency;
   priceUsd: number;
   priceCompareUsd: number | null;
   installmentPriceUsd: number | null;
   installmentCount: number | null;
+  pricePerMonth: number | null;
+  pricePerYear: number | null;
   accent: Accent;
   description: string;
   bullets: string[];
@@ -182,7 +194,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
               {p.type}
             </span>
             <span className="mono" style={{ width: 90, textAlign: "right", fontSize: 13, fontWeight: 700 }}>
-              ${p.priceUsd}
+              {formatMoney(p.priceUsd, p.currency)}
             </span>
             <span className="mono" style={{ width: 70, textAlign: "right", fontSize: 12 }}>
               {p.modulesCount}
@@ -319,10 +331,13 @@ function ProgramDialog({
     subtitle: program?.subtitle || "",
     type: program?.type || "curso",
     durationLabel: program?.durationLabel || "",
+    currency: (program?.currency ?? "USD") as Currency,
     priceUsd: program?.priceUsd ?? 0,
     priceCompareUsd: program?.priceCompareUsd ?? null,
     installmentPriceUsd: program?.installmentPriceUsd ?? null,
     installmentCount: program?.installmentCount ?? null,
+    pricePerMonth: program?.pricePerMonth ?? null,
+    pricePerYear: program?.pricePerYear ?? null,
     accent: (program?.accent ?? "accent") as Accent,
     description: program?.description || "",
     bullets: program?.bullets ?? [],
@@ -396,7 +411,7 @@ function ProgramDialog({
         </h2>
 
         <div className="col" style={{ gap: 14 }}>
-          <Field label="Título">
+          <Field label="Título" required>
             <input
               value={form.title}
               onChange={(e) => onTitleChange(e.target.value)}
@@ -406,6 +421,7 @@ function ProgramDialog({
           </Field>
           <Field
             label={`Slug (URL: /programas/${form.slug || "tu-slug"})`}
+            required
           >
             <input
               value={form.slug}
@@ -556,69 +572,16 @@ function ProgramDialog({
             </div>
           </div>
 
-          <div className="row" style={{ gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <Field label="Precio (USD)">
-                <input
-                  type="number"
-                  value={form.priceUsd}
-                  onChange={(e) => setForm({ ...form, priceUsd: parseInt(e.target.value || "0", 10) })}
-                  style={input()}
-                />
-              </Field>
-            </div>
-            <div style={{ flex: 1 }}>
-              <Field label="Precio comparativo (USD)">
-                <input
-                  type="number"
-                  value={form.priceCompareUsd ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      priceCompareUsd: e.target.value ? parseInt(e.target.value, 10) : null,
-                    })
-                  }
-                  placeholder="opcional"
-                  style={input()}
-                />
-              </Field>
-            </div>
-          </div>
-
-          <div className="row" style={{ gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <Field label="Precio mensualidad (USD)">
-                <input
-                  type="number"
-                  value={form.installmentPriceUsd ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      installmentPriceUsd: e.target.value ? parseInt(e.target.value, 10) : null,
-                    })
-                  }
-                  placeholder="opcional"
-                  style={input()}
-                />
-              </Field>
-            </div>
-            <div style={{ flex: 1 }}>
-              <Field label="N° mensualidades">
-                <input
-                  type="number"
-                  value={form.installmentCount ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      installmentCount: e.target.value ? parseInt(e.target.value, 10) : null,
-                    })
-                  }
-                  placeholder="opcional"
-                  style={input()}
-                />
-              </Field>
-            </div>
-          </div>
+          <PricingSection
+            currency={form.currency}
+            priceUsd={form.priceUsd}
+            priceCompareUsd={form.priceCompareUsd}
+            installmentPriceUsd={form.installmentPriceUsd}
+            installmentCount={form.installmentCount}
+            pricePerMonth={form.pricePerMonth}
+            pricePerYear={form.pricePerYear}
+            onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+          />
 
           <div className="row" style={{ gap: 18 }}>
             <label className="row" style={{ gap: 6, fontSize: 13, cursor: "pointer" }}>
@@ -673,11 +636,20 @@ function ProgramDialog({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  required,
+}: {
+  label: string;
+  children: React.ReactNode;
+  required?: boolean;
+}) {
   return (
     <label className="col" style={{ gap: 6 }}>
       <span className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.08em" }}>
         {label.toUpperCase()}
+        {required && <span style={{ color: "#b32f1a", marginLeft: 4 }}>*</span>}
       </span>
       {children}
     </label>
@@ -710,6 +682,523 @@ function input(): React.CSSProperties {
     fontFamily: "var(--font-sans)",
     background: "white",
   };
+}
+
+/**
+ * PricingSection — Estrategia de precios con 4 modos de venta.
+ *
+ * Bloque autocontenido que reemplazó los 4 inputs sueltos anteriores.
+ * Diseño basado en el feedback: "deja todo inteligentemente para que sea
+ * una buena oferta y el alumno no tenga opción de pretexto de inscribirse".
+ *
+ * Estructura:
+ *   1) Selector de moneda (USD / MXN / EUR)
+ *   2) Precio único (lo que vale el curso de un solo pago)
+ *   3) Precio comparativo (tachado en marketing) con validación > único
+ *   4) Toggle "Plan de pagos" → N° mensualidades + Precio por mes
+ *      Total se calcula en vivo. Aviso si total < único.
+ *   5) Toggle "Suscripción mensual" → precio/mes
+ *   6) Toggle "Suscripción anual" → precio/año
+ *
+ * Cada amount input formatea el número con grouping al perder foco
+ * (123456 → "123,456") usando la locale de la currency.
+ *
+ * El botón "Sugerir precios" calcula valores con suggestPricing() del
+ * helper money.ts — útil cuando el admin acaba de poner el precio base
+ * y quiere arrancar con valores razonables que luego puede ajustar.
+ */
+function PricingSection({
+  currency,
+  priceUsd,
+  priceCompareUsd,
+  installmentPriceUsd,
+  installmentCount,
+  pricePerMonth,
+  pricePerYear,
+  onChange,
+}: {
+  currency: Currency;
+  priceUsd: number;
+  priceCompareUsd: number | null;
+  installmentPriceUsd: number | null;
+  installmentCount: number | null;
+  pricePerMonth: number | null;
+  pricePerYear: number | null;
+  onChange: (patch: Partial<{
+    currency: Currency;
+    priceUsd: number;
+    priceCompareUsd: number | null;
+    installmentPriceUsd: number | null;
+    installmentCount: number | null;
+    pricePerMonth: number | null;
+    pricePerYear: number | null;
+  }>) => void;
+}) {
+  const planEnabled = installmentPriceUsd != null && installmentCount != null;
+  const monthlySubEnabled = pricePerMonth != null;
+  const yearlySubEnabled = pricePerYear != null;
+
+  // Cross-field validations for live feedback (errors are also enforced server-side).
+  const errors = useMemo(() => {
+    const out: { compare?: string; plan?: string; planCount?: string; monthly?: string; yearly?: string } = {};
+    if (priceCompareUsd != null && priceUsd > 0 && priceCompareUsd <= priceUsd) {
+      out.compare = "Debe ser MAYOR al precio único (es el precio tachado).";
+    }
+    if (planEnabled && priceUsd > 0 && installmentPriceUsd! * installmentCount! < priceUsd) {
+      out.plan = `El total del plan (${formatMoney(installmentPriceUsd! * installmentCount!, currency)}) es menor que el precio único.`;
+    }
+    if (planEnabled && installmentCount! < 2) {
+      out.planCount = "Mínimo 2 mensualidades.";
+    }
+    if (monthlySubEnabled && pricePerMonth! < 1) {
+      out.monthly = "El precio mensual debe ser positivo.";
+    }
+    if (yearlySubEnabled && pricePerYear! < 1) {
+      out.yearly = "El precio anual debe ser positivo.";
+    }
+    return out;
+  }, [priceUsd, priceCompareUsd, installmentPriceUsd, installmentCount, pricePerMonth, pricePerYear, planEnabled, monthlySubEnabled, yearlySubEnabled, currency]);
+
+  // Computed values shown to the user.
+  const planTotal = planEnabled ? installmentPriceUsd! * installmentCount! : 0;
+  const planMarkupPct = planEnabled && priceUsd > 0 ? Math.round(((planTotal - priceUsd) / priceUsd) * 100) : 0;
+  const compareDiscountPct =
+    priceCompareUsd != null && priceCompareUsd > priceUsd && priceUsd > 0
+      ? Math.round(((priceCompareUsd - priceUsd) / priceCompareUsd) * 100)
+      : 0;
+
+  function applySuggestions() {
+    if (priceUsd <= 0) return;
+    const s = suggestPricing(priceUsd);
+    onChange({
+      priceCompareUsd: priceCompareUsd ?? s.priceCompare,
+      installmentCount: installmentCount ?? s.installmentCount,
+      installmentPriceUsd: installmentPriceUsd ?? s.installmentPrice,
+      pricePerMonth: pricePerMonth ?? s.pricePerMonth,
+      pricePerYear: pricePerYear ?? s.pricePerYear,
+    });
+  }
+
+  return (
+    <section
+      style={{
+        border: "1px solid rgba(216,168,63,0.30)",
+        borderRadius: 14,
+        padding: 18,
+        background: "color-mix(in srgb, var(--gold) 4%, white)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+      }}
+    >
+      <div className="between" style={{ alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div className="mono" style={{ fontSize: 11, color: "var(--gold-deep)", fontWeight: 800, letterSpacing: "0.1em" }}>
+            ESTRATEGIA DE PRECIO
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
+            Define moneda, precio único y los modos de venta que quieres ofrecer.
+          </div>
+        </div>
+        {priceUsd > 0 && (
+          <button
+            type="button"
+            onClick={applySuggestions}
+            className="mono"
+            style={{
+              padding: "6px 12px",
+              borderRadius: 6,
+              border: "1px dashed var(--gold-deep)",
+              background: "transparent",
+              color: "var(--gold-deep)",
+              cursor: "pointer",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+            }}
+          >
+            ✨ Sugerir desglose
+          </button>
+        )}
+      </div>
+
+      {/* Moneda + Precio único + Comparativo */}
+      <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+        <div style={{ width: 180 }}>
+          <Field label="Moneda" required>
+            <select
+              value={currency}
+              onChange={(e) => onChange({ currency: e.target.value as Currency })}
+              style={input()}
+            >
+              {SUPPORTED_CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {CURRENCY_META[c].label}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <Field label={`Precio único (${currency})`} required>
+            <AmountInput
+              value={priceUsd}
+              currency={currency}
+              onChange={(n) => onChange({ priceUsd: n })}
+              placeholder="0"
+            />
+            <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>
+              Lo que cobras por el curso de un solo pago.
+            </div>
+          </Field>
+        </div>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <Field label={`Precio tachado (${currency})`}>
+            <AmountInput
+              value={priceCompareUsd ?? 0}
+              currency={currency}
+              onChange={(n) => onChange({ priceCompareUsd: n > 0 ? n : null })}
+              placeholder="opcional"
+              error={!!errors.compare}
+            />
+            <div
+              className="mono"
+              style={{
+                fontSize: 10,
+                color: errors.compare ? "#b32f1a" : "var(--muted)",
+                marginTop: 4,
+                lineHeight: 1.5,
+              }}
+            >
+              {errors.compare
+                ? errors.compare
+                : compareDiscountPct > 0
+                  ? `–${compareDiscountPct}% de ahorro vs precio tachado.`
+                  : "Opcional. Se muestra tachado para anclar valor."}
+            </div>
+          </Field>
+        </div>
+      </div>
+
+      {/* Plan de pagos */}
+      <PaymentMode
+        title="Plan de pagos (mensualidades)"
+        desc="Divide el precio en cuotas mensuales sin intereses."
+        enabled={planEnabled}
+        onToggle={(on) => {
+          if (on && priceUsd > 0) {
+            const s = suggestPricing(priceUsd);
+            onChange({ installmentCount: s.installmentCount, installmentPriceUsd: s.installmentPrice });
+          } else if (!on) {
+            onChange({ installmentCount: null, installmentPriceUsd: null });
+          }
+        }}
+      >
+        <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+          <div style={{ width: 140 }}>
+            <Field label="N° mensualidades">
+              <input
+                type="number"
+                min={2}
+                max={36}
+                value={installmentCount ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value ? parseInt(e.target.value, 10) : null;
+                  onChange({ installmentCount: v });
+                }}
+                style={{ ...input(), borderColor: errors.planCount ? "#b32f1a" : undefined }}
+                placeholder="6"
+              />
+            </Field>
+          </div>
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <Field label={`Precio por mes (${currency})`}>
+              <AmountInput
+                value={installmentPriceUsd ?? 0}
+                currency={currency}
+                onChange={(n) => onChange({ installmentPriceUsd: n > 0 ? n : null })}
+                placeholder="0"
+                error={!!errors.plan}
+              />
+            </Field>
+          </div>
+          <div style={{ minWidth: 180, display: "flex", alignItems: "flex-end" }}>
+            <div
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: "white",
+                border: "1px solid var(--line)",
+              }}
+            >
+              <div className="mono" style={{ fontSize: 9, color: "var(--muted)", letterSpacing: "0.08em" }}>
+                TOTAL PLAN
+              </div>
+              <div className="serif" style={{ fontSize: 18, fontWeight: 700, color: "var(--navy)" }}>
+                {formatMoney(planTotal, currency)}
+              </div>
+              {planEnabled && planMarkupPct !== 0 && (
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    color: planMarkupPct < 0 ? "#b32f1a" : "var(--gold-deep)",
+                    marginTop: 2,
+                  }}
+                >
+                  {planMarkupPct > 0 ? `+${planMarkupPct}%` : `${planMarkupPct}%`} vs único
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        {errors.plan && (
+          <div className="mono" style={{ fontSize: 11, color: "#b32f1a", marginTop: 6 }}>
+            {errors.plan}
+          </div>
+        )}
+      </PaymentMode>
+
+      {/* Suscripción mensual */}
+      <PaymentMode
+        title="Suscripción mensual"
+        desc="Cobro recurrente cada mes. El alumno puede cancelar cuando quiera."
+        enabled={monthlySubEnabled}
+        onToggle={(on) => {
+          if (on && priceUsd > 0) {
+            onChange({ pricePerMonth: suggestPricing(priceUsd).pricePerMonth });
+          } else if (!on) {
+            onChange({ pricePerMonth: null });
+          }
+        }}
+      >
+        <div className="row" style={{ gap: 12, alignItems: "flex-end" }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <Field label={`Precio mensual (${currency})`}>
+              <AmountInput
+                value={pricePerMonth ?? 0}
+                currency={currency}
+                onChange={(n) => onChange({ pricePerMonth: n > 0 ? n : null })}
+                placeholder="0"
+              />
+            </Field>
+          </div>
+          {monthlySubEnabled && pricePerMonth! > 0 && (
+            <div
+              className="mono"
+              style={{ fontSize: 11, color: "var(--muted)", padding: "10px 0" }}
+            >
+              ≈ {formatMoney(pricePerMonth! * 12, currency)} / año
+            </div>
+          )}
+        </div>
+      </PaymentMode>
+
+      {/* Suscripción anual */}
+      <PaymentMode
+        title="Suscripción anual"
+        desc="Cobro anual con descuento vs mensual. Ideal anclaje."
+        enabled={yearlySubEnabled}
+        onToggle={(on) => {
+          if (on && priceUsd > 0) {
+            onChange({ pricePerYear: suggestPricing(priceUsd).pricePerYear });
+          } else if (!on) {
+            onChange({ pricePerYear: null });
+          }
+        }}
+      >
+        <div className="row" style={{ gap: 12, alignItems: "flex-end" }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <Field label={`Precio anual (${currency})`}>
+              <AmountInput
+                value={pricePerYear ?? 0}
+                currency={currency}
+                onChange={(n) => onChange({ pricePerYear: n > 0 ? n : null })}
+                placeholder="0"
+              />
+            </Field>
+          </div>
+          {yearlySubEnabled && pricePerYear! > 0 && pricePerMonth && pricePerMonth > 0 && (
+            <div
+              className="mono"
+              style={{ fontSize: 11, color: "var(--gold-deep)", padding: "10px 0" }}
+            >
+              Ahorra {Math.max(0, Math.round((1 - pricePerYear! / (pricePerMonth * 12)) * 100))}% vs mensual
+            </div>
+          )}
+        </div>
+      </PaymentMode>
+
+      {/* Preview que verá el alumno */}
+      {priceUsd > 0 && (
+        <div
+          style={{
+            background: "var(--navy)",
+            color: "white",
+            borderRadius: 12,
+            padding: 16,
+            marginTop: 4,
+          }}
+        >
+          <div className="mono" style={{ fontSize: 10, color: "var(--gold)", letterSpacing: "0.08em", fontWeight: 700 }}>
+            VISTA PREVIA (LO QUE VERÁ EL ALUMNO)
+          </div>
+          <div className="row" style={{ gap: 14, marginTop: 10, alignItems: "baseline", flexWrap: "wrap" }}>
+            {priceCompareUsd != null && priceCompareUsd > priceUsd && (
+              <span
+                style={{
+                  fontSize: 16,
+                  color: "rgba(255,255,255,0.55)",
+                  textDecoration: "line-through",
+                }}
+              >
+                {formatMoney(priceCompareUsd, currency)}
+              </span>
+            )}
+            <span className="serif" style={{ fontSize: 30, fontWeight: 700, color: "white" }}>
+              {formatMoney(priceUsd, currency)}
+            </span>
+            <span className="mono" style={{ fontSize: 11, color: "rgba(255,255,255,0.65)" }}>
+              pago único
+            </span>
+            {compareDiscountPct > 0 && (
+              <span
+                className="mono"
+                style={{
+                  background: "var(--gold)",
+                  color: "var(--navy)",
+                  padding: "3px 8px",
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                –{compareDiscountPct}%
+              </span>
+            )}
+          </div>
+          <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0", fontSize: 13, lineHeight: 1.7, color: "rgba(255,255,255,0.85)" }}>
+            {planEnabled && installmentPriceUsd! > 0 && installmentCount! > 0 && (
+              <li>
+                • o {installmentCount} pagos mensuales de{" "}
+                <strong>{formatMoney(installmentPriceUsd!, currency)}</strong>
+              </li>
+            )}
+            {monthlySubEnabled && pricePerMonth! > 0 && (
+              <li>
+                • o suscripción de <strong>{formatMoney(pricePerMonth!, currency)}/mes</strong> (cancela cuando quieras)
+              </li>
+            )}
+            {yearlySubEnabled && pricePerYear! > 0 && (
+              <li>
+                • o plan anual de <strong>{formatMoney(pricePerYear!, currency)}/año</strong>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Wrapper visual de un modo de pago — toggle + descripción + contenido condicional. */
+function PaymentMode({
+  title,
+  desc,
+  enabled,
+  onToggle,
+  children,
+}: {
+  title: string;
+  desc: string;
+  enabled: boolean;
+  onToggle: (on: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        background: "white",
+        border: enabled ? "1.5px solid rgba(216,168,63,0.40)" : "1px solid var(--line)",
+        borderRadius: 12,
+        padding: 14,
+        opacity: enabled ? 1 : 0.85,
+      }}
+    >
+      <label className="row" style={{ alignItems: "flex-start", gap: 12, cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => onToggle(e.target.checked)}
+          style={{ marginTop: 3 }}
+        />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--navy)" }}>{title}</div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{desc}</div>
+        </div>
+      </label>
+      {enabled && <div style={{ marginTop: 12 }}>{children}</div>}
+    </div>
+  );
+}
+
+/** Amount input — formatted with currency-aware grouping on blur. */
+function AmountInput({
+  value,
+  currency,
+  onChange,
+  placeholder,
+  error,
+}: {
+  value: number;
+  currency: Currency;
+  onChange: (n: number) => void;
+  placeholder?: string;
+  error?: boolean;
+}) {
+  const [focused, setFocused] = useState(false);
+  const display = focused
+    ? value > 0
+      ? String(value)
+      : ""
+    : value > 0
+      ? formatGrouping(value, currency)
+      : "";
+  return (
+    <div style={{ position: "relative" }}>
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: 12,
+          top: "50%",
+          transform: "translateY(-50%)",
+          color: "var(--muted)",
+          fontSize: 13,
+          pointerEvents: "none",
+          fontWeight: 600,
+        }}
+      >
+        {CURRENCY_META[currency].symbol}
+      </span>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={display}
+        onChange={(e) => onChange(parseAmount(e.target.value))}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder={placeholder}
+        style={{
+          ...input(),
+          paddingLeft: 26,
+          borderColor: error ? "#b32f1a" : undefined,
+        }}
+      />
+    </div>
+  );
 }
 
 /**

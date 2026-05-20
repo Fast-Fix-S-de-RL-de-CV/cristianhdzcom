@@ -9,39 +9,71 @@ export const dynamic = "force-dynamic";
 //   lowercase a-z0-9, single dashes between segments, no leading/trailing dash.
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-const body = z.object({
-  title: z.string().min(2).max(200),
-  slug: z
-    .string()
-    .min(2)
-    .max(80)
-    .regex(SLUG_RE, { message: "slug debe ser kebab-case (a-z, 0-9 y guiones simples)" }),
-  subtitle: z.string().max(2000).optional().nullable(),
-  type: z.string().min(2).max(40),
-  durationLabel: z.string().max(80).optional().nullable(),
-  priceUsd: z.number().int().min(0).default(0),
-  priceCompareUsd: z.number().int().positive().nullable().optional(),
-  installmentPriceUsd: z.number().int().positive().nullable().optional(),
-  installmentCount: z.number().int().positive().nullable().optional(),
-  accent: z.enum(["accent", "warm", "green", "navy", "gold"]).optional(),
-  description: z.string().max(5000).optional().nullable(),
-  bullets: z.array(z.string().min(1).max(140)).max(20).optional(),
-  // Acepta tanto URL absoluta como path relativo /uploads/...
-  // El upload local devuelve "/uploads/YYYY-MM/xxx.jpg" y Zod .url() rechaza
-  // paths sin protocolo, así que validamos manualmente.
-  coverUrl: z
-    .string()
-    .max(500)
-    .nullable()
-    .optional()
-    .refine(
-      (v) => v == null || v === "" || /^https?:\/\//.test(v) || v.startsWith("/"),
-      { message: "coverUrl debe ser URL absoluta o path /uploads/..." },
-    ),
-  coverKind: z.enum(["image", "video"]).nullable().optional(),
-  isActive: z.boolean().optional(),
-  isFeatured: z.boolean().optional(),
-});
+const body = z
+  .object({
+    title: z.string().min(2).max(200),
+    slug: z
+      .string()
+      .min(2)
+      .max(80)
+      .regex(SLUG_RE, { message: "slug debe ser kebab-case (a-z, 0-9 y guiones simples)" }),
+    subtitle: z.string().max(2000).optional().nullable(),
+    type: z.string().min(2).max(40),
+    durationLabel: z.string().max(80).optional().nullable(),
+    currency: z.enum(["USD", "MXN", "EUR"]).optional(),
+    priceUsd: z.number().int().min(0).default(0),
+    priceCompareUsd: z.number().int().positive().nullable().optional(),
+    installmentPriceUsd: z.number().int().positive().nullable().optional(),
+    installmentCount: z.number().int().positive().nullable().optional(),
+    pricePerMonth: z.number().int().positive().nullable().optional(),
+    pricePerYear: z.number().int().positive().nullable().optional(),
+    accent: z.enum(["accent", "warm", "green", "navy", "gold"]).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    bullets: z.array(z.string().min(1).max(140)).max(20).optional(),
+    coverUrl: z
+      .string()
+      .max(500)
+      .nullable()
+      .optional()
+      .refine(
+        (v) => v == null || v === "" || /^https?:\/\//.test(v) || v.startsWith("/"),
+        { message: "coverUrl debe ser URL absoluta o path /uploads/..." },
+      ),
+    coverKind: z.enum(["image", "video"]).nullable().optional(),
+    isActive: z.boolean().optional(),
+    isFeatured: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // Precio comparativo (tachado) debe ser MAYOR que el precio único.
+    if (data.priceCompareUsd != null && data.priceUsd > 0 && data.priceCompareUsd <= data.priceUsd) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["priceCompareUsd"],
+        message: "El precio comparativo debe ser MAYOR al precio único (es el precio 'tachado').",
+      });
+    }
+    // Plan de pagos: si se define uno, deben venir AMBOS campos.
+    if ((data.installmentPriceUsd != null) !== (data.installmentCount != null)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["installmentCount"],
+        message: "Si activas plan de pagos, debes definir precio por mensualidad Y número de mensualidades.",
+      });
+    }
+    // Plan de pagos: el total debe ser ≥ al precio único (no es lógico vender más barato a plazos).
+    if (
+      data.installmentPriceUsd != null &&
+      data.installmentCount != null &&
+      data.priceUsd > 0 &&
+      data.installmentPriceUsd * data.installmentCount < data.priceUsd
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["installmentPriceUsd"],
+        message: `El plan de pagos (${data.installmentCount} × ${data.installmentPriceUsd}) suma menos que el precio único. Sube el precio mensual o reduce el número de mensualidades.`,
+      });
+    }
+  });
 
 export async function POST(req: Request) {
   try {
@@ -59,10 +91,13 @@ export async function POST(req: Request) {
         subtitle: data.subtitle || null,
         type: data.type,
         durationLabel: data.durationLabel || null,
+        currency: data.currency ?? "USD",
         priceUsd: data.priceUsd,
         priceCompareUsd: data.priceCompareUsd ?? null,
         installmentPriceUsd: data.installmentPriceUsd ?? null,
         installmentCount: data.installmentCount ?? null,
+        pricePerMonth: data.pricePerMonth ?? null,
+        pricePerYear: data.pricePerYear ?? null,
         accent: data.accent ?? "accent",
         description: data.description ?? null,
         bullets: data.bullets ?? [],

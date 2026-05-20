@@ -8,33 +8,71 @@ export const dynamic = "force-dynamic";
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-const body = z.object({
-  title: z.string().min(2).max(200).optional(),
-  slug: z.string().min(2).max(80).regex(SLUG_RE).optional(),
-  subtitle: z.string().max(2000).optional().nullable(),
-  type: z.string().min(2).max(40).optional(),
-  durationLabel: z.string().max(80).optional().nullable(),
-  priceUsd: z.number().int().min(0).optional(),
-  priceCompareUsd: z.number().int().positive().nullable().optional(),
-  installmentPriceUsd: z.number().int().positive().nullable().optional(),
-  installmentCount: z.number().int().positive().nullable().optional(),
-  accent: z.enum(["accent", "warm", "green", "navy", "gold"]).optional(),
-  description: z.string().max(5000).optional().nullable(),
-  bullets: z.array(z.string().min(1).max(140)).max(20).optional(),
-  coverUrl: z
-    .string()
-    .max(500)
-    .nullable()
-    .optional()
-    .refine(
-      (v) => v == null || v === "" || /^https?:\/\//.test(v) || v.startsWith("/"),
-      { message: "coverUrl debe ser URL absoluta o path /uploads/..." },
-    ),
-  coverKind: z.enum(["image", "video"]).nullable().optional(),
-  isActive: z.boolean().optional(),
-  isFeatured: z.boolean().optional(),
-  sortOrder: z.number().int().optional(),
-});
+const body = z
+  .object({
+    title: z.string().min(2).max(200).optional(),
+    slug: z.string().min(2).max(80).regex(SLUG_RE).optional(),
+    subtitle: z.string().max(2000).optional().nullable(),
+    type: z.string().min(2).max(40).optional(),
+    durationLabel: z.string().max(80).optional().nullable(),
+    currency: z.enum(["USD", "MXN", "EUR"]).optional(),
+    priceUsd: z.number().int().min(0).optional(),
+    priceCompareUsd: z.number().int().positive().nullable().optional(),
+    installmentPriceUsd: z.number().int().positive().nullable().optional(),
+    installmentCount: z.number().int().positive().nullable().optional(),
+    pricePerMonth: z.number().int().positive().nullable().optional(),
+    pricePerYear: z.number().int().positive().nullable().optional(),
+    accent: z.enum(["accent", "warm", "green", "navy", "gold"]).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    bullets: z.array(z.string().min(1).max(140)).max(20).optional(),
+    coverUrl: z
+      .string()
+      .max(500)
+      .nullable()
+      .optional()
+      .refine(
+        (v) => v == null || v === "" || /^https?:\/\//.test(v) || v.startsWith("/"),
+        { message: "coverUrl debe ser URL absoluta o path /uploads/..." },
+      ),
+    coverKind: z.enum(["image", "video"]).nullable().optional(),
+    isActive: z.boolean().optional(),
+    isFeatured: z.boolean().optional(),
+    sortOrder: z.number().int().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.priceCompareUsd != null &&
+      data.priceUsd != null &&
+      data.priceUsd > 0 &&
+      data.priceCompareUsd <= data.priceUsd
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["priceCompareUsd"],
+        message: "El precio comparativo debe ser MAYOR al precio único.",
+      });
+    }
+    if ((data.installmentPriceUsd != null) !== (data.installmentCount != null)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["installmentCount"],
+        message: "Plan de pagos requiere precio mensual Y número de mensualidades.",
+      });
+    }
+    if (
+      data.installmentPriceUsd != null &&
+      data.installmentCount != null &&
+      data.priceUsd != null &&
+      data.priceUsd > 0 &&
+      data.installmentPriceUsd * data.installmentCount < data.priceUsd
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["installmentPriceUsd"],
+        message: "El plan de pagos suma menos que el precio único.",
+      });
+    }
+  });
 
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
