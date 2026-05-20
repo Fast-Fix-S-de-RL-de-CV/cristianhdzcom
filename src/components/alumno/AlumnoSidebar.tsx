@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { AlumnoActiveKey } from "./AlumnoShell";
 
 type NavLink = {
@@ -91,6 +91,19 @@ const Icon = {
   Shield: (
     <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <path d="M12 2 L20 5 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V5 Z" />
+    </svg>
+  ),
+  Home: (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11 L12 3 L21 11" />
+      <path d="M5 10 V20 a1 1 0 0 0 1 1 H10 V14 H14 V21 H18 a1 1 0 0 0 1 -1 V10" />
+    </svg>
+  ),
+  LogOut: (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 4 H5 a2 2 0 0 0 -2 2 V18 a2 2 0 0 0 2 2 H9" />
+      <polyline points="14,7 19,12 14,17" />
+      <line x1="9" y1="12" x2="19" y2="12" />
     </svg>
   ),
 };
@@ -218,12 +231,22 @@ export function AlumnoSidebar({
         })}
       </div>
 
-      {/* Bottom: Mi cuenta + identity card */}
+      {/* Bottom: Mi cuenta (+ logout shortcut) + identity card */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: "auto" }}>
-        <NavItem
-          link={{ key: "cuenta", href: "/cuenta", label: "Mi cuenta", icon: <span style={{ fontSize: 18 }}>⌂</span> }}
-          active={isActiveKey("cuenta") || pathname === "/cuenta"}
-        />
+        {/* Row: Mi cuenta link + small logout button */}
+        <div style={{ display: "flex", alignItems: "stretch", gap: 6 }}>
+          <NavItem
+            link={{
+              key: "cuenta",
+              href: "/cuenta",
+              label: "Mi cuenta",
+              icon: Icon.Home,
+            }}
+            active={isActiveKey("cuenta") || pathname === "/cuenta"}
+            style={{ flex: 1 }}
+          />
+          <LogoutButton />
+        </div>
 
         {/* Identity card */}
         <div
@@ -374,9 +397,17 @@ export function AlumnoSidebar({
   );
 }
 
-function NavItem({ link, active }: { link: NavLink; active: boolean }) {
+function NavItem({
+  link,
+  active,
+  style,
+}: {
+  link: NavLink;
+  active: boolean;
+  style?: React.CSSProperties;
+}) {
   return (
-    <Link href={link.href} className={`nav-item-dark${active ? " active" : ""}`}>
+    <Link href={link.href} className={`nav-item-dark${active ? " active" : ""}`} style={style}>
       <span className="nav-icon" style={{ display: "inline-flex" }}>{link.icon}</span>
       <span style={{ flex: 1 }}>{link.label}</span>
       {link.notify && (
@@ -393,6 +424,63 @@ function NavItem({ link, active }: { link: NavLink; active: boolean }) {
       )}
       {link.key === "mensajes" && <UnreadBadge />}
     </Link>
+  );
+}
+
+/**
+ * Small square logout button alongside "Mi cuenta". Clicking calls
+ * POST /api/auth/logout and redirects to "/" (home), with a hover
+ * state that hints destructiveness in soft warm orange instead of red
+ * (matches our palette).
+ */
+function LogoutButton() {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <button
+      type="button"
+      title="Cerrar sesión"
+      aria-label="Cerrar sesión"
+      disabled={pending}
+      onClick={() => {
+        start(async () => {
+          try {
+            await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+          } catch {
+            /* swallow */
+          }
+          router.push("/");
+          router.refresh();
+        });
+      }}
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        border: "1px solid rgba(255,255,255,0.10)",
+        background: "rgba(255,255,255,0.04)",
+        color: "rgba(255,255,255,0.7)",
+        cursor: pending ? "wait" : "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        transition: "background 0.15s, color 0.15s, border-color 0.15s",
+      }}
+      onMouseEnter={(e) => {
+        if (pending) return;
+        e.currentTarget.style.background = "rgba(232,155,61,0.18)";
+        e.currentTarget.style.color = "#F2C65A";
+        e.currentTarget.style.borderColor = "rgba(232,155,61,0.40)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+        e.currentTarget.style.color = "rgba(255,255,255,0.7)";
+        e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)";
+      }}
+    >
+      {Icon.LogOut}
+    </button>
   );
 }
 
