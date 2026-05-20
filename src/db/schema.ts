@@ -87,6 +87,8 @@ export const programs = pgTable(
     accent: varchar("accent", { length: 20 }).default("accent"),
     description: text("description"),
     bullets: jsonb("bullets").$type<string[]>().default([]),
+    coverUrl: text("cover_url"),
+    coverKind: varchar("cover_kind", { length: 12 }), // "image" | "video"
     modulesCount: integer("modules_count").default(0),
     isFeatured: boolean("is_featured").notNull().default(false),
     isActive: boolean("is_active").notNull().default(true),

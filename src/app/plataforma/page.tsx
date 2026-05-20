@@ -57,6 +57,8 @@ export default async function PlatformPage() {
     type: string;
     accent: string | null;
     durationLabel: string | null;
+    coverUrl: string | null;
+    coverKind: string | null;
     modulesCount: number;
     doneCount: number;
     xpEarned: number;
@@ -74,6 +76,8 @@ export default async function PlatformPage() {
       p.type              AS "type",
       p.accent            AS "accent",
       p.duration_label    AS "durationLabel",
+      p.cover_url         AS "coverUrl",
+      p.cover_kind        AS "coverKind",
       (SELECT COUNT(*)::int FROM modules WHERE program_id = p.id) AS "modulesCount",
       (SELECT COUNT(*)::int FROM module_progress mp
         JOIN modules m ON m.id = mp.module_id
@@ -278,20 +282,65 @@ export default async function PlatformPage() {
                       flexDirection: "column",
                     }}
                   >
-                    {/* Color band */}
+                    {/* Cover (image/video) or color band fallback */}
                     <div
                       style={{
-                        height: 80,
-                        background: `linear-gradient(135deg, ${palette.chipBg} 0%, white 100%)`,
+                        height: 140,
+                        background: c.coverUrl
+                          ? "#0a0a0a"
+                          : `linear-gradient(135deg, ${palette.chipBg} 0%, white 100%)`,
                         position: "relative",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
                         padding: "0 20px",
+                        overflow: "hidden",
                       }}
                     >
+                      {c.coverUrl && c.coverKind !== "video" && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={c.coverUrl}
+                          alt=""
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      )}
+                      {c.coverUrl && c.coverKind === "video" && /\.(mp4|webm|mov)(\?|$)/i.test(c.coverUrl) && (
+                        <video
+                          src={c.coverUrl}
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      )}
+                      {/* Dark gradient overlay for legibility */}
+                      {c.coverUrl && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            background: "linear-gradient(180deg, rgba(6,27,54,0.05) 0%, rgba(6,27,54,0.55) 100%)",
+                          }}
+                          aria-hidden
+                        />
+                      )}
                       <div
                         style={{
+                          position: "relative",
                           width: 56,
                           height: 56,
                           borderRadius: 16,
@@ -303,7 +352,7 @@ export default async function PlatformPage() {
                           fontFamily: "var(--font-serif)",
                           fontSize: 22,
                           fontWeight: 700,
-                          boxShadow: "0 4px 0 rgba(10,30,58,0.18)",
+                          boxShadow: "0 4px 12px rgba(10,30,58,0.30)",
                         }}
                       >
                         {(c.title || "").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
@@ -311,6 +360,7 @@ export default async function PlatformPage() {
                       <span
                         className="mono"
                         style={{
+                          position: "relative",
                           fontSize: 10,
                           padding: "4px 10px",
                           borderRadius: 999,

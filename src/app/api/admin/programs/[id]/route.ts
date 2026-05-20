@@ -6,9 +6,11 @@ import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 const body = z.object({
   title: z.string().min(2).max(200).optional(),
-  slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/).optional(),
+  slug: z.string().min(2).max(80).regex(SLUG_RE).optional(),
   subtitle: z.string().max(2000).optional().nullable(),
   type: z.string().min(2).max(40).optional(),
   durationLabel: z.string().max(80).optional().nullable(),
@@ -19,6 +21,8 @@ const body = z.object({
   accent: z.enum(["accent", "warm", "green", "navy", "gold"]).optional(),
   description: z.string().max(5000).optional().nullable(),
   bullets: z.array(z.string().min(1).max(140)).max(20).optional(),
+  coverUrl: z.string().url().max(500).nullable().optional(),
+  coverKind: z.enum(["image", "video"]).nullable().optional(),
   isActive: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
   sortOrder: z.number().int().optional(),

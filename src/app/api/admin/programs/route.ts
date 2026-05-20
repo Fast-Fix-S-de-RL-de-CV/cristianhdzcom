@@ -5,9 +5,17 @@ import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+// Strict slug regex matching the client-side `isValidSlug`:
+//   lowercase a-z0-9, single dashes between segments, no leading/trailing dash.
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 const body = z.object({
   title: z.string().min(2).max(200),
-  slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/),
+  slug: z
+    .string()
+    .min(2)
+    .max(80)
+    .regex(SLUG_RE, { message: "slug debe ser kebab-case (a-z, 0-9 y guiones simples)" }),
   subtitle: z.string().max(2000).optional().nullable(),
   type: z.string().min(2).max(40),
   durationLabel: z.string().max(80).optional().nullable(),
@@ -18,6 +26,8 @@ const body = z.object({
   accent: z.enum(["accent", "warm", "green", "navy", "gold"]).optional(),
   description: z.string().max(5000).optional().nullable(),
   bullets: z.array(z.string().min(1).max(140)).max(20).optional(),
+  coverUrl: z.string().url().max(500).nullable().optional(),
+  coverKind: z.enum(["image", "video"]).nullable().optional(),
   isActive: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
 });
@@ -45,6 +55,8 @@ export async function POST(req: Request) {
         accent: data.accent ?? "accent",
         description: data.description ?? null,
         bullets: data.bullets ?? [],
+        coverUrl: data.coverUrl ?? null,
+        coverKind: data.coverKind ?? null,
         isActive: data.isActive ?? true,
         isFeatured: data.isFeatured ?? false,
       })
