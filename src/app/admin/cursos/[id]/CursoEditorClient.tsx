@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { AIGenerateModal } from "./AIGenerateModal";
 
 /* ───────────────── types ───────────────── */
 
@@ -616,6 +617,7 @@ function ModulesTab({
   const toast = useToast();
   const [editing, setEditing] = useState<ModuleRow | null>(null);
   const [creating, setCreating] = useState(false);
+  const [aiMode, setAiMode] = useState<"doc" | "scratch" | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function del(id: string) {
@@ -640,21 +642,53 @@ function ModulesTab({
 
   return (
     <div>
+      {/* AI generation banner */}
       <div
         style={{
-          padding: "14px 24px",
+          padding: "18px 24px 4px 24px",
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--gold) 8%, white) 0%, white 100%)",
           borderBottom: "1px solid var(--line)",
-          display: "flex",
-          justifyContent: "flex-end",
         }}
       >
-        <button
-          onClick={() => setCreating(true)}
-          className="btn btn-primary"
-          style={{ padding: "8px 14px", fontSize: 12 }}
+        <div className="mono" style={{ fontSize: 10, color: "var(--gold-deep)", fontWeight: 800, letterSpacing: "0.1em" }}>
+          ✨ GENERAR CON IA
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 12,
+            marginTop: 12,
+          }}
+          className="ai-cards-grid"
         >
-          + Nuevo módulo
-        </button>
+          <AICta
+            title="Desde un documento"
+            desc="Sube .md / .pdf / .docx o pega texto. Claude lo estructura como módulos + lecciones."
+            icon="📄"
+            onClick={() => setAiMode("doc")}
+          />
+          <AICta
+            title="Desde cero"
+            desc="Solo escribe un brief del curso. Claude inventa módulos y lecciones desde cero."
+            icon="🧠"
+            onClick={() => setAiMode("scratch")}
+          />
+        </div>
+        <div className="row" style={{ marginTop: 14, justifyContent: "flex-end", alignItems: "center", gap: 10 }}>
+          <span className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.06em" }}>
+            ¿Prefieres hacerlo manual?
+          </span>
+          <button
+            onClick={() => setCreating(true)}
+            className="btn btn-ghost"
+            style={{ padding: "6px 12px", fontSize: 11 }}
+          >
+            + Crear módulo manualmente
+          </button>
+        </div>
+        <style>{`@media (max-width: 720px) { .ai-cards-grid { grid-template-columns: 1fr !important; } }`}</style>
       </div>
 
       <div
@@ -809,7 +843,87 @@ function ModulesTab({
           }}
         />
       )}
+
+      {aiMode && (
+        <AIGenerateModal
+          programId={program.id}
+          initialMode={aiMode}
+          hasExistingModules={modules.length > 0}
+          onClose={() => setAiMode(null)}
+          onCreated={onChanged}
+        />
+      )}
     </div>
+  );
+}
+
+/** Card grande con CTA para uno de los dos modos de IA. */
+function AICta({
+  title,
+  desc,
+  icon,
+  onClick,
+}: {
+  title: string;
+  desc: string;
+  icon: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        textAlign: "left",
+        background: "white",
+        border: "1.5px solid rgba(216,168,63,0.30)",
+        borderRadius: 14,
+        padding: "16px 18px",
+        cursor: "pointer",
+        display: "flex",
+        gap: 14,
+        alignItems: "flex-start",
+        transition: "transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease",
+        boxShadow: "0 4px 10px rgba(10,30,58,0.05)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.borderColor = "var(--gold)";
+        e.currentTarget.style.boxShadow = "0 8px 22px rgba(216,168,63,0.18)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "";
+        e.currentTarget.style.borderColor = "rgba(216,168,63,0.30)";
+        e.currentTarget.style.boxShadow = "0 4px 10px rgba(10,30,58,0.05)";
+      }}
+    >
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 12,
+          background: "linear-gradient(160deg, #F2C65A 0%, #B88523 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 22,
+          flexShrink: 0,
+          boxShadow: "0 3px 0 #B88523",
+        }}
+        aria-hidden
+      >
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="serif" style={{ fontSize: 16, fontWeight: 700, color: "var(--navy)" }}>
+          {title}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4, lineHeight: 1.5 }}>
+          {desc}
+        </div>
+      </div>
+      <span style={{ color: "var(--gold-deep)", fontSize: 22, fontWeight: 800 }}>→</span>
+    </button>
   );
 }
 
