@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 
 /* ───────────────── types ───────────────── */
 
@@ -611,19 +612,27 @@ function ModulesTab({
   onChanged: () => void;
   onGotoLessons: (mid: string) => void;
 }) {
+  const confirm = useConfirm();
+  const toast = useToast();
   const [editing, setEditing] = useState<ModuleRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function del(id: string) {
-    if (!confirm("¿Eliminar este módulo? Borra también sus lecciones.")) return;
+    const ok = await confirm({
+      title: "¿Eliminar este módulo?",
+      description: "Borra también sus lecciones.",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/modules/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Error al borrar");
       onChanged();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message || "No se pudo eliminar el módulo");
     } finally {
       setBusy(false);
     }
@@ -962,6 +971,8 @@ function LessonsTab({
     }
     return modules[0]?.id ?? "";
   });
+  const confirm = useConfirm();
+  const toast = useToast();
   const [editing, setEditing] = useState<LessonRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -969,14 +980,19 @@ function LessonsTab({
   const filtered = lessons.filter((l) => l.moduleId === selectedModule);
 
   async function del(id: string) {
-    if (!confirm("¿Eliminar esta lección?")) return;
+    const ok = await confirm({
+      title: "¿Eliminar esta lección?",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/lessons/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Error al borrar");
       onChanged();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message || "No se pudo eliminar la lección");
     } finally {
       setBusy(false);
     }
@@ -1539,19 +1555,26 @@ function CohortsTab({
   cohorts: CohortRow[];
   onChanged: () => void;
 }) {
+  const confirm = useConfirm();
+  const toast = useToast();
   const [editing, setEditing] = useState<CohortRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function del(id: string) {
-    if (!confirm("¿Eliminar esta cohorte?")) return;
+    const ok = await confirm({
+      title: "¿Eliminar esta cohorte?",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/cohorts/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Error al borrar");
       onChanged();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message || "No se pudo eliminar la cohorte");
     } finally {
       setBusy(false);
     }

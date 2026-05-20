@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatRelative } from "@/lib/utils";
+import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 
 type Row = {
   id: string;
@@ -18,6 +19,8 @@ type Row = {
 
 export function BlogManager({ rows }: { rows: Row[] }) {
   const router = useRouter();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [editing, setEditing] = useState<Row | null>(null);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -47,14 +50,20 @@ export function BlogManager({ rows }: { rows: Row[] }) {
   }
 
   async function remove(id: string) {
-    if (!confirm("¿Eliminar post? Esto es permanente.")) return;
+    const ok = await confirm({
+      title: "¿Eliminar post?",
+      description: "Esto es permanente.",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/blog-posts/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Error al borrar");
       router.refresh();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message || "No se pudo eliminar el post");
     } finally {
       setBusy(false);
     }

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatRelative } from "@/lib/utils";
+import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 
 type Post = {
   id: string;
@@ -95,6 +96,8 @@ export function ComunidadManager({
 
 function PostsTab({ posts }: { posts: Post[] }) {
   const router = useRouter();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
 
   async function togglePin(id: string) {
@@ -104,21 +107,26 @@ function PostsTab({ posts }: { posts: Post[] }) {
       if (!res.ok) throw new Error("Error");
       router.refresh();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message || "No se pudo cambiar el pin");
     } finally {
       setBusy(null);
     }
   }
 
   async function remove(id: string) {
-    if (!confirm("¿Eliminar post?")) return;
+    const ok = await confirm({
+      title: "¿Eliminar post?",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     setBusy(id);
     try {
       const res = await fetch(`/api/admin/posts/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Error");
       router.refresh();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message || "No se pudo eliminar el post");
     } finally {
       setBusy(null);
     }
@@ -201,17 +209,24 @@ function PostsTab({ posts }: { posts: Post[] }) {
 
 function CommentsTab({ comments }: { comments: Comment[] }) {
   const router = useRouter();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
 
   async function remove(id: string) {
-    if (!confirm("¿Eliminar comentario?")) return;
+    const ok = await confirm({
+      title: "¿Eliminar comentario?",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     setBusy(id);
     try {
       const res = await fetch(`/api/admin/comments/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Error");
       router.refresh();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message || "No se pudo eliminar el comentario");
     } finally {
       setBusy(null);
     }
@@ -272,6 +287,8 @@ function CommentsTab({ comments }: { comments: Comment[] }) {
 
 function CategoriesTab({ categories }: { categories: Category[] }) {
   const router = useRouter();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [editing, setEditing] = useState<Category | null>(null);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -301,14 +318,19 @@ function CategoriesTab({ categories }: { categories: Category[] }) {
   }
 
   async function remove(id: number) {
-    if (!confirm("¿Eliminar categoría?")) return;
+    const ok = await confirm({
+      title: "¿Eliminar categoría?",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Error");
       router.refresh();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message || "No se pudo eliminar la categoría");
     } finally {
       setBusy(false);
     }

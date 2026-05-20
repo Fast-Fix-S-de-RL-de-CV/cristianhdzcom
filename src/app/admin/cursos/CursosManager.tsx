@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isValidSlug, sanitizeSlugInput, slugify } from "@/lib/slug";
+import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 
 type Accent = "accent" | "warm" | "green" | "navy" | "gold";
 
@@ -32,6 +33,8 @@ const ACCENTS: Accent[] = ["accent", "warm", "green", "navy", "gold"];
 
 export function CursosManager({ rows }: { rows: Row[] }) {
   const router = useRouter();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [editing, setEditing] = useState<Row | null>(null);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -82,7 +85,13 @@ export function CursosManager({ rows }: { rows: Row[] }) {
   }
 
   async function deleteProgram(id: string) {
-    if (!confirm("¿Eliminar este programa? Esta acción no se puede deshacer.")) return;
+    const ok = await confirm({
+      title: "¿Eliminar este programa?",
+      description: "Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/programs/${id}`, { method: "DELETE" });
@@ -92,7 +101,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
       }
       router.refresh();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message || "No se pudo eliminar el programa");
     } finally {
       setBusy(false);
     }

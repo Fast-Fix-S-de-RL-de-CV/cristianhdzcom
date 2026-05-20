@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import { embedUrl } from "@/lib/video";
 
 type LessonCommentRow = {
@@ -693,6 +694,7 @@ function LessonComments({
   lessonId: string;
   currentUser: { id: string; name: string };
 }) {
+  const confirm = useConfirm();
   const [rows, setRows] = useState<LessonCommentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
@@ -729,7 +731,12 @@ function LessonComments({
   }
 
   async function deleteComment(id: string) {
-    if (!confirm("¿Eliminar este comentario?")) return;
+    const ok = await confirm({
+      title: "¿Eliminar este comentario?",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     const res = await fetch(`/api/lessons/${lessonId}/comments/${id}`, { method: "DELETE" });
     if (res.ok) load();
   }

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 
 type Row = {
   id: string;
@@ -18,6 +19,8 @@ type Row = {
 
 export function TalleresManager({ rows }: { rows: Row[] }) {
   const router = useRouter();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [editing, setEditing] = useState<Row | null>(null);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -47,14 +50,19 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
   }
 
   async function remove(id: string) {
-    if (!confirm("¿Eliminar evento?")) return;
+    const ok = await confirm({
+      title: "¿Eliminar evento?",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/events/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Error al borrar");
       router.refresh();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message || "No se pudo eliminar el evento");
     } finally {
       setBusy(false);
     }
