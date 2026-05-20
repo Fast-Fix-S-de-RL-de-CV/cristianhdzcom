@@ -1,0 +1,18 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bsBg" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#0B2548"></stop>
+      <stop offset="100%" stop-color="#061B36"></stop>
+    </radialGradient>
+    <linearGradient id="bsFlame" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFE19A"></stop>
+      <stop offset="50%" stop-color="#E89B3D"></stop>
+      <stop offset="100%" stop-color="#B88523"></stop>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="46" fill="url(#bsBg)" stroke="#D8A83F" stroke-width="3"></circle>
+  <circle cx="50" cy="50" r="46" fill="none" stroke="#F2C65A" stroke-width="0.8" opacity="0.6" stroke-dasharray="2 3"></circle>
+  <path d="M 50 18 Q 38 32 42 44 Q 30 48 32 60 Q 30 76 50 80 Q 70 76 68 60 Q 70 48 58 44 Q 62 32 50 18 Z" fill="url(#bsFlame)"></path>
+  <path d="M 50 30 Q 44 40 46 50 Q 50 56 54 50 Q 56 40 50 30 Z" fill="#FFFDF8" opacity="0.6"></path>
+  <ellipse cx="42" cy="32" rx="3" ry="6" fill="#FFFDF8" opacity="0.3"></ellipse>
+</svg>

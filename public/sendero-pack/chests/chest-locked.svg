@@ -1,0 +1,43 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="clBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#C28D2D"></stop>
+      <stop offset="100%" stop-color="#7E5A14"></stop>
+    </linearGradient>
+    <linearGradient id="clLid" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F2C65A"></stop>
+      <stop offset="100%" stop-color="#A07B36"></stop>
+    </linearGradient>
+    <linearGradient id="clBand" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F2C65A"></stop>
+      <stop offset="100%" stop-color="#B88523"></stop>
+    </linearGradient>
+  </defs>
+  <ellipse cx="100" cy="180" rx="70" ry="10" fill="#061B36" opacity="0.25"></ellipse>
+  
+  <rect x="32" y="92" width="136" height="80" rx="6" fill="url(#clBody)"></rect>
+  <rect x="32" y="92" width="136" height="80" rx="6" fill="none" stroke="#5A3E14" stroke-width="2.5"></rect>
+  
+  <rect x="52" y="92" width="10" height="80" fill="url(#clBand)" opacity="0.85"></rect>
+  <rect x="138" y="92" width="10" height="80" fill="url(#clBand)" opacity="0.85"></rect>
+  
+  <path d="M 32 92 Q 32 48 100 48 Q 168 48 168 92 Z" fill="url(#clLid)"></path>
+  <path d="M 32 92 Q 32 48 100 48 Q 168 48 168 92" fill="none" stroke="#5A3E14" stroke-width="2.5"></path>
+  <path d="M 42 88 Q 42 58 100 58 Q 158 58 158 88" stroke="#FFFDF8" stroke-width="1.5" fill="none" opacity="0.5"></path>
+  
+  <path d="M 52 92 Q 52 56 62 52 L 62 92 Z" fill="url(#clBand)" opacity="0.85"></path>
+  <path d="M 148 92 Q 148 56 138 52 L 138 92 Z" fill="url(#clBand)" opacity="0.85"></path>
+  
+  <rect x="86" y="84" width="28" height="36" rx="3" fill="#D8A83F" stroke="#5A3E14" stroke-width="2"></rect>
+  <circle cx="100" cy="98" r="5" fill="#5A3E14"></circle>
+  <rect x="98" y="98" width="4" height="14" rx="1" fill="#5A3E14"></rect>
+  
+  <g transform="translate(100 38)">
+    <path d="M -8 6 L -8 -2 A 8 8 0 0 1 8 -2 L 8 6" stroke="#5A3E14" stroke-width="3" fill="none" stroke-linecap="round"></path>
+    <rect x="-10" y="6" width="20" height="14" rx="2" fill="#D8A83F" stroke="#5A3E14" stroke-width="2"></rect>
+    <circle cx="0" cy="13" r="2" fill="#5A3E14"></circle>
+  </g>
+  
+  <ellipse cx="70" cy="64" rx="22" ry="8" fill="#FFFDF8" opacity="0.25"></ellipse>
+  <ellipse cx="60" cy="120" rx="6" ry="20" fill="#FFFDF8" opacity="0.12"></ellipse>
+</svg>

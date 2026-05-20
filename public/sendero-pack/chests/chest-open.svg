@@ -1,0 +1,70 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="coBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E0A540"></stop>
+      <stop offset="100%" stop-color="#8C6620"></stop>
+    </linearGradient>
+    <linearGradient id="coLid" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE19A"></stop>
+      <stop offset="100%" stop-color="#B88523"></stop>
+    </linearGradient>
+    <radialGradient id="coGlow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FFFDF8" stop-opacity="1"></stop>
+      <stop offset="30%" stop-color="#F2C65A" stop-opacity="0.85"></stop>
+      <stop offset="100%" stop-color="#D8A83F" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="coBand" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F2C65A"></stop>
+      <stop offset="100%" stop-color="#B88523"></stop>
+    </linearGradient>
+  </defs>
+  <ellipse cx="100" cy="184" rx="80" ry="11" fill="#061B36" opacity="0.22"></ellipse>
+  
+  <circle cx="100" cy="90" r="110" fill="url(#coGlow)" opacity="0.85"></circle>
+  
+  <g opacity="0.45" fill="#FFE19A">
+    <path d="M 100 100 L 86 0 L 114 0 Z"></path>
+    <path d="M 100 100 L 30 16 L 50 4 Z"></path>
+    <path d="M 100 100 L 170 16 L 150 4 Z"></path>
+    <path d="M 100 100 L 0 60 L 6 40 Z"></path>
+    <path d="M 100 100 L 200 60 L 194 40 Z"></path>
+  </g>
+  
+  <rect x="32" y="108" width="136" height="64" rx="6" fill="url(#coBody)"></rect>
+  <rect x="32" y="108" width="136" height="64" rx="6" fill="none" stroke="#5A3E14" stroke-width="2.5"></rect>
+  <rect x="52" y="108" width="10" height="64" fill="url(#coBand)" opacity="0.9"></rect>
+  <rect x="138" y="108" width="10" height="64" fill="url(#coBand)" opacity="0.9"></rect>
+  
+  <path d="M 42 108 L 158 108 L 152 132 L 48 132 Z" fill="#3A2A14"></path>
+  
+  <g transform="translate(100 60) rotate(-22) translate(-100 -60)">
+    <path d="M 32 84 Q 32 40 100 40 Q 168 40 168 84 L 168 96 L 32 96 Z" fill="url(#coLid)"></path>
+    <path d="M 32 96 Q 32 40 100 40 Q 168 40 168 96" fill="none" stroke="#5A3E14" stroke-width="2.5"></path>
+    <path d="M 42 92 Q 42 52 100 52 Q 158 52 158 92" stroke="#FFFDF8" stroke-width="1.5" fill="none" opacity="0.7"></path>
+  </g>
+  
+  <g>
+    <circle cx="68" cy="124" r="10" fill="#F2C65A" stroke="#B88523" stroke-width="1.5"></circle>
+    <circle cx="68" cy="124" r="6" fill="#FFE19A" opacity="0.6"></circle>
+    <circle cx="92" cy="130" r="11" fill="#F2C65A" stroke="#B88523" stroke-width="1.5"></circle>
+    <circle cx="118" cy="128" r="10" fill="#F2C65A" stroke="#B88523" stroke-width="1.5"></circle>
+    <circle cx="118" cy="128" r="6" fill="#FFE19A" opacity="0.6"></circle>
+    <circle cx="140" cy="126" r="9" fill="#F2C65A" stroke="#B88523" stroke-width="1.5"></circle>
+    
+    <path d="M 80 110 L 86 116 L 80 122 L 74 116 Z" fill="#8067D8" stroke="#3A2877" stroke-width="1"></path>
+    <path d="M 108 112 L 113 117 L 108 122 L 103 117 Z" fill="#2BB8A7" stroke="#0E6B5C" stroke-width="1"></path>
+    <path d="M 130 108 L 136 114 L 130 120 L 124 114 Z" fill="#E89B3D" stroke="#8C4F0F" stroke-width="1"></path>
+  </g>
+  
+  <g>
+    <circle cx="60" cy="80" r="7" fill="#F2C65A" stroke="#B88523" stroke-width="1.5"></circle>
+    <circle cx="60" cy="80" r="4" fill="#FFE19A"></circle>
+    <circle cx="148" cy="86" r="6" fill="#F2C65A" stroke="#B88523" stroke-width="1.5"></circle>
+    <circle cx="100" cy="50" r="5" fill="#F2C65A" stroke="#B88523" stroke-width="1.5"></circle>
+  </g>
+  
+  <path d="M 38 40 L 40 50 L 50 52 L 40 54 L 38 64 L 36 54 L 26 52 L 36 50 Z" fill="#FFE19A"></path>
+  <path d="M 162 50 L 163 58 L 171 59 L 163 60 L 162 68 L 161 60 L 153 59 L 161 58 Z" fill="#FFE19A"></path>
+  <circle cx="180" cy="100" r="2.5" fill="#FFFDF8"></circle>
+  <circle cx="20" cy="110" r="2" fill="#FFFDF8"></circle>
+</svg>

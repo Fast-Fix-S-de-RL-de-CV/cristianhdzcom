@@ -2,10 +2,17 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ModuleSvgIcon, NodeBadgeIcon } from "./ModuleIcon";
-import type { ModuleIconKind } from "./ModuleIcon";
 
 export type SenderoModuleState = "done" | "current" | "in_progress" | "locked";
+
+export type SenderoLesson = {
+  id: string;
+  code: string;
+  title: string;
+  kind: string;
+  xpReward: number;
+  completed: boolean;
+};
 
 export type SenderoModule = {
   id: string;
@@ -17,78 +24,61 @@ export type SenderoModule = {
   xpReward: number;
   lessonsCount: number;
   state: SenderoModuleState;
+  lessons: SenderoLesson[];
 };
 
 /**
- * Sendero map — Duolingo-style learning path rendered as a connected SVG
- * dotted gold trail with zigzag nodes. Each module shows:
- *   - a circular node (size + color + icon vary by state)
- *   - a horizontal card on the opposite side with code, title, lessons, XP
- *   - subtle decorations (trees, mountains, start flag) tucked behind the path
+ * Sendero map — Premium gamified learning path using the official asset
+ * pack (`/public/sendero-pack/`). Renders a vertical zigzag of module
+ * nodes on top of a hand-painted landscape, connected by a dotted gold
+ * SVG path.
  *
- * `current` modules are clickable → navigate into the next pending lesson.
- * Locked modules render disabled. Project modules (isBig) use purple.
+ * Each module card is expandable: click anywhere on it to reveal the
+ * lessons inside (Skool's "submodule" affordance). Lessons link to
+ * /plataforma/leccion/[id]; the current/active lesson uses /modules/start.
  */
-const NODE_SIZE = 86;
-const NODE_SIZE_BIG = 104;
-const ROW_HEIGHT = 150;
-const TOP_PADDING = 60;
-const BOTTOM_PADDING = 60;
-const VIEW_WIDTH = 100; // viewBox in % units
+const NODE_SIZE = 116;
+const NODE_SIZE_BIG = 132;
+const ROW_HEIGHT = 200;
+const TOP_PADDING = 120;
+const BOTTOM_PADDING = 80;
 
-// Zigzag X% positions — slight randomness keeps it natural.
-const ZIGZAG = [50, 38, 56, 70, 42, 56, 70, 36, 56];
+// Zigzag X% positions — extends naturally for any number of modules.
+const ZIGZAG = [50, 32, 58, 72, 38, 56, 70, 36, 54, 68, 40, 60];
 
-function pickIcon(mod: SenderoModule): ModuleIconKind {
-  if (mod.state === "current" || mod.state === "in_progress") return "play";
-  if (mod.state === "done") return "gauge";
-  if (mod.isBig && /seguridad|security/i.test(mod.title)) return "chest";
-  if (mod.isBig) return "pulse";
-  if (/observ|metric|monitor/i.test(mod.title)) return "pulse";
-  if (/test|qa|calidad/i.test(mod.title)) return "clipboard";
-  if (/job|queue|cola|background|deploy/i.test(mod.title)) return "boxes";
-  if (/performance|database|datos|rendimiento/i.test(mod.title)) return "gauge";
-  return "boxes";
+type NodeKind =
+  | "current"
+  | "completed"
+  | "project"
+  | "locked-boxes"
+  | "locked-clipboard"
+  | "locked-chest";
+
+function pickNodeAsset(mod: SenderoModule): NodeKind {
+  if (mod.state === "current" || mod.state === "in_progress") return "current";
+  if (mod.state === "done") return "completed";
+  if (mod.isBig && /seguridad|security|boss/i.test(mod.title)) return "locked-chest";
+  if (mod.isBig) return "project";
+  if (/test|qa|calidad/i.test(mod.title)) return "locked-clipboard";
+  if (/job|queue|cola|background|deploy/i.test(mod.title)) return "locked-boxes";
+  if (/observ|metric|monitor/i.test(mod.title)) return "project";
+  return "locked-boxes";
 }
 
-type Palette = { fill: string; shadow: string; ring: string; textOnFill: string };
-function pickPalette(mod: SenderoModule): Palette {
-  if (mod.state === "done") {
-    return {
-      fill: "linear-gradient(160deg, #4dca8c 0%, #2da064 100%)",
-      shadow: "#1b7849",
-      ring: "rgba(53,183,121,0.35)",
-      textOnFill: "white",
-    };
-  }
-  if (mod.state === "current" || mod.state === "in_progress") {
-    return {
-      fill: "linear-gradient(165deg, #F2C65A 0%, #D8A83F 60%, #B88523 100%)",
-      shadow: "#7c5410",
-      ring: "rgba(216,168,63,0.45)",
-      textOnFill: "var(--navy)",
-    };
-  }
-  if (mod.isBig) {
-    return {
-      fill: "linear-gradient(160deg, #9d83e8 0%, #6c52c4 100%)",
-      shadow: "#3a2877",
-      ring: "rgba(128,103,216,0.30)",
-      textOnFill: "white",
-    };
-  }
-  // locked
-  return {
-    fill: "linear-gradient(160deg, #36486a 0%, #24314c 100%)",
-    shadow: "#0a1426",
-    ring: "rgba(54,72,106,0.30)",
-    textOnFill: "rgba(255,255,255,0.78)",
-  };
+function nodeAssetUrl(kind: NodeKind): string {
+  return `/sendero-pack/nodes/node-${kind}.svg`;
 }
 
 export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(() => {
+    const init = new Set<string>();
+    // Auto-expand the current module so lessons are visible
+    const cur = modules.find((m) => m.state === "current" || m.state === "in_progress");
+    if (cur) init.add(cur.id);
+    return init;
+  });
 
   const layout = useMemo(() => {
     const points = modules.map((_, i) => ({
@@ -99,7 +89,7 @@ export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
     return { points, height };
   }, [modules]);
 
-  // Build dotted bezier path between consecutive points (smooth zigzag).
+  // Build a smooth zigzag path (bezier between consecutive points).
   const pathD = useMemo(() => {
     const pts = layout.points;
     if (pts.length === 0) return "";
@@ -130,79 +120,129 @@ export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
     }
   }
 
+  function toggleExpand(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   return (
     <div
       style={{
         position: "relative",
         width: "100%",
         height: layout.height,
-        // Subtle hand-drawn paper texture under the path.
-        background:
-          "radial-gradient(ellipse 80% 40% at 50% 0%, rgba(216,168,63,0.06), transparent 70%)",
+        // Landscape background — repeats vertically to support long paths.
+        backgroundImage: "url(/sendero-pack/backgrounds/path-landscape.svg)",
+        backgroundRepeat: "repeat-y",
+        backgroundPosition: "center top",
+        backgroundSize: "100% auto",
+        borderRadius: 20,
         overflow: "hidden",
+        border: "1px solid rgba(216,168,63,0.18)",
+        boxShadow: "0 10px 30px rgba(10,30,58,0.06), inset 0 0 0 1px rgba(255,255,255,0.5)",
       }}
     >
-      {/* Decorative landscape SVG behind everything */}
-      <DecorBackground height={layout.height} />
+      {/* Start flag */}
+      {layout.points[0] && (
+        <img
+          src="/sendero-pack/decorations/flag-start.svg"
+          alt=""
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: 20,
+            left: `calc(${layout.points[0].xPct}% - 80px)`,
+            width: 60,
+            height: 80,
+            filter: "drop-shadow(0 4px 8px rgba(10,30,58,0.18))",
+          }}
+        />
+      )}
 
-      {/* Path */}
+      {/* Path arrow as a fun detail near the flag */}
+      <img
+        src="/sendero-pack/decorations/path-arrow.svg"
+        alt=""
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: 50,
+          left: `calc(${layout.points[0]?.xPct ?? 50}% - 30px)`,
+          width: 48,
+          height: 48,
+          opacity: 0.85,
+        }}
+      />
+
+      {/* Dotted gold path on top of the landscape */}
       <svg
         width="100%"
         height={layout.height}
-        viewBox={`0 0 ${VIEW_WIDTH} ${layout.height}`}
+        viewBox={`0 0 100 ${layout.height}`}
         preserveAspectRatio="none"
         style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
       >
-        {/* soft halo behind path */}
+        <defs>
+          <linearGradient id="senderoGold" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stopColor="#F2C65A" />
+            <stop offset="100%" stopColor="#B88523" />
+          </linearGradient>
+        </defs>
+        {/* Soft halo */}
         <path
           d={pathD}
           fill="none"
-          stroke="rgba(216,168,63,0.20)"
-          strokeWidth={1.6}
+          stroke="rgba(216,168,63,0.22)"
           vectorEffect="non-scaling-stroke"
-          style={{ strokeWidth: 14 }}
+          style={{ strokeWidth: 18 }}
         />
-        {/* main dotted gold path */}
+        {/* Main dotted gold path */}
         <path
           d={pathD}
           fill="none"
-          stroke="#D8A83F"
-          strokeWidth={1}
-          strokeDasharray="2 2.2"
+          stroke="url(#senderoGold)"
+          strokeDasharray="2 3"
           strokeLinecap="round"
           vectorEffect="non-scaling-stroke"
-          style={{ strokeWidth: 4 }}
+          style={{ strokeWidth: 5, opacity: 0.92 }}
         />
       </svg>
 
-      {/* Start flag at first point */}
-      {layout.points[0] && (
-        <div
-          style={{
-            position: "absolute",
-            top: layout.points[0].y - 90,
-            left: `calc(${layout.points[0].xPct}% - 16px)`,
-            color: "#D8A83F",
-            opacity: 0.85,
-          }}
-          aria-hidden
-        >
-          <ModuleSvgIcon kind="flag" size={32} color="#D8A83F" />
-        </div>
+      {/* Sparkles scattered along path for visual interest */}
+      {layout.points.map((pt, i) =>
+        i % 2 === 0 && i > 0 ? (
+          <img
+            key={`sp-${i}`}
+            src="/sendero-pack/decorations/sparkle-gold.svg"
+            alt=""
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: pt.y - ROW_HEIGHT / 2 + (i * 17) % 30,
+              left: `calc(${(pt.xPct + layout.points[i - 1]!.xPct) / 2}% - 12px)`,
+              width: 24,
+              height: 24,
+              opacity: 0.7,
+            }}
+          />
+        ) : null,
       )}
 
       {/* Nodes + cards */}
       {modules.map((m, i) => {
         const pt = layout.points[i]!;
-        const palette = pickPalette(m);
-        const iconKind = pickIcon(m);
         const size = m.isBig ? NODE_SIZE_BIG : NODE_SIZE;
         const isActive = m.state === "current" || m.state === "in_progress";
         const isDone = m.state === "done";
         const isLocked = m.state === "locked";
-        const isProject = m.isBig;
-        const cardOnLeft = pt.xPct > 50; // node is right-side → card to the left
+        const cardOnLeft = pt.xPct > 50;
         const pending = pendingId === m.id;
+        const kind = pickNodeAsset(m);
+        const isExpanded = expanded.has(m.id);
 
         return (
           <div
@@ -215,100 +255,61 @@ export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
               height: size,
             }}
           >
-            {/* Halo for active */}
+            {/* Halo for the active node */}
             {isActive && (
               <span
                 aria-hidden
                 style={{
                   position: "absolute",
-                  inset: -14,
+                  inset: -16,
                   borderRadius: "50%",
-                  background: palette.ring,
-                  filter: "blur(2px)",
+                  background:
+                    "radial-gradient(circle, rgba(242,198,90,0.55) 0%, rgba(216,168,63,0) 65%)",
                   animation: "sm-pulse 2.4s ease-in-out infinite",
                   pointerEvents: "none",
                 }}
               />
             )}
 
-            {/* Node button */}
+            {/* The node itself — using the asset pack illustration */}
             <button
               type="button"
-              onClick={() => onActiveClick(m)}
-              disabled={isLocked || pending}
+              onClick={() => (isActive ? onActiveClick(m) : toggleExpand(m.id))}
+              disabled={pending}
               aria-label={`${m.code} · ${m.title}`}
               style={{
                 position: "relative",
                 width: size,
                 height: size,
-                borderRadius: "50%",
-                background: palette.fill,
-                color: palette.textOnFill,
-                border: isActive ? "3px solid white" : "3px solid white",
-                boxShadow: `0 8px 0 ${palette.shadow}, 0 12px 24px rgba(10,30,58,0.18)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: isLocked ? "not-allowed" : isActive ? "pointer" : "default",
+                border: "none",
+                background: "transparent",
+                padding: 0,
+                cursor: isLocked && !isActive ? "pointer" : isActive ? "pointer" : "pointer",
                 opacity: pending ? 0.7 : 1,
-                transition: "transform 0.12s ease, box-shadow 0.12s ease",
+                transition: "transform 0.15s ease",
+                filter: "drop-shadow(0 14px 22px rgba(10,30,58,0.22))",
               }}
-              onMouseDown={(e) => {
-                if (!isLocked && isActive) {
-                  e.currentTarget.style.transform = "translateY(4px)";
-                  e.currentTarget.style.boxShadow = `0 4px 0 ${palette.shadow}, 0 6px 14px rgba(10,30,58,0.18)`;
-                }
-              }}
-              onMouseUp={(e) => {
-                e.currentTarget.style.transform = "";
-                e.currentTarget.style.boxShadow = `0 8px 0 ${palette.shadow}, 0 12px 24px rgba(10,30,58,0.18)`;
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "";
-                e.currentTarget.style.boxShadow = `0 8px 0 ${palette.shadow}, 0 12px 24px rgba(10,30,58,0.18)`;
+              }}
+              onMouseDown={(e) => {
+                e.currentTarget.style.transform = "translateY(2px)";
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
               }}
             >
-              <ModuleSvgIcon kind={iconKind} size={Math.round(size * 0.42)} color={palette.textOnFill} />
-
-              {/* Overlay badge: check (done) or lock (locked) */}
-              {isDone && (
-                <span
-                  style={{
-                    position: "absolute",
-                    right: -4,
-                    bottom: -4,
-                    width: 26,
-                    height: 26,
-                    borderRadius: "50%",
-                    background: "#1b7849",
-                    border: "2.5px solid white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <NodeBadgeIcon kind="check" size={12} />
-                </span>
-              )}
-              {isLocked && (
-                <span
-                  style={{
-                    position: "absolute",
-                    right: -4,
-                    bottom: -4,
-                    width: 26,
-                    height: 26,
-                    borderRadius: "50%",
-                    background: "rgba(20, 32, 60, 0.92)",
-                    border: "2.5px solid white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <NodeBadgeIcon kind="lock" size={11} />
-                </span>
-              )}
+              <img
+                src={nodeAssetUrl(kind)}
+                alt=""
+                width={size}
+                height={size}
+                style={{ display: "block", width: "100%", height: "100%" }}
+                draggable={false}
+              />
             </button>
 
             {/* Module card alongside the node */}
@@ -317,11 +318,13 @@ export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
               isActive={isActive}
               isLocked={isLocked}
               isDone={isDone}
-              isProject={isProject}
               side={cardOnLeft ? "left" : "right"}
               size={size}
               onContinue={() => onActiveClick(m)}
+              onToggle={() => toggleExpand(m.id)}
               pending={pending}
+              isExpanded={isExpanded}
+              router={router}
             />
           </div>
         );
@@ -329,8 +332,8 @@ export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
 
       <style>{`
         @keyframes sm-pulse {
-          0%, 100% { opacity: 0.45; transform: scale(1); }
-          50%      { opacity: 0.85; transform: scale(1.12); }
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50%      { opacity: 0.95; transform: scale(1.10); }
         }
       `}</style>
     </div>
@@ -342,32 +345,44 @@ function ModuleCard({
   isActive,
   isLocked,
   isDone,
-  isProject,
   side,
   size,
   onContinue,
+  onToggle,
   pending,
+  isExpanded,
+  router,
 }: {
   mod: SenderoModule;
   isActive: boolean;
   isLocked: boolean;
   isDone: boolean;
-  isProject: boolean;
   side: "left" | "right";
   size: number;
   onContinue: () => void;
+  onToggle: () => void;
   pending: boolean;
+  isExpanded: boolean;
+  router: ReturnType<typeof useRouter>;
 }) {
-  // Position relative to the node: nudge horizontally outward by half the
-  // node size + 18px gap.
-  const offset = size / 2 + 18;
-  const stateLabel: { text: string; bg: string; color: string } = isActive
-    ? { text: "ACTUAL", bg: "#F2C65A", color: "var(--navy)" }
+  const offset = size / 2 + 22;
+  const isProject = mod.isBig;
+  const stateLabel: { text: string; bg: string; color: string; icon?: string } = isActive
+    ? { text: "ACTUAL", bg: "#F2C65A", color: "#5d3d0a", icon: "●" }
     : isDone
-      ? { text: "COMPLETADO", bg: "#1b7849", color: "white" }
+      ? { text: "COMPLETADO", bg: "#1B7849", color: "white", icon: "✓" }
       : isProject
-        ? { text: "PROYECTO", bg: "#6c52c4", color: "white" }
-        : { text: "BLOQUEADO", bg: "rgba(20,32,60,0.08)", color: "var(--muted)" };
+        ? { text: "PROYECTO", bg: "#6C52C4", color: "white", icon: "◆" }
+        : { text: "BLOQUEADO", bg: "rgba(6,27,54,0.08)", color: "#6D7890", icon: "🔒" };
+
+  // Card border / shadow tuned to state.
+  const borderColor = isActive
+    ? "rgba(216,168,63,0.55)"
+    : isDone
+      ? "rgba(53,183,121,0.45)"
+      : isProject
+        ? "rgba(128,103,216,0.42)"
+        : "rgba(6,27,54,0.08)";
 
   return (
     <div
@@ -376,38 +391,46 @@ function ModuleCard({
         top: "50%",
         transform: "translateY(-50%)",
         [side]: offset,
-        width: 280,
+        width: 300,
         background: "#FFFDF8",
-        border: `1px solid ${isActive ? "rgba(216,168,63,0.55)" : isProject ? "rgba(128,103,216,0.45)" : isLocked ? "rgba(20,32,60,0.08)" : "rgba(53,183,121,0.45)"}`,
+        border: `1.5px solid ${borderColor}`,
         borderRadius: 14,
-        padding: "12px 14px",
+        padding: 14,
         boxShadow: isActive
-          ? "0 14px 32px rgba(216,168,63,0.18), 0 1px 0 rgba(255,255,255,0.6) inset"
-          : "0 6px 16px rgba(10,30,58,0.06)",
-        opacity: isLocked ? 0.72 : 1,
+          ? "0 14px 32px rgba(216,168,63,0.20), 0 1px 0 rgba(255,255,255,0.6) inset"
+          : isDone
+            ? "0 8px 18px rgba(53,183,121,0.14)"
+            : isProject
+              ? "0 8px 18px rgba(128,103,216,0.14)"
+              : "0 6px 14px rgba(10,30,58,0.05)",
+        opacity: isLocked ? 0.78 : 1,
         backdropFilter: "blur(2px)",
       }}
     >
-      <div className="row" style={{ gap: 6, marginBottom: 6, alignItems: "center" }}>
+      <div className="row" style={{ gap: 6, marginBottom: 6, alignItems: "center", flexWrap: "wrap" }}>
         <span
           className="mono"
           style={{
             fontSize: 9,
-            padding: "3px 7px",
+            padding: "3px 8px",
             borderRadius: 4,
             background: stateLabel.bg,
             color: stateLabel.color,
             fontWeight: 800,
             letterSpacing: "0.08em",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
           }}
         >
+          {stateLabel.icon && <span style={{ fontSize: 8 }}>{stateLabel.icon}</span>}
           {stateLabel.text}
         </span>
         <span
           className="mono"
           style={{
             fontSize: 9,
-            color: "var(--muted)",
+            color: "#6D7890",
             letterSpacing: "0.06em",
             fontWeight: 700,
           }}
@@ -416,32 +439,54 @@ function ModuleCard({
           {mod.weekLabel ? ` · ${mod.weekLabel.toUpperCase()}` : ""}
           {isProject ? " · PROYECTO" : ""}
         </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+          style={{
+            marginLeft: "auto",
+            background: "transparent",
+            border: "none",
+            color: "#6D7890",
+            cursor: "pointer",
+            padding: "0 4px",
+            fontSize: 14,
+          }}
+          aria-label={isExpanded ? "Contraer" : "Expandir lecciones"}
+        >
+          ⋮
+        </button>
       </div>
       <div
         style={{
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: 700,
-          color: "var(--navy)",
+          color: "#061B36",
           lineHeight: 1.25,
-          marginBottom: 4,
+          marginBottom: 6,
         }}
       >
         {mod.title}
       </div>
-      <div
-        className="mono"
-        style={{
-          fontSize: 11,
-          color: "var(--muted)",
-          letterSpacing: "0.02em",
-        }}
-      >
-        {mod.lessonsCount} {mod.lessonsCount === 1 ? "lección" : "lecciones"} ·{" "}
-        <span style={{ color: isProject ? "#6c52c4" : isActive ? "#B88523" : "var(--muted)" }}>
+      <div className="row" style={{ gap: 6, alignItems: "center", fontSize: 11 }}>
+        <span className="mono" style={{ color: "#6D7890" }}>
+          {mod.lessonsCount} {mod.lessonsCount === 1 ? "lección" : "lecciones"}
+        </span>
+        <span style={{ color: "#6D7890" }}>·</span>
+        <span
+          className="mono"
+          style={{
+            color: isProject ? "#6C52C4" : isActive ? "#B88523" : isDone ? "#1B7849" : "#6D7890",
+            fontWeight: 700,
+          }}
+        >
           +{mod.xpReward} XP
         </span>
       </div>
-      {isActive && (
+
+      {isActive && !isExpanded && (
         <button
           type="button"
           onClick={onContinue}
@@ -449,84 +494,127 @@ function ModuleCard({
           style={{
             marginTop: 10,
             width: "100%",
-            padding: "8px 12px",
-            background:
-              "linear-gradient(180deg, #F2C65A 0%, #D8A83F 100%)",
-            color: "var(--navy)",
+            padding: "9px 12px",
+            background: "linear-gradient(180deg, #F2C65A 0%, #D8A83F 100%)",
+            color: "#061B36",
             border: "none",
             borderRadius: 8,
             fontWeight: 800,
             fontSize: 12,
             cursor: pending ? "wait" : "pointer",
             boxShadow: "0 3px 0 #B88523",
+            letterSpacing: "0.02em",
           }}
         >
           {pending ? "Cargando…" : "Continuar →"}
         </button>
       )}
+
+      {/* Expanded lessons list — Skool-style sub-modules */}
+      {isExpanded && mod.lessons.length > 0 && (
+        <div
+          style={{
+            marginTop: 12,
+            paddingTop: 10,
+            borderTop: "1px dashed rgba(6,27,54,0.1)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          {mod.lessons.map((l, idx) => {
+            const lessonClickable = !isLocked || l.completed;
+            return (
+              <button
+                key={l.id}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (lessonClickable) router.push(`/plataforma/leccion/${l.id}`);
+                }}
+                disabled={!lessonClickable}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "26px 1fr auto",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  background: l.completed
+                    ? "color-mix(in srgb, #35B779 6%, white)"
+                    : isActive && idx === mod.lessons.findIndex((x) => !x.completed)
+                      ? "color-mix(in srgb, #F2C65A 10%, white)"
+                      : "var(--bg-2)",
+                  border: "1px solid",
+                  borderColor: l.completed
+                    ? "rgba(53,183,121,0.30)"
+                    : isActive && idx === mod.lessons.findIndex((x) => !x.completed)
+                      ? "rgba(216,168,63,0.40)"
+                      : "transparent",
+                  cursor: lessonClickable ? "pointer" : "not-allowed",
+                  opacity: lessonClickable ? 1 : 0.55,
+                  textAlign: "left",
+                  fontFamily: "inherit",
+                }}
+              >
+                <span
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    background: l.completed
+                      ? "#1B7849"
+                      : isActive && idx === mod.lessons.findIndex((x) => !x.completed)
+                        ? "#D8A83F"
+                        : "rgba(6,27,54,0.15)",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
+                  {l.completed ? "✓" : l.kind === "video" ? "▶" : idx + 1}
+                </span>
+                <span style={{ minWidth: 0 }}>
+                  <span
+                    className="mono"
+                    style={{ fontSize: 9, color: "#6D7890", letterSpacing: "0.06em" }}
+                  >
+                    {l.code} · {l.kind === "video" ? "VIDEO" : "QUIZ"}
+                  </span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      color: "#061B36",
+                      lineHeight: 1.3,
+                      marginTop: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {l.title}
+                  </span>
+                </span>
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    color: l.completed ? "#1B7849" : "#B88523",
+                    fontWeight: 700,
+                  }}
+                >
+                  +{l.xpReward}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
-  );
-}
-
-/* ─────────── Background decorations (trees, mountains, sparkles) ─────────── */
-function DecorBackground({ height }: { height: number }) {
-  // Generate deterministic trees/sparkles based on height so SSR matches CSR.
-  const trees: { x: number; y: number; size: number; tone: string }[] = [];
-  const cols = [10, 18, 88, 80, 6, 92, 14, 86];
-  const tones = ["#3f6b54", "#4f7d63", "#6b8c75"];
-  for (let y = 110; y < height - 60; y += 95) {
-    const x = cols[(y / 95) % cols.length] ?? 10;
-    trees.push({
-      x,
-      y,
-      size: 18 + ((y * 13) % 10),
-      tone: tones[(y / 95) % tones.length]!,
-    });
-  }
-
-  return (
-    <svg
-      width="100%"
-      height={height}
-      viewBox={`0 0 100 ${height}`}
-      preserveAspectRatio="none"
-      style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-    >
-      {/* Soft mountain silhouettes near top */}
-      <path
-        d={`M 0 ${TOP_PADDING + 10} L 12 ${TOP_PADDING - 18} L 22 ${TOP_PADDING + 6} L 36 ${TOP_PADDING - 24} L 50 ${TOP_PADDING - 4} L 62 ${TOP_PADDING - 20} L 78 ${TOP_PADDING + 4} L 92 ${TOP_PADDING - 22} L 100 ${TOP_PADDING + 6} L 100 ${TOP_PADDING + 30} L 0 ${TOP_PADDING + 30} Z`}
-        fill="rgba(10,30,58,0.04)"
-        vectorEffect="non-scaling-stroke"
-      />
-      <path
-        d={`M 0 ${TOP_PADDING + 18} L 18 ${TOP_PADDING - 4} L 34 ${TOP_PADDING + 8} L 50 ${TOP_PADDING - 6} L 70 ${TOP_PADDING + 4} L 86 ${TOP_PADDING - 10} L 100 ${TOP_PADDING + 12} L 100 ${TOP_PADDING + 40} L 0 ${TOP_PADDING + 40} Z`}
-        fill="rgba(216,168,63,0.06)"
-        vectorEffect="non-scaling-stroke"
-      />
-      {/* Trees scattered along sides */}
-      {trees.map((t, i) => (
-        <g key={i} transform={`translate(${t.x} ${t.y})`}>
-          <path
-            d={`M -2.2 0 L 0 -${t.size * 0.6} L 2.2 0 Z M -1.8 -${t.size * 0.3} L 0 -${t.size * 0.85} L 1.8 -${t.size * 0.3} Z`}
-            fill={t.tone}
-            opacity={0.78}
-            vectorEffect="non-scaling-stroke"
-          />
-          <rect x={-0.6} y={0} width={1.2} height={t.size * 0.18} fill="#6b4a2a" vectorEffect="non-scaling-stroke" />
-        </g>
-      ))}
-      {/* Tiny gold sparkles */}
-      {[200, 460, 720, 980].map((y, i) => (
-        <circle
-          key={i}
-          cx={i % 2 === 0 ? 78 : 22}
-          cy={y}
-          r={0.9}
-          fill="#D8A83F"
-          opacity={0.6}
-          vectorEffect="non-scaling-stroke"
-        />
-      ))}
-    </svg>
   );
 }

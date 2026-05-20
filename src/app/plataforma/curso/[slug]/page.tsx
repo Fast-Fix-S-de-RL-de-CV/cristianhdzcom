@@ -55,19 +55,48 @@ export default async function CursoSendero({
     .where(eq(schema.modules.programId, program.id))
     .orderBy(asc(schema.modules.sortOrder));
 
-  // Lesson counts per module
-  const lessonCountsRes = (await db.execute(sql`
-    SELECT module_id AS "moduleId", COUNT(*)::int AS "count"
-    FROM lessons
-    WHERE module_id = ANY(${sql.raw(`ARRAY[${mods.map((m) => `'${m.id}'`).join(",") || "NULL"}]::uuid[]`)})
-    GROUP BY module_id
-  `)) as unknown as
-    | { rows?: Array<{ moduleId: string; count: number }> }
-    | Array<{ moduleId: string; count: number }>;
-  const lessonCountRows: Array<{ moduleId: string; count: number }> = Array.isArray(lessonCountsRes)
-    ? lessonCountsRes
-    : (lessonCountsRes.rows ?? []);
-  const lessonCounts = new Map<string, number>(lessonCountRows.map((r) => [r.moduleId, r.count]));
+  // Full lessons per module — with completion flag for the current user.
+  // We pull everything in one query so the sendero can render expandable
+  // sub-modules (lessons) without N+1 trips.
+  type LRow = {
+    moduleId: string;
+    id: string;
+    code: string;
+    title: string;
+    kind: string;
+    xpReward: number;
+    sortOrder: number;
+    completed: boolean;
+  };
+  const lessonsRes = (await db.execute(sql`
+    SELECT
+      l.module_id  AS "moduleId",
+      l.id         AS "id",
+      l.code       AS "code",
+      l.title      AS "title",
+      l.kind       AS "kind",
+      l.xp_reward  AS "xpReward",
+      l.sort_order AS "sortOrder",
+      EXISTS(
+        SELECT 1 FROM lesson_progress lp
+        WHERE lp.lesson_id = l.id AND lp.user_id = ${user.id}
+      ) AS "completed"
+    FROM lessons l
+    WHERE l.module_id = ANY(${sql.raw(`ARRAY[${mods.map((m) => `'${m.id}'`).join(",") || "NULL"}]::uuid[]`)})
+    ORDER BY l.sort_order ASC
+  `)) as unknown as { rows?: LRow[] } | LRow[];
+  const lessonRows: LRow[] = Array.isArray(lessonsRes) ? lessonsRes : (lessonsRes.rows ?? []);
+
+  // Index by module id
+  const lessonsByModule = new Map<string, LRow[]>();
+  for (const l of lessonRows) {
+    const arr = lessonsByModule.get(l.moduleId) ?? [];
+    arr.push(l);
+    lessonsByModule.set(l.moduleId, arr);
+  }
+  const lessonCounts = new Map<string, number>(
+    Array.from(lessonsByModule.entries()).map(([k, v]) => [k, v.length]),
+  );
 
   // moduleProgress for this user
   const progress = await db
@@ -235,6 +264,14 @@ export default async function CursoSendero({
     xpReward: m.xpReward,
     lessonsCount: lessonCounts.get(m.id) ?? 0,
     state: states.get(m.id) ?? "locked",
+    lessons: (lessonsByModule.get(m.id) ?? []).map((l) => ({
+      id: l.id,
+      code: l.code,
+      title: l.title,
+      kind: l.kind,
+      xpReward: l.xpReward,
+      completed: l.completed,
+    })),
   }));
 
   const levelLabel = getLevelLabel(user.level);
@@ -295,9 +332,24 @@ export default async function CursoSendero({
             )}
           </div>
           <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
-            <StatChip icon="🔥" label="Racha" value={`${user.streakDays} días`} accent="warm" />
-            <StatChip icon="★" label="Total" value={`${user.xp.toLocaleString("es-MX")} XP`} accent="gold" />
-            <StatChip icon="◆" label={levelLabel} value={`Nivel ${user.level}`} accent="navy" />
+            <StatChip
+              badge="/sendero-pack/badges/badge-streak.svg"
+              label="Racha"
+              value={`${user.streakDays} días`}
+              accent="warm"
+            />
+            <StatChip
+              badge="/sendero-pack/badges/badge-xp.svg"
+              label="Total"
+              value={`${user.xp.toLocaleString("es-MX")} XP`}
+              accent="gold"
+            />
+            <StatChip
+              badge="/sendero-pack/badges/badge-rank.svg"
+              label={levelLabel}
+              value={`Nivel ${user.level}`}
+              accent="navy"
+            />
           </div>
         </div>
 
@@ -537,43 +589,47 @@ export default async function CursoSendero({
 
 /* ───────────── Helpers ───────────── */
 function StatChip({
-  icon,
+  badge,
   label,
   value,
   accent,
 }: {
-  icon: string;
+  badge: string;
   label: string;
   value: string;
   accent: "warm" | "gold" | "navy";
 }) {
   const palette =
     accent === "warm"
-      ? { bg: "color-mix(in srgb, #E89B3D 12%, white)", border: "rgba(232,155,61,0.30)", color: "#B85F12" }
+      ? { bg: "color-mix(in srgb, #E89B3D 8%, white)", border: "rgba(232,155,61,0.22)", color: "var(--navy)" }
       : accent === "gold"
-        ? { bg: "color-mix(in srgb, #D8A83F 12%, white)", border: "rgba(216,168,63,0.30)", color: "#7c5410" }
-        : { bg: "color-mix(in srgb, var(--navy) 8%, white)", border: "rgba(11,37,72,0.18)", color: "var(--navy)" };
+        ? { bg: "color-mix(in srgb, #D8A83F 8%, white)", border: "rgba(216,168,63,0.22)", color: "var(--navy)" }
+        : { bg: "color-mix(in srgb, var(--navy) 5%, white)", border: "rgba(11,37,72,0.14)", color: "var(--navy)" };
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 10,
+        gap: 12,
         background: palette.bg,
         border: `1px solid ${palette.border}`,
         borderRadius: 14,
-        padding: "10px 14px",
+        padding: "10px 16px 10px 12px",
         boxShadow: "0 4px 10px rgba(10,30,58,0.04)",
+        minWidth: 130,
       }}
     >
-      <span style={{ fontSize: 18 }}>{icon}</span>
+      <img src={badge} alt="" width={36} height={36} aria-hidden style={{ flexShrink: 0 }} />
       <div>
-        <div className="serif" style={{ fontSize: 18, fontWeight: 700, color: palette.color, lineHeight: 1 }}>
+        <div
+          className="serif"
+          style={{ fontSize: 18, fontWeight: 700, color: palette.color, lineHeight: 1 }}
+        >
           {value}
         </div>
         <div
           className="mono"
-          style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.06em", marginTop: 2 }}
+          style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.08em", marginTop: 3, fontWeight: 600 }}
         >
           {label}
         </div>

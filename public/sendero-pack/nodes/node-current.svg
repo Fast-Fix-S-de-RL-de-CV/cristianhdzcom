@@ -1,0 +1,31 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="ncBg" cx="38%" cy="32%" r="78%">
+      <stop offset="0%" stop-color="#FFE19A"></stop>
+      <stop offset="35%" stop-color="#F2C65A"></stop>
+      <stop offset="78%" stop-color="#D8A83F"></stop>
+      <stop offset="100%" stop-color="#B88523"></stop>
+    </radialGradient>
+    <radialGradient id="ncFlare" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFDF8" stop-opacity="0.7"></stop>
+      <stop offset="60%" stop-color="#FFFDF8" stop-opacity="0.08"></stop>
+      <stop offset="100%" stop-color="#FFFDF8" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="ncRim" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE9B0"></stop>
+      <stop offset="100%" stop-color="#B88523"></stop>
+    </linearGradient>
+  </defs>
+  <ellipse cx="100" cy="184" rx="64" ry="8" fill="#061B36" opacity="0.18"></ellipse>
+  <circle cx="100" cy="106" r="84" fill="#8C621A"></circle>
+  <circle cx="100" cy="100" r="84" fill="url(#ncRim)"></circle>
+  <circle cx="100" cy="100" r="76" fill="url(#ncBg)"></circle>
+  <circle cx="100" cy="100" r="76" fill="none" stroke="#FFFDF8" stroke-width="5" opacity="0.95"></circle>
+  <path d="M 84 70 Q 100 64 116 70" stroke="#FFFDF8" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.55"></path>
+  <ellipse cx="80" cy="64" rx="34" ry="14" fill="url(#ncFlare)"></ellipse>
+  <path d="M 86 70 L 86 130 L 134 100 Z" fill="#FFFDF8" stroke="#FFFDF8" stroke-width="6" stroke-linejoin="round"></path>
+  <path d="M 92 80 L 92 100 L 116 92 Z" fill="#FFFDF8" opacity="0.6"></path>
+  <circle cx="68" cy="56" r="6" fill="#FFFDF8" opacity="0.85"></circle>
+  <circle cx="58" cy="48" r="3" fill="#FFFDF8" opacity="0.6"></circle>
+  <circle cx="140" cy="148" r="4" fill="#FFFDF8" opacity="0.3"></circle>
+</svg>

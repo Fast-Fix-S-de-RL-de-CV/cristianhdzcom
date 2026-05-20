@@ -1,0 +1,15 @@
+<svg viewBox="0 0 140 80" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="rockBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F2EBD8"></stop>
+      <stop offset="100%" stop-color="#D6CBAA"></stop>
+    </linearGradient>
+  </defs>
+  <ellipse cx="70" cy="72" rx="60" ry="6" fill="#061B36" opacity="0.18"></ellipse>
+  <path d="M 20 60 Q 8 30 30 24 Q 44 14 60 24 Q 76 8 92 22 Q 116 18 124 44 Q 132 62 110 68 Q 86 76 60 70 Q 32 72 20 60 Z" fill="url(#rockBody)"></path>
+  <path d="M 20 60 Q 8 30 30 24 Q 44 14 60 24 Q 76 8 92 22 Q 116 18 124 44 Q 132 62 110 68 Q 86 76 60 70 Q 32 72 20 60 Z" fill="none" stroke="#061B36" stroke-width="1" opacity="0.18"></path>
+  <path d="M 28 40 Q 40 30 56 36" stroke="#061B36" stroke-width="1" fill="none" opacity="0.25"></path>
+  <path d="M 78 30 Q 96 30 112 42" stroke="#061B36" stroke-width="1" fill="none" opacity="0.25"></path>
+  <ellipse cx="42" cy="32" rx="8" ry="3" fill="#FFFDF8" opacity="0.4"></ellipse>
+  <ellipse cx="98" cy="36" rx="6" ry="2" fill="#FFFDF8" opacity="0.35"></ellipse>
+</svg>

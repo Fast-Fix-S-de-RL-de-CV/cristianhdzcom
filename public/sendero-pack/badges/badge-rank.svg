@@ -1,0 +1,25 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="brBg" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFE19A"></stop>
+      <stop offset="50%" stop-color="#F2C65A"></stop>
+      <stop offset="100%" stop-color="#B88523"></stop>
+    </radialGradient>
+    <linearGradient id="brCup" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE19A"></stop>
+      <stop offset="100%" stop-color="#8C6620"></stop>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="46" fill="url(#brBg)" stroke="#FFFDF8" stroke-width="3"></circle>
+  <circle cx="50" cy="50" r="42" fill="none" stroke="#B88523" stroke-width="1" opacity="0.6"></circle>
+  
+  <path d="M 18 50 Q 22 30 36 24 M 22 42 Q 26 38 32 38 M 26 50 Q 30 46 36 46 M 24 58 Q 28 56 34 56" stroke="#5C8770" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.85"></path>
+  <path d="M 82 50 Q 78 30 64 24 M 78 42 Q 74 38 68 38 M 74 50 Q 70 46 64 46 M 76 58 Q 72 56 66 56" stroke="#5C8770" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.85"></path>
+  
+  <path d="M 38 36 L 62 36 L 60 56 Q 50 64 40 56 Z" fill="url(#brCup)" stroke="#5A3E14" stroke-width="1.5"></path>
+  <path d="M 38 40 Q 30 40 30 48 Q 30 54 38 54" stroke="#5A3E14" stroke-width="1.5" fill="none"></path>
+  <path d="M 62 40 Q 70 40 70 48 Q 70 54 62 54" stroke="#5A3E14" stroke-width="1.5" fill="none"></path>
+  <rect x="44" y="62" width="12" height="6" fill="#5A3E14"></rect>
+  <rect x="40" y="68" width="20" height="4" rx="1" fill="#5A3E14"></rect>
+  <text x="50" y="52" font-family="Georgia, serif" font-size="11" font-weight="700" fill="#5A3E14" text-anchor="middle">#1</text>
+</svg>

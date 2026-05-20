@@ -1,0 +1,36 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="npBg" cx="38%" cy="32%" r="78%">
+      <stop offset="0%" stop-color="#B9A5F0"></stop>
+      <stop offset="35%" stop-color="#9D83E8"></stop>
+      <stop offset="78%" stop-color="#6C52C4"></stop>
+      <stop offset="100%" stop-color="#3A2877"></stop>
+    </radialGradient>
+    <radialGradient id="npFlare" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFDF8" stop-opacity="0.65"></stop>
+      <stop offset="60%" stop-color="#FFFDF8" stop-opacity="0.07"></stop>
+      <stop offset="100%" stop-color="#FFFDF8" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="npRim" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#CFBFFA"></stop>
+      <stop offset="100%" stop-color="#3A2877"></stop>
+    </linearGradient>
+  </defs>
+  <ellipse cx="100" cy="184" rx="64" ry="8" fill="#061B36" opacity="0.18"></ellipse>
+  <circle cx="100" cy="106" r="84" fill="#2E1F60"></circle>
+  <circle cx="100" cy="100" r="84" fill="url(#npRim)"></circle>
+  <circle cx="100" cy="100" r="76" fill="url(#npBg)"></circle>
+  <circle cx="100" cy="100" r="76" fill="none" stroke="#FFFDF8" stroke-width="5" opacity="0.95"></circle>
+  <ellipse cx="80" cy="64" rx="34" ry="14" fill="url(#npFlare)"></ellipse>
+  
+  <path d="M 50 100 L 72 100 L 80 84 L 90 116 L 100 70 L 110 130 L 120 100 L 150 100" stroke="#FFFDF8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+  <path d="M 50 100 L 72 100 L 80 84 L 90 116 L 100 70 L 110 130 L 120 100 L 150 100" stroke="#FFFDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.6" filter="blur(2px)"></path>
+  <circle cx="100" cy="70" r="4" fill="#FFFDF8"></circle>
+  <circle cx="100" cy="70" r="8" fill="#FFFDF8" opacity="0.25"></circle>
+  <circle cx="68" cy="56" r="5" fill="#FFFDF8" opacity="0.7"></circle>
+  
+  <circle cx="160" cy="158" r="24" fill="#2A1A5C"></circle>
+  <circle cx="160" cy="158" r="20" fill="#3A2877" stroke="#FFFDF8" stroke-width="3"></circle>
+  <path d="M 160 148 L 170 158 L 160 168 L 150 158 Z" fill="#FFFDF8"></path>
+  <path d="M 160 148 L 170 158 L 160 168 L 150 158 Z" fill="none" stroke="#3A2877" stroke-width="1.5" stroke-linejoin="round"></path>
+</svg>

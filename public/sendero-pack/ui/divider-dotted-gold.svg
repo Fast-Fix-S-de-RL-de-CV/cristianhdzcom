@@ -1,0 +1,13 @@
+<svg viewBox="0 0 400 8" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="ddG" x="0" y="0" width="10" height="8" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="4" r="1.2" fill="#D8A83F"></circle>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="400" height="8" fill="url(#ddG)" opacity="0.85"></rect>
+  
+  <path d="M 200 4 L 201 0 L 202 4 L 206 4 L 202 6 L 201 8 L 200 6 L 196 4 Z" fill="#F2C65A"></path>
+  
+  <circle cx="80" cy="4" r="1.8" fill="#F2C65A"></circle>
+  <circle cx="320" cy="4" r="1.8" fill="#F2C65A"></circle>
+</svg>

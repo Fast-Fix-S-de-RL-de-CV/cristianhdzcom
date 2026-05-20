@@ -1,0 +1,25 @@
+<svg viewBox="0 0 300 40" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="hfG" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D8A83F" stop-opacity="0"></stop>
+      <stop offset="20%" stop-color="#D8A83F"></stop>
+      <stop offset="50%" stop-color="#F2C65A"></stop>
+      <stop offset="80%" stop-color="#D8A83F"></stop>
+      <stop offset="100%" stop-color="#D8A83F" stop-opacity="0"></stop>
+    </linearGradient>
+  </defs>
+  <line x1="20" y1="20" x2="130" y2="20" stroke="url(#hfG)" stroke-width="1.2"></line>
+  <line x1="170" y1="20" x2="280" y2="20" stroke="url(#hfG)" stroke-width="1.2"></line>
+  
+  <path d="M 130 20 Q 138 12 146 20 Q 138 28 130 20" fill="none" stroke="#D8A83F" stroke-width="1.2"></path>
+  <path d="M 146 20 Q 150 16 150 20 Q 150 24 146 20" fill="#D8A83F"></path>
+  
+  <path d="M 150 12 L 158 20 L 150 28 L 142 20 Z" fill="#F2C65A" stroke="#B88523" stroke-width="1"></path>
+  <circle cx="150" cy="20" r="2" fill="#FFFDF8"></circle>
+  
+  <path d="M 170 20 Q 162 12 154 20 Q 162 28 170 20" fill="none" stroke="#D8A83F" stroke-width="1.2"></path>
+  <path d="M 154 20 Q 150 16 150 20 Q 150 24 154 20" fill="#D8A83F"></path>
+  
+  <circle cx="10" cy="20" r="1.5" fill="#D8A83F"></circle>
+  <circle cx="290" cy="20" r="1.5" fill="#D8A83F"></circle>
+</svg>

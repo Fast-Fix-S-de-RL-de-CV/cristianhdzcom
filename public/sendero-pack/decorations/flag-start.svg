@@ -1,0 +1,16 @@
+<svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="flagBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F2C65A"></stop>
+      <stop offset="100%" stop-color="#B88523"></stop>
+    </linearGradient>
+  </defs>
+  <ellipse cx="20" cy="116" rx="14" ry="2.5" fill="#061B36" opacity="0.2"></ellipse>
+  <rect x="18" y="14" width="4" height="102" rx="1.5" fill="#FFFDF8"></rect>
+  <rect x="18" y="14" width="4" height="102" rx="1.5" fill="none" stroke="#B88523" stroke-width="0.5" opacity="0.5"></rect>
+  <circle cx="20" cy="10" r="5" fill="#D8A83F" stroke="#B88523" stroke-width="1"></circle>
+  <path d="M 22 18 L 70 22 Q 60 38 70 54 L 22 50 Z" fill="url(#flagBody)"></path>
+  <path d="M 22 18 L 70 22 Q 60 38 70 54 L 22 50 Z" fill="none" stroke="#B88523" stroke-width="1" opacity="0.5"></path>
+  <path d="M 28 24 L 36 30 L 28 36" stroke="#FFFDF8" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"></path>
+  <path d="M 22 22 L 64 26" stroke="#FFFDF8" stroke-width="0.8" opacity="0.4"></path>
+</svg>
