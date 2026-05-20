@@ -5,20 +5,12 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
-// Public-facing nav: same order whether you're logged in or not, except we
-// only show "Plataforma" (private area) when there is a session. Anonymous
-// visitors see only marketing pages they can actually browse without auth.
-const PUBLIC_ITEMS: [string, string][] = [
+// Public-facing nav. Same 5 items para todos los usuarios — la entrada al
+// área privada se hace por el botón "Mi escritorio →" / avatar a la
+// derecha, no como item del menú (de lo contrario quedaba duplicada).
+const NAV_ITEMS: [string, string][] = [
   ["Inicio", "/"],
   ["Programas", "/programas"],
-  ["Libros", "/libros"],
-  ["Comunidad", "/comunidad"],
-  ["Blog", "/blog"],
-];
-const AUTH_ITEMS: [string, string][] = [
-  ["Inicio", "/"],
-  ["Programas", "/programas"],
-  ["Plataforma", "/plataforma"],
   ["Libros", "/libros"],
   ["Comunidad", "/comunidad"],
   ["Blog", "/blog"],
@@ -68,7 +60,7 @@ export function Nav() {
         <img src="/logo.png" alt="Cristian Hernández" />
       </Link>
       <div className="ch-nav-links">
-        {(user ? AUTH_ITEMS : PUBLIC_ITEMS).map(([label, href]) => {
+        {NAV_ITEMS.map(([label, href]) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <Link
