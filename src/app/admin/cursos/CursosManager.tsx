@@ -51,9 +51,10 @@ export function CursosManager({ rows }: { rows: Row[] }) {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error al crear");
+        throw new Error(humanizeError(j));
       }
       setCreating(false);
+      toast.success("Curso creado");
       router.refresh();
     } catch (e) {
       setErr((e as Error).message);
@@ -73,9 +74,10 @@ export function CursosManager({ rows }: { rows: Row[] }) {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error al guardar");
+        throw new Error(humanizeError(j));
       }
       setEditing(null);
+      toast.success("Cambios guardados");
       router.refresh();
     } catch (e) {
       setErr((e as Error).message);
@@ -680,6 +682,22 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   );
+}
+
+/**
+ * Convierte el error JSON del API en un mensaje legible en español.
+ * El API devuelve { error: "invalid", details: ZodIssue[] } para 400s de Zod,
+ * { error: "slug_in_use" } para 409, etc. Antes mostrábamos solo "invalid"
+ * lo cual era inútil — ahora apuntamos al campo y al mensaje del issue.
+ */
+function humanizeError(j: { error?: string; details?: Array<{ path?: (string | number)[]; message?: string }> }): string {
+  if (j?.error === "slug_in_use") return "Ese slug ya está en uso. Cambia el título o el slug.";
+  if (j?.error === "invalid" && Array.isArray(j.details) && j.details.length > 0) {
+    const issue = j.details[0];
+    const field = issue.path?.join(".") ?? "campo";
+    return `${field}: ${issue.message ?? "valor inválido"}`;
+  }
+  return j?.error || "No se pudo guardar";
 }
 
 function input(): React.CSSProperties {

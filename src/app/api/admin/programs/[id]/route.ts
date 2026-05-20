@@ -21,7 +21,15 @@ const body = z.object({
   accent: z.enum(["accent", "warm", "green", "navy", "gold"]).optional(),
   description: z.string().max(5000).optional().nullable(),
   bullets: z.array(z.string().min(1).max(140)).max(20).optional(),
-  coverUrl: z.string().url().max(500).nullable().optional(),
+  coverUrl: z
+    .string()
+    .max(500)
+    .nullable()
+    .optional()
+    .refine(
+      (v) => v == null || v === "" || /^https?:\/\//.test(v) || v.startsWith("/"),
+      { message: "coverUrl debe ser URL absoluta o path /uploads/..." },
+    ),
   coverKind: z.enum(["image", "video"]).nullable().optional(),
   isActive: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
