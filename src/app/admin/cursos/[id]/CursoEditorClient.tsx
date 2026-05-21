@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { AIGenerateModal } from "./AIGenerateModal";
 
 /* ───────────────── types ───────────────── */
@@ -1902,21 +1903,20 @@ function CohortDialog({
         <div className="row" style={{ gap: 12 }}>
           <div style={{ flex: 1 }}>
             <Field label="Fecha de inicio">
-              <input
-                type="date"
+              <DatePicker
                 value={form.startsOn}
-                onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
-                style={input()}
+                onChange={(v) => setForm({ ...form, startsOn: v })}
+                placeholder="Selecciona fecha"
               />
             </Field>
           </div>
           <div style={{ flex: 1 }}>
             <Field label="Fecha de fin">
-              <input
-                type="date"
+              <DatePicker
                 value={form.endsOn}
-                onChange={(e) => setForm({ ...form, endsOn: e.target.value })}
-                style={input()}
+                onChange={(v) => setForm({ ...form, endsOn: v })}
+                placeholder="Selecciona fecha"
+                min={form.startsOn || undefined}
               />
             </Field>
           </div>

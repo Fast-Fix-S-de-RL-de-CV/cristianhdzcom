@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 type Row = {
   id: string;
@@ -299,11 +300,11 @@ function EventDialog({
           <div className="row" style={{ gap: 12 }}>
             <div style={{ flex: 1 }}>
               <Field label="Fecha y hora">
-                <input
-                  type="datetime-local"
+                <DatePicker
+                  mode="datetime"
                   value={form.startsAt}
-                  onChange={(e) => setForm({ ...form, startsAt: e.target.value })}
-                  style={inputStyle()}
+                  onChange={(v) => setForm({ ...form, startsAt: v })}
+                  placeholder="Selecciona fecha y hora"
                 />
               </Field>
             </div>
