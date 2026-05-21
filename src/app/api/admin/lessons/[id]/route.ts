@@ -18,6 +18,8 @@ const optionShape = z
 
 const body = z
   .object({
+    // moduleId optional → si cambia, mueve la lección a otro módulo (drag entre módulos).
+    moduleId: z.string().uuid().optional(),
     code: z.string().min(1).max(20).optional(),
     title: z.string().min(1).max(200).optional(),
     kind: z.enum(["multiple_choice", "true_false", "fill_blank", "open", "video"]).optional(),

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { AIGenerateModal } from "./AIGenerateModal";
+import { OutlineEditor } from "./OutlineEditor";
 
 /* ───────────────── types ───────────────── */
 
@@ -87,8 +88,7 @@ export type EnrollmentRow = {
 
 const TABS = [
   ["info", "Información"],
-  ["modules", "Módulos"],
-  ["lessons", "Lecciones"],
+  ["structure", "Estructura"],
   ["cohorts", "Cohortes"],
   ["enrollments", "Inscritos"],
 ] as const;
@@ -115,7 +115,10 @@ export function CursoEditorClient({
   initialTab: string;
 }) {
   const router = useRouter();
-  const startTab = (TABS.find(([k]) => k === initialTab)?.[0] ?? "info") as TabKey;
+  // Migración suave: links viejos a ?tab=modules o ?tab=lessons ahora abren "structure".
+  const normalizedInitial =
+    initialTab === "modules" || initialTab === "lessons" ? "structure" : initialTab;
+  const startTab = (TABS.find(([k]) => k === normalizedInitial)?.[0] ?? "info") as TabKey;
   const [tab, setTab] = useState<TabKey>(startTab);
 
   function changeTab(t: TabKey) {
@@ -233,22 +236,13 @@ export function CursoEditorClient({
       </div>
 
       {tab === "info" && <InfoTab program={program} onSaved={() => router.refresh()} />}
-      {tab === "modules" && (
-        <ModulesTab
+      {tab === "structure" && (
+        <StructureTab
           program={program}
           modules={modules}
+          lessons={lessons}
           onChanged={() => router.refresh()}
-          onGotoLessons={(mid) => {
-            setTab("lessons");
-            const url = new URL(window.location.href);
-            url.searchParams.set("tab", "lessons");
-            url.searchParams.set("module", mid);
-            window.history.replaceState(null, "", url.toString());
-          }}
         />
-      )}
-      {tab === "lessons" && (
-        <LessonsTab modules={modules} lessons={lessons} onChanged={() => router.refresh()} />
       )}
       {tab === "cohorts" && (
         <CohortsTab program={program} cohorts={cohorts} onChanged={() => router.refresh()} />
@@ -602,6 +596,133 @@ type ModuleForm = {
   xpReward: number;
   sortOrder: number;
 };
+
+/* ───────────────── STRUCTURE TAB (outline editor) ─────────────────
+ * Unifica los antiguos tabs "Módulos" y "Lecciones" en una sola vista
+ * jerárquica tipo árbol expandible. Reusa los Dialogs existentes
+ * (ModuleDialog, LessonDialog) para editar detalles cuando el admin
+ * hace click en un item. Soporta drag & drop, quick-add inline y la
+ * generación con IA arriba.
+ */
+function StructureTab({
+  program,
+  modules,
+  lessons,
+  onChanged,
+}: {
+  program: Program;
+  modules: ModuleRow[];
+  lessons: LessonRow[];
+  onChanged: () => void;
+}) {
+  const [editingModule, setEditingModule] = useState<ModuleRow | null>(null);
+  const [creatingModule, setCreatingModule] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<LessonRow | null>(null);
+  const [creatingLessonInModule, setCreatingLessonInModule] = useState<string | null>(null);
+  const [aiMode, setAiMode] = useState<"doc" | "scratch" | null>(null);
+
+  return (
+    <div>
+      {/* AI generation banner — el mismo que tenía ModulesTab */}
+      <div
+        style={{
+          padding: "18px 24px 4px 24px",
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--gold) 8%, white) 0%, white 100%)",
+          borderBottom: "1px solid var(--line)",
+        }}
+      >
+        <div className="mono" style={{ fontSize: 10, color: "var(--gold-deep)", fontWeight: 800, letterSpacing: "0.1em" }}>
+          ✨ GENERAR CON IA
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 12,
+            marginTop: 12,
+            paddingBottom: 14,
+          }}
+          className="ai-cards-grid"
+        >
+          <AICta
+            title="Desde un documento"
+            desc="Sube .md / .pdf / .docx o pega texto. Claude lo estructura como módulos + lecciones."
+            icon="📄"
+            onClick={() => setAiMode("doc")}
+          />
+          <AICta
+            title="Desde cero"
+            desc="Solo escribe un brief del curso. Claude inventa módulos y lecciones desde cero."
+            icon="🧠"
+            onClick={() => setAiMode("scratch")}
+          />
+        </div>
+        <style>{`@media (max-width: 720px) { .ai-cards-grid { grid-template-columns: 1fr !important; } }`}</style>
+      </div>
+
+      {/* Outline tree */}
+      <OutlineEditor
+        program={program}
+        modules={modules}
+        lessons={lessons}
+        onEditModule={(m) => setEditingModule(m)}
+        onEditLesson={(l) => setEditingLesson(l)}
+        onAddModule={() => setCreatingModule(true)}
+        onAddLessonToModule={(mid) => setCreatingLessonInModule(mid)}
+        onChanged={onChanged}
+      />
+
+      {/* Dialogs reusados */}
+      {(editingModule || creatingModule) && (
+        <ModuleDialog
+          programId={program.id}
+          module={editingModule}
+          existingCount={modules.length}
+          onClose={() => {
+            setEditingModule(null);
+            setCreatingModule(false);
+          }}
+          onSaved={() => {
+            setEditingModule(null);
+            setCreatingModule(false);
+            onChanged();
+          }}
+        />
+      )}
+      {(editingLesson || creatingLessonInModule) && (
+        <LessonDialog
+          moduleId={creatingLessonInModule ?? editingLesson?.moduleId ?? ""}
+          lesson={editingLesson}
+          existingCount={
+            creatingLessonInModule
+              ? lessons.filter((l) => l.moduleId === creatingLessonInModule).length
+              : 0
+          }
+          onClose={() => {
+            setEditingLesson(null);
+            setCreatingLessonInModule(null);
+          }}
+          onSaved={() => {
+            setEditingLesson(null);
+            setCreatingLessonInModule(null);
+            onChanged();
+          }}
+        />
+      )}
+
+      {aiMode && (
+        <AIGenerateModal
+          programId={program.id}
+          initialMode={aiMode}
+          hasExistingModules={modules.length > 0}
+          onClose={() => setAiMode(null)}
+          onCreated={onChanged}
+        />
+      )}
+    </div>
+  );
+}
 
 function ModulesTab({
   program,
