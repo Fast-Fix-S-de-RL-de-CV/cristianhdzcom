@@ -100,13 +100,15 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22px 56px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(250, 250, 247, 0.85);
-  backdrop-filter: blur(12px);
+  padding: 18px 56px;
+  border-bottom: 1px solid rgba(216, 168, 63, 0.10);
+  /* Mismo gradiente que el sidebar alumno — continuidad visual entre el
+   * sitio público y la app privada. */
+  background: linear-gradient(180deg, #061B36 0%, #0B2548 100%);
   position: sticky;
   top: 0;
   z-index: 40;
+  color: rgba(255, 255, 255, 0.85);
 }
 .ch-logo {
   font-family: var(--font-serif);
@@ -121,8 +123,14 @@ button {
   height: 44px;
   width: auto;
   display: block;
-  /* Make the gold signature read on light ivory backgrounds without changing
-     the artwork itself — subtle navy shadow + faint outline. */
+  /* La firma dorada se lee sola sobre el fondo navy del nav. */
+  filter:
+    drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3))
+    drop-shadow(0 0 8px rgba(216, 168, 63, 0.20));
+}
+/* Footer y otros contextos sobre fondo claro mantienen el filtro original. */
+.ch-foot .ch-logo img,
+.ch-foot-light .ch-logo img {
   filter:
     drop-shadow(0 0 1px rgba(10, 30, 58, 0.6))
     drop-shadow(0 1px 2px rgba(10, 30, 58, 0.18))
@@ -146,21 +154,69 @@ button {
 }
 .ch-nav-links {
   display: flex;
-  gap: 32px;
+  gap: 28px;
   font-size: 14px;
-  color: var(--ink-2);
+  color: rgba(255, 255, 255, 0.72);
 }
 .ch-nav-links a {
   cursor: pointer;
   transition: color 0.15s;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 500;
+  padding: 6px 2px;
+  position: relative;
 }
 .ch-nav-links a:hover {
-  color: var(--accent);
+  color: white;
+}
+.ch-nav-links a.is-active {
+  color: white;
+  font-weight: 700;
+}
+.ch-nav-links a.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 2px;
 }
 .ch-nav-cta {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
+}
+/* Botones del nav cuando viven en el fondo navy oscuro */
+.ch-nav .btn-primary {
+  background: linear-gradient(180deg, #F2C65A 0%, #D8A83F 100%);
+  color: var(--navy);
+  border: none;
+  box-shadow: 0 3px 0 #B88523;
+  font-weight: 700;
+}
+.ch-nav .btn-primary:hover {
+  filter: brightness(1.05);
+}
+.ch-nav .btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-weight: 600;
+}
+.ch-nav .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.10);
+  color: white;
+  border-color: rgba(216, 168, 63, 0.40);
+}
+/* Avatar circular en el nav */
+.ch-nav .av {
+  background: linear-gradient(160deg, #F2C65A 0%, #D8A83F 100%);
+  color: var(--navy);
+  font-weight: 800;
+  border: 2px solid rgba(216, 168, 63, 0.40);
+  box-shadow: 0 3px 0 #B88523, 0 0 0 1px rgba(11, 37, 72, 0.5) inset;
 }
 
 /* ============ Buttons ============ */

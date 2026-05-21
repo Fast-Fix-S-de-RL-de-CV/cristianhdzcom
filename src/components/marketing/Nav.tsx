@@ -66,8 +66,7 @@ export function Nav() {
             <Link
               key={href}
               href={href}
-              className={cn(active ? "text-ink font-semibold" : "text-ink-2")}
-              style={{ color: active ? "var(--ink)" : "var(--ink-2)", fontWeight: active ? 600 : 500 }}
+              className={cn(active && "is-active")}
             >
               {label}
             </Link>
