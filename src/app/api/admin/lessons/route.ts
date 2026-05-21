@@ -64,13 +64,14 @@ const body = z
       }
     }
     if (data.kind === "video") {
-      if (!data.videoUrl) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "videoUrl is required for video lessons", path: ["videoUrl"] });
-        return;
-      }
-      const parsed = parseVideoUrl(data.videoUrl);
-      if (!parsed) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "URL no es de Vimeo o YouTube válida", path: ["videoUrl"] });
+      // videoUrl es opcional al CREAR: permite crear el placeholder y luego
+      // pegar la URL desde el editor de detalles (flujo quick-add y AI-gen).
+      // Solo validamos el formato si vino algún valor.
+      if (data.videoUrl) {
+        const parsed = parseVideoUrl(data.videoUrl);
+        if (!parsed) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "URL no es de Vimeo o YouTube válida", path: ["videoUrl"] });
+        }
       }
     }
   });

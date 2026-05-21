@@ -145,6 +145,16 @@ export function OutlineEditor({
   }
 
   /* ─────────── Quick add ─────────── */
+  // Convierte el JSON de error de Zod en un mensaje legible (campo: motivo).
+  function humanize(j: { error?: string; details?: Array<{ path?: (string | number)[]; message?: string }> }): string {
+    if (j?.error === "invalid" && Array.isArray(j.details) && j.details.length > 0) {
+      const issue = j.details[0];
+      const field = issue.path?.join(".") ?? "campo";
+      return `${field}: ${issue.message ?? "valor inválido"}`;
+    }
+    return j?.error || "No se pudo guardar";
+  }
+
   async function quickAddModule() {
     const title = quickModuleTitle.trim();
     if (!title) return;
@@ -161,7 +171,7 @@ export function OutlineEditor({
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error al crear");
+        throw new Error(humanize(j));
       }
       setQuickModuleTitle("");
       toast.success("Módulo agregado");
@@ -189,7 +199,7 @@ export function OutlineEditor({
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error al crear");
+        throw new Error(humanize(j));
       }
       setQuickLessonByModule((p) => ({ ...p, [mid]: "" }));
       onChanged();
