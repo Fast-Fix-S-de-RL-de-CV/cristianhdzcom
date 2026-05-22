@@ -121,6 +121,7 @@ export default async function AdminDashboard() {
 
   const sidebarItems = [
     ["◎", "Dashboard", true, "/admin"],
+    ["✨", "Prospectos", false, "/admin/prospectos"],
     ["👥", "Alumnos", false, "/admin/alumnos", String(counts.users)],
     ["💼", "Clientes", false, "/admin/clientes", String(counts.users)],
     ["💳", "Suscripciones", false, "/admin/suscripciones", String(counts.orders)],

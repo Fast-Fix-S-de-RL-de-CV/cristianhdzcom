@@ -422,6 +422,52 @@ export const userProjects = pgTable(
   }),
 );
 
+/* ─────────── PAYMENT SETTINGS (single-row config) ─────────── */
+/**
+ * Single-row table que guarda las credenciales de TODOS los proveedores
+ * de pago del negocio. La fila siempre tiene id=1 (upsert por convención).
+ *
+ * Las claves secretas se almacenan tal cual; el acceso a esta tabla está
+ * restringido a admins vía el endpoint /api/admin/payment-settings. NUNCA
+ * exponer este endpoint a clientes anónimos.
+ */
+export const paymentSettings = pgTable("payment_settings", {
+  id: serial("id").primaryKey(),
+  // Stripe
+  stripePublishableKey: text("stripe_publishable_key"),
+  stripeSecretKey: text("stripe_secret_key"),
+  stripeWebhookSecret: text("stripe_webhook_secret"),
+  stripeMode: varchar("stripe_mode", { length: 10 }).default("test"), // "test" | "live"
+  // PayPal
+  paypalClientId: text("paypal_client_id"),
+  paypalClientSecret: text("paypal_client_secret"),
+  paypalMode: varchar("paypal_mode", { length: 10 }).default("sandbox"), // "sandbox" | "live"
+  // MercadoPago
+  mpAccessToken: text("mp_access_token"),
+  mpPublicKey: text("mp_public_key"),
+  // Cuentas bancarias para transferencia/depósito (admin muestra al cliente al checkout).
+  // jsonb array de { bankName, accountHolder, accountNumber, clabe?, swift?, instructions? }
+  bankAccounts: jsonb("bank_accounts")
+    .$type<
+      Array<{
+        bankName: string;
+        accountHolder: string;
+        accountNumber?: string;
+        clabe?: string;
+        swift?: string;
+        currency?: string;
+        instructions?: string;
+      }>
+    >()
+    .default([]),
+  // Toggles para habilitar/deshabilitar cada método sin borrar credenciales.
+  enableStripe: boolean("enable_stripe").notNull().default(false),
+  enablePaypal: boolean("enable_paypal").notNull().default(false),
+  enableMercadopago: boolean("enable_mercadopago").notNull().default(false),
+  enableTransfer: boolean("enable_transfer").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /* ─────────── LESSON PROGRESS (per-lesson completion) ─────────── */
 export const lessonProgress = pgTable(
   "lesson_progress",

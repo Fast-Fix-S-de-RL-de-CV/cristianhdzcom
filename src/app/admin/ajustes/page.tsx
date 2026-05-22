@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
+import { PaymentMethodsCard } from "./PaymentMethodsCard";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,19 @@ export default async function AjustesPage() {
       title="Ajustes"
       subtitle="Configuración global del sitio"
     >
-      <div style={{ display: "grid", gap: 20, gridTemplateColumns: "1fr", maxWidth: 760 }}>
+      <div style={{ display: "grid", gap: 20, gridTemplateColumns: "1fr", maxWidth: 920 }}>
+        {/* Métodos de pago */}
+        <Card style={{ padding: 24 }}>
+          <Eyebrow>Pagos</Eyebrow>
+          <h2 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
+            Métodos de pago
+          </h2>
+          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18 }}>
+            Configura los proveedores que aceptarán pagos de tus alumnos. Cada uno se puede habilitar/deshabilitar sin perder credenciales.
+          </p>
+          <PaymentMethodsCard />
+        </Card>
+
         {/* Comunidad */}
         <Card style={{ padding: 24 }}>
           <Eyebrow>Comunidad</Eyebrow>
