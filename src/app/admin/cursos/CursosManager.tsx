@@ -779,13 +779,34 @@ function PricingSection({
     });
   }
 
+  // Free course toggle — cuando true, fuerza priceUsd=0 y limpia el resto.
+  const isFree = priceUsd === 0;
+  function toggleFree(on: boolean) {
+    if (on) {
+      // Limpia todo el pricing — el curso se vuelve lead magnet gratis
+      onChange({
+        priceUsd: 0,
+        priceCompareUsd: null,
+        installmentPriceUsd: null,
+        installmentCount: null,
+        pricePerMonth: null,
+        pricePerYear: null,
+      });
+    } else {
+      // Vuelve a precio mínimo sugerido (97 USD) para que tenga algo razonable
+      onChange({ priceUsd: 97 });
+    }
+  }
+
   return (
     <section
       style={{
-        border: "1px solid rgba(216,168,63,0.30)",
+        border: `1px solid ${isFree ? "rgba(53,183,121,0.40)" : "rgba(216,168,63,0.30)"}`,
         borderRadius: 14,
         padding: 18,
-        background: "color-mix(in srgb, var(--gold) 4%, white)",
+        background: isFree
+          ? "color-mix(in srgb, #35B779 6%, white)"
+          : "color-mix(in srgb, var(--gold) 4%, white)",
         display: "flex",
         flexDirection: "column",
         gap: 14,
@@ -793,14 +814,24 @@ function PricingSection({
     >
       <div className="between" style={{ alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <div className="mono" style={{ fontSize: 11, color: "var(--gold-deep)", fontWeight: 800, letterSpacing: "0.1em" }}>
-            ESTRATEGIA DE PRECIO
+          <div
+            className="mono"
+            style={{
+              fontSize: 11,
+              color: isFree ? "var(--green-strong)" : "var(--gold-deep)",
+              fontWeight: 800,
+              letterSpacing: "0.1em",
+            }}
+          >
+            {isFree ? "🎁 LEAD MAGNET (GRATIS)" : "ESTRATEGIA DE PRECIO"}
           </div>
           <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
-            Define moneda, precio único y los modos de venta que quieres ofrecer.
+            {isFree
+              ? "El alumno se inscribe sin pagar. Útil para atraer prospectos calientes y venderles después consultoría o productos premium."
+              : "Define moneda, precio único y los modos de venta que quieres ofrecer."}
           </div>
         </div>
-        {priceUsd > 0 && (
+        {!isFree && priceUsd > 0 && (
           <button
             type="button"
             onClick={applySuggestions}
@@ -822,6 +853,70 @@ function PricingSection({
         )}
       </div>
 
+      {/* Toggle "curso gratuito" */}
+      <label
+        className="row"
+        style={{
+          gap: 10,
+          alignItems: "flex-start",
+          padding: 12,
+          background: "white",
+          borderRadius: 10,
+          border: `1px solid ${isFree ? "rgba(53,183,121,0.35)" : "var(--line)"}`,
+          cursor: "pointer",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={isFree}
+          onChange={(e) => toggleFree(e.target.checked)}
+          style={{ marginTop: 2, accentColor: "#35B779" }}
+        />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--navy)" }}>
+            Curso gratuito (lead magnet)
+          </div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, lineHeight: 1.5 }}>
+            El alumno se inscribe con un click sin pasar por checkout. Sigue contando como{" "}
+            <strong>prospecto</strong> hasta que compre algo de paga. Bueno para captar leads.
+          </div>
+        </div>
+      </label>
+
+      {isFree && (
+        <div
+          style={{
+            padding: "14px 16px",
+            background: "color-mix(in srgb, #35B779 12%, white)",
+            border: "1px solid rgba(53,183,121,0.30)",
+            borderRadius: 10,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 28,
+              fontFamily: "var(--font-serif)",
+              fontWeight: 700,
+              background: "linear-gradient(135deg, #2da064 0%, #35B779 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            GRATIS
+          </span>
+          <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.5 }}>
+            La página de venta mostrará un botón <strong>"Inscribirme gratis →"</strong>. Si quieres
+            cobrar este curso después, desmarca la casilla de arriba.
+          </div>
+        </div>
+      )}
+
+      {/* Todo el bloque siguiente sólo aplica a cursos de paga */}
+      {!isFree && (
+      <>
       {/* Moneda + Precio único + Comparativo */}
       <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
         <div style={{ width: 180 }}>
@@ -1098,6 +1193,8 @@ function PricingSection({
             )}
           </ul>
         </div>
+      )}
+      </>
       )}
     </section>
   );

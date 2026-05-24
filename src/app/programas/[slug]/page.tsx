@@ -10,6 +10,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { FAQAccordion } from "@/components/marketing/FAQAccordion";
 import { CurriculumAccordion } from "@/components/marketing/CurriculumAccordion";
+import { FreeEnrollButton } from "./FreeEnrollButton";
 
 export const dynamic = "force-dynamic";
 
@@ -134,34 +135,58 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
                   CH-{program.slug.slice(0, 4).toUpperCase()}
                 </span>
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 4 }}>
-                <span className="serif" style={{ fontSize: 56 }}>
-                  ${program.priceUsd}
-                </span>
-                <span style={{ color: "var(--muted)" }}>USD</span>
-                {program.priceCompareUsd ? (
-                  <span style={{ marginLeft: "auto", textDecoration: "line-through", color: "var(--muted)", fontSize: 16 }}>
-                    ${program.priceCompareUsd}
-                  </span>
-                ) : null}
-              </div>
-              {program.installmentPriceUsd ? (
-                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
-                  o <strong style={{ color: "var(--ink)" }}>
-                    {program.installmentCount} cuotas de ${program.installmentPriceUsd}
-                  </strong>{" "}
-                  sin intereses
-                </div>
-              ) : null}
+              {/* Pricing block: free courses skip the price + alternative CTAs. */}
+              {program.priceUsd === 0 ? (
+                <>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 16 }}>
+                    <span
+                      className="serif"
+                      style={{
+                        fontSize: 48,
+                        background: "linear-gradient(135deg, #2da064 0%, #35B779 100%)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        fontWeight: 700,
+                      }}
+                    >
+                      GRATIS
+                    </span>
+                    <span style={{ color: "var(--muted)", fontSize: 14 }}>· acceso completo</span>
+                  </div>
+                  <FreeEnrollButton slug={program.slug} />
+                </>
+              ) : (
+                <>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 4 }}>
+                    <span className="serif" style={{ fontSize: 56 }}>
+                      ${program.priceUsd}
+                    </span>
+                    <span style={{ color: "var(--muted)" }}>USD</span>
+                    {program.priceCompareUsd ? (
+                      <span style={{ marginLeft: "auto", textDecoration: "line-through", color: "var(--muted)", fontSize: 16 }}>
+                        ${program.priceCompareUsd}
+                      </span>
+                    ) : null}
+                  </div>
+                  {program.installmentPriceUsd ? (
+                    <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
+                      o <strong style={{ color: "var(--ink)" }}>
+                        {program.installmentCount} cuotas de ${program.installmentPriceUsd}
+                      </strong>{" "}
+                      sin intereses
+                    </div>
+                  ) : null}
 
-              <Link href={`/checkout/${program.slug}`}>
-                <Button size="lg" style={{ width: "100%", justifyContent: "center", marginBottom: 10 }}>
-                  Inscribirme ahora →
-                </Button>
-              </Link>
-              <Button size="lg" variant="ghost" style={{ width: "100%", justifyContent: "center" }}>
-                Reservar cupo con $99
-              </Button>
+                  <Link href={`/checkout/${program.slug}`}>
+                    <Button size="lg" style={{ width: "100%", justifyContent: "center", marginBottom: 10 }}>
+                      Inscribirme ahora →
+                    </Button>
+                  </Link>
+                  <Button size="lg" variant="ghost" style={{ width: "100%", justifyContent: "center" }}>
+                    Reservar cupo con $99
+                  </Button>
+                </>
+              )}
 
               <div className="rule" style={{ margin: "24px 0" }} />
               <div className="col" style={{ gap: 12 }}>
