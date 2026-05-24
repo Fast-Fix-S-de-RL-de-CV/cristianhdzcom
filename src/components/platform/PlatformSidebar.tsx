@@ -61,7 +61,7 @@ export function PlatformSidebar({ activeHref }: { activeHref?: string }) {
         </Link>
         <div className="card" style={{ padding: 14, background: "var(--bg-2)" }}>
           <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-            SIGUIENTE COHORTE
+            SIGUIENTE GENERACIÓN
           </div>
           <div className="serif" style={{ fontSize: 22, marginTop: 4 }}>
             04 Mar

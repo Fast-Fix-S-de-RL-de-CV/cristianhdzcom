@@ -145,7 +145,7 @@ export function CheckoutClient({
             {recentSales === 1 ? "se inscribió" : "ya se inscribieron"} en los últimos 7 días
           </span>
         ) : (
-          <span style={{ color: "var(--muted)" }}>Sé el primero de esta cohorte.</span>
+          <span style={{ color: "var(--muted)" }}>Sé el primero de esta generación.</span>
         )}
         {seatsLeft !== null && (
           <span>
@@ -153,7 +153,7 @@ export function CheckoutClient({
               className="pulse"
               style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", marginRight: 6 }}
             />
-            {seatsLeft} {seatsLeft === 1 ? "cupo restante" : "cupos restantes"} en esta cohorte
+            {seatsLeft} {seatsLeft === 1 ? "cupo restante" : "cupos restantes"} en esta generación
           </span>
         )}
         <span style={{ color: "var(--muted)" }}>🔒 Pago 100% seguro · Stripe + PayPal</span>
@@ -193,7 +193,7 @@ export function CheckoutClient({
       >
         {/* LEFT */}
         <div className="col" style={{ gap: 20 }}>
-          <h1 style={{ fontSize: 40, lineHeight: 1.1 }}>Estás a 30 segundos de entrar a la cohorte.</h1>
+          <h1 style={{ fontSize: 40, lineHeight: 1.1 }}>Estás a 30 segundos de entrar a la generación.</h1>
 
           {/* Express */}
           <Card style={{ padding: 20 }}>
@@ -444,7 +444,7 @@ export function CheckoutClient({
                 </div>
                 <div style={{ flex: 1 }}>
                   <span className="mono" style={{ fontSize: 10, color: "var(--accent)" }}>
-                    {program.type.toUpperCase()} · COHORTE
+                    {program.type.toUpperCase()} · GENERACIÓN
                   </span>
                   <h4 className="serif" style={{ fontSize: 17, lineHeight: 1.15 }}>
                     {program.title}

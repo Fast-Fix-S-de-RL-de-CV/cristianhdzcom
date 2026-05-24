@@ -69,7 +69,7 @@ async function main() {
       subtitle:
         "Cuatro semanas para pasar de prompts a productos reales. Aprendes a diseñar, codificar y desplegar software profesional usando agentes y modelos de frontera.",
       type: "curso",
-      durationLabel: "32h · cohorte",
+      durationLabel: "32h · generación",
       priceUsd: 689,
       priceCompareUsd: 989,
       installmentPriceUsd: 237,
@@ -90,7 +90,7 @@ async function main() {
       title: "Negocios con IA: de cero a clientes",
       subtitle: "Seis semanas para validar tu oferta, lanzar y cerrar tus primeros clientes con IA como copiloto.",
       type: "curso",
-      durationLabel: "48h · cohorte",
+      durationLabel: "48h · generación",
       priceUsd: 789,
       priceCompareUsd: 1089,
       installmentPriceUsd: 269,
@@ -309,7 +309,7 @@ async function main() {
       {
         authorId: adminRow.id,
         categoryId: catAnuncios?.id,
-        title: "🎯 Mañana abrimos Demo Day · cohorte 03",
+        title: "🎯 Mañana abrimos Demo Day · generación 03",
         body: "8 alumnos presentan sus productos a 3 inversores ángeles invitados. Si querés pitch, comenten abajo y los meto en lista. Empieza 19:00 GMT-5.",
         pinned: true,
         likesCount: 240,
@@ -370,7 +370,7 @@ async function main() {
         hot: true,
       },
       {
-        title: "Demo Day · Cohorte 03",
+        title: "Demo Day · Generación 03",
         host: "Cristian + Luis",
         startsAt: new Date(now + 1000 * 60 * 60 * 24 * 10),
         durationMinutes: 180,

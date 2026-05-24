@@ -84,7 +84,7 @@ export default async function CommunityPage() {
       <AlumnoHeader
         eyebrow="COMUNIDAD · CH NEGOCIOS CON IA"
         title="Feed"
-        subtitle="Conversaciones, victorias y preguntas de la cohorte."
+        subtitle="Conversaciones, victorias y preguntas de la generación."
         user={{ name: user.name, level: user.level, xp: user.xp, streakDays: user.streakDays }}
       />
       <div

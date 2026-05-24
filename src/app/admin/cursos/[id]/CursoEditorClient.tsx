@@ -89,7 +89,7 @@ export type EnrollmentRow = {
 const TABS = [
   ["info", "Información"],
   ["structure", "Estructura"],
-  ["cohorts", "Cohortes"],
+  ["cohorts", "Generaciones"],
   ["enrollments", "Inscritos"],
 ] as const;
 type TabKey = (typeof TABS)[number][0];
@@ -1799,7 +1799,7 @@ function CohortsTab({
 
   async function del(id: string) {
     const ok = await confirm({
-      title: "¿Eliminar esta cohorte?",
+      title: "¿Eliminar esta generación?",
       confirmLabel: "Eliminar",
       tone: "danger",
     });
@@ -1810,7 +1810,7 @@ function CohortsTab({
       if (!res.ok) throw new Error("Error al borrar");
       onChanged();
     } catch (e) {
-      toast.error((e as Error).message || "No se pudo eliminar la cohorte");
+      toast.error((e as Error).message || "No se pudo eliminar la generación");
     } finally {
       setBusy(false);
     }
@@ -1831,7 +1831,7 @@ function CohortsTab({
           className="btn btn-primary"
           style={{ padding: "8px 14px", fontSize: 12 }}
         >
-          + Nueva cohorte
+          + Nueva generación
         </button>
       </div>
 
@@ -1933,7 +1933,7 @@ function CohortsTab({
         ))}
         {cohorts.length === 0 && (
           <div style={{ padding: 40, textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
-            Sin cohortes. Crea la primera.
+            Sin generaciones. Crea la primera.
           </div>
         )}
       </div>
@@ -2011,7 +2011,7 @@ function CohortDialog({
     form.seatsTotal > 0;
 
   return (
-    <Modal title={cohort ? "Editar cohorte" : "Nueva cohorte"} onClose={onClose}>
+    <Modal title={cohort ? "Editar generación" : "Nueva generación"} onClose={onClose}>
       <div className="col" style={{ gap: 14 }}>
         <Field label="Código (opcional)">
           <input
@@ -2062,7 +2062,7 @@ function CohortDialog({
               checked={form.isOpen}
               onChange={(e) => setForm({ ...form, isOpen: e.target.checked })}
             />
-            Cohorte abierta a inscripciones
+            Generación abierta a inscripciones
           </label>
         </div>
         {cohort && (
@@ -2146,7 +2146,7 @@ function EnrollmentsTab({
       >
         <span style={{ flex: 2 }}>Alumno</span>
         <span style={{ width: 60, textAlign: "right" }}>Nivel</span>
-        <span style={{ width: 110 }}>Cohorte</span>
+        <span style={{ width: 110 }}>Generación</span>
         <span style={{ width: 100 }}>Status</span>
         <span style={{ width: 140 }}>Inscrito</span>
       </div>

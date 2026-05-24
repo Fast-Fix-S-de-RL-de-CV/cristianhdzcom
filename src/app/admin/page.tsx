@@ -417,7 +417,7 @@ export default async function AdminDashboard() {
                 ["✍️", "Nuevo post de blog"],
                 ["📚", "Nuevo módulo curso"],
                 ["🎙️", "Crear taller en vivo"],
-                ["💸", "Enviar oferta cohorte"],
+                ["💸", "Enviar oferta generación"],
                 ["📩", "Email a alumnos"],
                 ["🏷️", "Cupón de descuento"],
                 ["🎯", "Lanzar campaña"],

@@ -91,13 +91,13 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
               {nextCohort && seatsLeft !== null && seatsLeft > 0 ? (
                 <>
                   <Chip variant="accent" dot pulse style={{ color: "var(--accent)" }}>
-                    Cohorte abierta · {seatsLeft} {seatsLeft === 1 ? "cupo" : "cupos"}
+                    Generación abierta · {seatsLeft} {seatsLeft === 1 ? "cupo" : "cupos"}
                   </Chip>
                   {cohortRange && <Chip>{cohortRange}</Chip>}
                 </>
               ) : (
                 <Chip variant="warm" dot style={{ color: "var(--warm)" }}>
-                  Lista de espera · próxima cohorte pronto
+                  Lista de espera · próxima generación pronto
                 </Chip>
               )}
             </div>
@@ -130,7 +130,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
           <div>
             <Card className="sales-pricing-sticky" style={{ padding: 28, position: "sticky", top: 100, boxShadow: "0 12px 40px rgba(15,17,21,0.08)" }}>
               <div className="between" style={{ marginBottom: 16 }}>
-                <Chip variant="ink">{program.type.toUpperCase()} · COHORTE</Chip>
+                <Chip variant="ink">{program.type.toUpperCase()} · GENERACIÓN</Chip>
                 <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
                   CH-{program.slug.slice(0, 4).toUpperCase()}
                 </span>

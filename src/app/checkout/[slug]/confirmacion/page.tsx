@@ -53,7 +53,7 @@ export default async function ConfirmationPage({
             ✓
           </div>
           <Eyebrow>Pago confirmado</Eyebrow>
-          <h1 style={{ fontSize: 48, marginTop: 12, marginBottom: 16 }}>¡Bienvenido a la cohorte!</h1>
+          <h1 style={{ fontSize: 48, marginTop: 12, marginBottom: 16 }}>¡Bienvenido a la generación!</h1>
           <p style={{ fontSize: 17, color: "var(--muted)", maxWidth: 480, margin: "0 auto 32px", lineHeight: 1.5 }}>
             Acabas de inscribirte a <strong style={{ color: "var(--ink)" }}>{program?.title}</strong>. Te enviamos los accesos
             a tu correo y tu lugar en la plataforma ya está listo.

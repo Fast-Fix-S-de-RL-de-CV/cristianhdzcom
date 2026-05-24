@@ -28,7 +28,7 @@ const PATHS = [
     title: "Aprende a hacer negocios con IA.",
     desc: "Mis 2 libros y mis programas para empezar sin dinero, validar y escalar por internet. Para empresarios, empleados y profesionales.",
     cta: "Ver programas",
-    kpi: "2 libros + cohorte",
+    kpi: "2 libros + generación",
     color: "accent" as const,
     href: "/programas",
   },
@@ -178,7 +178,7 @@ export default async function HomePage() {
           <div>
             <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
               <Chip variant="accent" dot pulse style={{ color: "var(--accent)" }}>
-                Disponible · cohorte Mar 2026
+                Disponible · generación Mar 2026
               </Chip>
               <Chip>AUTOR · FUNDADOR · MENTOR</Chip>
             </div>
@@ -504,7 +504,7 @@ export default async function HomePage() {
           </div>
           <p style={{ maxWidth: 360, color: "var(--muted)", lineHeight: 1.55, fontSize: 16 }}>
             Cada producto es un caso real de cómo aplicamos IA + negocios. Úsalos en tu empresa o aprende del repo en mis
-            cohortes.
+            generaciones.
           </p>
         </div>
 
