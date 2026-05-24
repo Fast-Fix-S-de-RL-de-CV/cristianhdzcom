@@ -58,34 +58,39 @@ export function AdminShell({
         <div
           className="admin-header-grid"
           style={{
-            padding: "16px 40px",
+            padding: "14px 40px",
             display: "grid",
-            gridTemplateColumns: "52px 1fr auto",
-            gap: 14,
+            gridTemplateColumns: "auto 1fr auto",
+            gap: 18,
             alignItems: "center",
           }}
         >
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 12,
-              background: "var(--gold)",
-              color: "var(--navy)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: "var(--font-serif)",
-              fontSize: 24,
-              fontWeight: 700,
-            }}
+          {/* Logo dorado (mismo asset que el sidebar alumno) */}
+          <Link
+            href="/admin"
+            className="ch-logo"
+            aria-label="CH · Panel de administración"
+            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
           >
-            C
-          </div>
+            <img
+              src="/logo.png"
+              alt="Cristian Hernández"
+              style={{
+                height: 44,
+                width: "auto",
+                display: "block",
+                /* Sombra negra suave + halo dorado para que la firma dorada
+                 * se lea bien sobre el navy oscuro del panel admin (mismo
+                 * filtro que aplicamos al logo del nav público). */
+                filter:
+                  "drop-shadow(0 1px 3px rgba(0,0,0,0.30)) drop-shadow(0 0 8px rgba(216,168,63,0.20))",
+              }}
+            />
+          </Link>
           <div>
             <div className="row" style={{ gap: 10, alignItems: "center" }}>
-              <h2 className="serif" style={{ fontSize: 22, color: "white", margin: 0 }}>
-                CH · Panel de administración
+              <h2 className="serif" style={{ fontSize: 20, color: "white", margin: 0 }}>
+                Panel de administración
               </h2>
               <span
                 className="mono"
