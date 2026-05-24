@@ -10,6 +10,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { FAQAccordion } from "@/components/marketing/FAQAccordion";
 import { CurriculumAccordion } from "@/components/marketing/CurriculumAccordion";
+import { CourseCover } from "@/components/marketing/CourseCover";
 import { FreeEnrollButton } from "./FreeEnrollButton";
 
 export const dynamic = "force-dynamic";
@@ -87,6 +88,15 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
               <span>/</span>
               <span style={{ color: "var(--ink)" }}>{program.title}</span>
             </div>
+            {program.coverUrl && program.coverUrl.trim() !== "" ? (
+              <CourseCover
+                coverUrl={program.coverUrl}
+                coverKind={program.coverKind}
+                radius={18}
+                aspectRatio="16/9"
+                style={{ marginBottom: 28, boxShadow: "0 18px 50px rgba(15,17,21,0.12)" }}
+              />
+            ) : null}
             <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
               {nextCohort && seatsLeft !== null && seatsLeft > 0 ? (
                 <>

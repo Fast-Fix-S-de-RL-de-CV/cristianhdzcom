@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
+import { CourseCover } from "@/components/marketing/CourseCover";
 import { formatMoney } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -94,22 +95,15 @@ export default async function ProgramsPage() {
                     Más elegido
                   </div>
                 )}
-                <div
-                  className="ph"
-                  style={{
-                    height: 180,
-                    borderRadius: 0,
-                    borderTop: "none",
-                    borderLeft: "none",
-                    borderRight: "none",
-                    borderColor: "var(--line)",
-                    position: "relative",
-                  }}
-                >
-                  <div className="serif" style={{ fontSize: 88, color: accentColor, opacity: 0.5 }}>
-                    {String(i + 1).padStart(2, "0")}
-                  </div>
-                </div>
+                <CourseCover
+                  coverUrl={p.coverUrl}
+                  coverKind={p.coverKind}
+                  fallback={String(i + 1).padStart(2, "0")}
+                  accent={accentColor}
+                  height={180}
+                  bottomDivider
+                />
+
                 <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
                   <span className="mono" style={{ fontSize: 11, color: accentColor, letterSpacing: "0.08em" }}>
                     {p.type.toUpperCase()} {p.durationLabel ? `· ${p.durationLabel.toUpperCase()}` : ""}

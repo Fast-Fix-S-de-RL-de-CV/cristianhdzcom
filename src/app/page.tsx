@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
+import { CourseCover } from "@/components/marketing/CourseCover";
 
 export const dynamic = "force-dynamic";
 
@@ -452,14 +453,14 @@ export default async function HomePage() {
                     hover
                     style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}
                   >
-                    <div
-                      className="ph"
-                      style={{ height: 160, borderRadius: 0, border: "none", borderBottom: "1px solid var(--line)" }}
-                    >
-                      <div className="serif" style={{ fontSize: 64, color: accentColor, opacity: 0.55 }}>
-                        {String(i + 1).padStart(2, "0")}
-                      </div>
-                    </div>
+                    <CourseCover
+                      coverUrl={p.coverUrl}
+                      coverKind={p.coverKind}
+                      fallback={String(i + 1).padStart(2, "0")}
+                      accent={accentColor}
+                      height={160}
+                      bottomDivider
+                    />
                     <div style={{ padding: 22, display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
                       <span className="mono" style={{ fontSize: 11, color: accentColor, letterSpacing: "0.08em" }}>
                         {p.type.toUpperCase()}
