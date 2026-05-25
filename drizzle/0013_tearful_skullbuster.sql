@@ -1,0 +1,21 @@
+CREATE TABLE "site_settings" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"hero_chip_1_label" varchar(80),
+	"hero_chip_1_pulse" boolean DEFAULT true NOT NULL,
+	"hero_chip_2_label" varchar(80),
+	"hero_eyebrow" varchar(40) DEFAULT 'Hola, soy' NOT NULL,
+	"hero_title" varchar(120) DEFAULT 'Cristian Hernández.' NOT NULL,
+	"hero_subtitle_accent" varchar(80),
+	"hero_subtitle_rest" varchar(80),
+	"hero_bio_1" text,
+	"hero_bio_2" text,
+	"hero_cta_primary_label" varchar(40) DEFAULT 'Empezar gratis →' NOT NULL,
+	"hero_cta_secondary_label" varchar(40) DEFAULT 'Ver mis empresas' NOT NULL,
+	"hero_portrait_url" text,
+	"hero_portrait_footer_line" varchar(80) DEFAULT 'FAST FIX · CLICK THUNDER · G20' NOT NULL,
+	"hero_portrait_chip" varchar(40) DEFAULT '● Disponible' NOT NULL,
+	"hero_stats" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"hero_quote_text" text,
+	"hero_quote_attrib" varchar(80) DEFAULT '— CRISTIAN H. · 2026',
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);

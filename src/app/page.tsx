@@ -12,6 +12,7 @@ import { CourseCover } from "@/components/marketing/CourseCover";
 import { TallerBanner } from "@/components/marketing/TallerBanner";
 import { ProgramsCarousel } from "@/components/marketing/ProgramsCarousel";
 import { ServicesGrid } from "@/components/marketing/ServicesGrid";
+import { getSiteSettings, renderMarkdownLight } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +82,7 @@ const BRANDS = [
 
 export default async function HomePage() {
   const now = new Date();
-  const [user, featured, talleres, services] = await Promise.all([
+  const [user, featured, talleres, services, hero] = await Promise.all([
     getCurrentUser(),
     // Programas y certificaciones (excluye talleres — esos viven en su propia
     // sección de banners arriba). Trae varios para alimentar el carrusel.
@@ -118,6 +119,8 @@ export default async function HomePage() {
       .where(eq(schema.services.isActive, true))
       .orderBy(asc(schema.services.sortOrder))
       .limit(12),
+    // Site settings singleton — controla todo el hero (título, bio, foto, etc).
+    getSiteSettings(),
   ]);
 
   return (
@@ -141,48 +144,54 @@ export default async function HomePage() {
         >
           <div>
             <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
-              <Chip variant="accent" dot pulse style={{ color: "var(--accent)" }}>
-                G20 · Brasil 2024 · Sudáfrica 2025
-              </Chip>
-              <Chip>HUAWEI SPARK 2023</Chip>
+              {hero.heroChip1Label && (
+                <Chip variant="accent" dot pulse={hero.heroChip1Pulse} style={{ color: "var(--accent)" }}>
+                  {hero.heroChip1Label}
+                </Chip>
+              )}
+              {hero.heroChip2Label && <Chip>{hero.heroChip2Label}</Chip>}
             </div>
-            <Eyebrow style={{ marginBottom: 18 }}>Hola, soy</Eyebrow>
+            <Eyebrow style={{ marginBottom: 18 }}>{hero.heroEyebrow}</Eyebrow>
             <h1 style={{ fontSize: "clamp(56px, 7vw, 96px)", marginBottom: 22, lineHeight: 0.95 }}>
-              Cristian Hernández.
+              {hero.heroTitle}
             </h1>
-            <h2
-              className="serif"
-              style={{
-                fontSize: "clamp(24px, 3vw, 36px)",
-                lineHeight: 1.15,
-                color: "var(--ink-2)",
-                marginBottom: 28,
-                fontWeight: 500,
-              }}
-            >
-              <span style={{ color: "var(--accent)" }}>Arquitecto de Software</span> y Empresario.
-            </h2>
-            <p style={{ fontSize: 19, color: "var(--ink-2)", lineHeight: 1.5, maxWidth: 580, marginBottom: 20 }}>
-              Delegado mexicano en la Cumbre del G20 (Brasil 2024, Sudáfrica 2025). Director de{" "}
-              <strong style={{ color: "var(--ink)" }}>Fast Fix</strong>, agencia de software a medida, y de{" "}
-              <strong style={{ color: "var(--ink)" }}>Click Thunder</strong>, holding propietaria de 14 marcas SaaS.
-              También opero empresas del sector restaurantero.
-            </p>
-            <p style={{ fontSize: 15, color: "var(--muted)", lineHeight: 1.6, maxWidth: 560, marginBottom: 36 }}>
-              Ganador del <strong style={{ color: "var(--ink-2)" }}>Premio Huawei Spark 2023</strong> por expansión
-              en el sector informático. He compartido foros con empresarios como Marcus Dantus y Ernesto Coppel, y
-              mantengo relación directa con los consulados de Brasil y México. Trabajar conmigo es sinónimo de{" "}
-              <em>confianza, compromiso y resultados</em>.
-            </p>
+            {(hero.heroSubtitleAccent || hero.heroSubtitleRest) && (
+              <h2
+                className="serif"
+                style={{
+                  fontSize: "clamp(24px, 3vw, 36px)",
+                  lineHeight: 1.15,
+                  color: "var(--ink-2)",
+                  marginBottom: 28,
+                  fontWeight: 500,
+                }}
+              >
+                {hero.heroSubtitleAccent && (
+                  <span style={{ color: "var(--accent)" }}>{hero.heroSubtitleAccent}</span>
+                )}
+                {hero.heroSubtitleAccent && hero.heroSubtitleRest && " "}
+                {hero.heroSubtitleRest}
+              </h2>
+            )}
+            {hero.heroBio1 && (
+              <p style={{ fontSize: 19, color: "var(--ink-2)", lineHeight: 1.5, maxWidth: 580, marginBottom: 20 }}>
+                {renderMarkdownLight(hero.heroBio1)}
+              </p>
+            )}
+            {hero.heroBio2 && (
+              <p style={{ fontSize: 15, color: "var(--muted)", lineHeight: 1.6, maxWidth: 560, marginBottom: 36 }}>
+                {renderMarkdownLight(hero.heroBio2)}
+              </p>
+            )}
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <Link href={user ? "/plataforma" : "/registro"}>
                 <Button size="lg" shine>
-                  {user ? "Ir a mi plataforma →" : "Empezar gratis →"}
+                  {user ? "Ir a mi plataforma →" : hero.heroCtaPrimaryLabel}
                 </Button>
               </Link>
               <Link href="#saas">
                 <Button size="lg" variant="ghost">
-                  Ver mis empresas
+                  {hero.heroCtaSecondaryLabel}
                 </Button>
               </Link>
               <Link href="/programas">
@@ -205,20 +214,22 @@ export default async function HomePage() {
                 background: "linear-gradient(135deg, oklch(78% 0.04 245), oklch(68% 0.05 252))",
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/uploads/cristian-portrait.jpg"
-                alt="Cristian Hernández — Arquitecto de Software y Empresario"
-                loading="eager"
-                decoding="async"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  objectPosition: "center top",
-                  display: "block",
-                }}
-              />
+              {hero.heroPortraitUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={hero.heroPortraitUrl}
+                  alt={`${hero.heroTitle} — ${hero.heroSubtitleAccent ?? ""} ${hero.heroSubtitleRest ?? ""}`.trim()}
+                  loading="eager"
+                  decoding="async"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    objectPosition: "center top",
+                    display: "block",
+                  }}
+                />
+              ) : null}
               {/* Overlay gradient sutil para legibilidad del chip inferior */}
               <div
                 style={{
@@ -246,16 +257,16 @@ export default async function HomePage() {
                     className="mono"
                     style={{ fontSize: 10, color: "rgba(255,255,255,0.9)", letterSpacing: "0.12em" }}
                   >
-                    FAST FIX · CLICK THUNDER · G20
+                    {hero.heroPortraitFooterLine}
                   </div>
                   <div className="serif" style={{ fontSize: 26, color: "white", marginTop: 4, textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>
-                    Cristian Hernández
+                    {hero.heroTitle.replace(/\.$/, "")}
                   </div>
                 </div>
                 <Chip
                   style={{ background: "oklch(94% 0.05 145)", color: "oklch(40% 0.13 145)", borderColor: "transparent" }}
                 >
-                  ● Disponible
+                  {hero.heroPortraitChip}
                 </Chip>
               </div>
             </div>
@@ -274,18 +285,13 @@ export default async function HomePage() {
             >
               <Eyebrow style={{ marginBottom: 8 }}>Trayectoria</Eyebrow>
               <div className="grid-2" style={{ gap: 12 }}>
-                {[
-                  ["14", "MARCAS SAAS"],
-                  ["G20", "DELEGADO MEXICANO"],
-                  ["2", "LIBROS PUBLICADOS"],
-                  ["2023", "HUAWEI SPARK"],
-                ].map(([n, l]) => (
-                  <div key={l}>
+                {hero.heroStats.slice(0, 4).map((s, i) => (
+                  <div key={i}>
                     <div className="serif" style={{ fontSize: 30, lineHeight: 1 }}>
-                      {n}
+                      {s.value}
                     </div>
                     <div className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.06em" }}>
-                      {l}
+                      {s.label}
                     </div>
                   </div>
                 ))}
@@ -293,17 +299,21 @@ export default async function HomePage() {
             </Card>
 
             {/* Floating quote */}
-            <Card
-              className="hero-quote-float"
-              style={{ position: "absolute", top: 32, right: -28, padding: 16, width: 230, borderLeft: "3px solid var(--accent)" }}
-            >
-              <span className="serif" style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: "var(--ink)" }}>
-                &ldquo;Confianza, compromiso y resultados — esa es la promesa.&rdquo;
-              </span>
-              <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 8, letterSpacing: "0.08em" }}>
-                — CRISTIAN H. · 2026
-              </div>
-            </Card>
+            {hero.heroQuoteText && (
+              <Card
+                className="hero-quote-float"
+                style={{ position: "absolute", top: 32, right: -28, padding: 16, width: 230, borderLeft: "3px solid var(--accent)" }}
+              >
+                <span className="serif" style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: "var(--ink)" }}>
+                  &ldquo;{hero.heroQuoteText}&rdquo;
+                </span>
+                {hero.heroQuoteAttrib && (
+                  <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 8, letterSpacing: "0.08em" }}>
+                    {hero.heroQuoteAttrib}
+                  </div>
+                )}
+              </Card>
+            )}
           </div>
         </div>
 

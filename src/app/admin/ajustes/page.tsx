@@ -37,6 +37,26 @@ export default async function AjustesPage() {
       subtitle="Configuración global del sitio"
     >
       <div style={{ display: "grid", gap: 20, gridTemplateColumns: "1fr", maxWidth: 920 }}>
+        {/* Hero del Home */}
+        <Card style={{ padding: 24 }}>
+          <Eyebrow>Página de Inicio</Eyebrow>
+          <h2 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
+            Hero del Home
+          </h2>
+          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18 }}>
+            Edita el título, subtítulo, bio, foto de portada, chips, stats flotantes y la quote del
+            landing público. Soporta <code>**negritas**</code> y <code>*cursivas*</code> en los
+            párrafos de bio.
+          </p>
+          <a
+            href="/admin/ajustes/hero"
+            className="btn btn-primary"
+            style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}
+          >
+            Editar hero →
+          </a>
+        </Card>
+
         {/* Métodos de pago */}
         <Card style={{ padding: 24 }}>
           <Eyebrow>Pagos</Eyebrow>

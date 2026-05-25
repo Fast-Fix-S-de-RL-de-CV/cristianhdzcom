@@ -92,6 +92,13 @@
       "when": 1779737736944,
       "tag": "0012_early_true_believers",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1779740459292,
+      "tag": "0013_tearful_skullbuster",
+      "breakpoints": true
     }
   ]
 }

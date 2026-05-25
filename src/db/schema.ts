@@ -860,3 +860,61 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
   likes: many(postLikes),
   comments: many(comments),
 }));
+
+/* ─────────── SITE SETTINGS (singleton) ─────────── */
+/**
+ * Configuración global del sitio editable desde admin. Una sola fila
+ * (id=1) que controla el hero del home y otros textos que antes vivían
+ * hardcoded en page.tsx.
+ *
+ * Al refactorizar a este modelo, /admin/ajustes/hero permite editar
+ * título, bio, chips, stats, quote y subir/cambiar la foto del retrato
+ * sin tocar código.
+ */
+export const siteSettings = pgTable("site_settings", {
+  id: serial("id").primaryKey(), // siempre 1
+
+  // ── Chips superiores del hero ──
+  heroChip1Label: varchar("hero_chip_1_label", { length: 80 }),
+  heroChip1Pulse: boolean("hero_chip_1_pulse").notNull().default(true),
+  heroChip2Label: varchar("hero_chip_2_label", { length: 80 }),
+
+  // ── Título grande ──
+  heroEyebrow: varchar("hero_eyebrow", { length: 40 }).notNull().default("Hola, soy"),
+  heroTitle: varchar("hero_title", { length: 120 }).notNull().default("Cristian Hernández."),
+  /** Parte del subtítulo que va en color accent (la "frase importante"). */
+  heroSubtitleAccent: varchar("hero_subtitle_accent", { length: 80 }),
+  /** El resto del subtítulo, en color ink-2 (default). */
+  heroSubtitleRest: varchar("hero_subtitle_rest", { length: 80 }),
+
+  // ── Dos párrafos de bio ──
+  heroBio1: text("hero_bio_1"),
+  heroBio2: text("hero_bio_2"),
+
+  // ── CTAs ──
+  heroCtaPrimaryLabel: varchar("hero_cta_primary_label", { length: 40 }).notNull().default("Empezar gratis →"),
+  heroCtaSecondaryLabel: varchar("hero_cta_secondary_label", { length: 40 }).notNull().default("Ver mis empresas"),
+
+  // ── Retrato (lado derecho del hero) ──
+  /** URL de la foto (puede ser local /uploads/... o externa). */
+  heroPortraitUrl: text("hero_portrait_url"),
+  /** Línea mono encima del nombre, dentro del overlay del retrato. */
+  heroPortraitFooterLine: varchar("hero_portrait_footer_line", { length: 80 })
+    .notNull()
+    .default("FAST FIX · CLICK THUNDER · G20"),
+  /** Texto del chip verde "● Disponible" en el retrato. */
+  heroPortraitChip: varchar("hero_portrait_chip", { length: 40 }).notNull().default("● Disponible"),
+
+  // ── Floating credibility card (4 stats) ──
+  /** Array de {value, label}. Default = 4 stats actuales. */
+  heroStats: jsonb("hero_stats")
+    .$type<Array<{ value: string; label: string }>>()
+    .notNull()
+    .default([]),
+
+  // ── Floating quote card ──
+  heroQuoteText: text("hero_quote_text"),
+  heroQuoteAttrib: varchar("hero_quote_attrib", { length: 80 }).default("— CRISTIAN H. · 2026"),
+
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
