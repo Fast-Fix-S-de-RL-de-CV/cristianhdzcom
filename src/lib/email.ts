@@ -200,6 +200,74 @@ export function passwordResetEmailHtml(firstName: string, resetUrl: string): str
   return shell("Restablece tu contraseña", body);
 }
 
+export function bookPurchaseEmailHtml(opts: {
+  firstName: string;
+  bookTitle: string;
+  format: "digital" | "physical" | "bundle";
+  isPhysical: boolean;
+  tempPassword: string | null;
+  digitalFileUrl: string | null;
+}): string {
+  const { firstName, bookTitle, format, isPhysical, tempPassword, digitalFileUrl } = opts;
+  const cta = digitalFileUrl
+    ? `<div style="text-align:center;margin:24px 0;">
+        <a href="${digitalFileUrl}" style="display:inline-block;background:${BRAND_COLOR};color:#FAF3DC;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
+          Descargar mi libro →
+        </a>
+      </div>`
+    : "";
+  const accountBlock = tempPassword
+    ? `<div style="margin:24px 0;padding:18px 20px;background:#F4EDD9;border-radius:10px;border:1px solid ${GOLD};">
+        <p style="font-size:13px;color:#1A3458;margin:0 0 10px;font-weight:600;">
+          🔑 Te creamos una cuenta para ti
+        </p>
+        <p style="font-size:13px;color:#1A3458;margin:0 0 6px;line-height:1.5;">
+          Email: <strong>${escapeHtml(firstName)}…</strong> &nbsp;·&nbsp; Contraseña temporal:
+        </p>
+        <code style="display:inline-block;background:white;border:1px solid #D9D2BF;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:14px;color:#1A3458;letter-spacing:0.04em;">${escapeHtml(tempPassword)}</code>
+        <p style="font-size:12px;color:#6E7A91;margin:10px 0 0;line-height:1.5;">
+          Úsala para entrar en <a href="https://cristianhdz.com/login" style="color:${GOLD};font-weight:600;">cristianhdz.com/login</a> y cámbiala desde "Mi cuenta".
+        </p>
+      </div>`
+    : "";
+  const shippingNote = isPhysical
+    ? `<p style="font-size:14px;line-height:1.6;color:#1A3458;margin:0 0 16px;">
+        📦 Tu ejemplar físico firmado sale del taller en 1-2 días hábiles. Te mandamos el tracking en cuanto sea despachado. Llega en 7-12 días a tu dirección.
+      </p>`
+    : "";
+
+  const body = `
+    <p style="font-size:15px;line-height:1.6;color:#1A3458;margin:0 0 16px;">
+      ${escapeHtml(firstName) || "Hola"}, ¡gracias por tu compra!
+    </p>
+    <p style="font-size:15px;line-height:1.6;color:#1A3458;margin:0 0 16px;">
+      Acabas de llevarte <strong>${escapeHtml(bookTitle)}</strong>${format === "digital" ? " en formato digital" : format === "physical" ? " en formato físico firmado" : ""}.
+    </p>
+    ${cta}
+    ${shippingNote}
+    ${accountBlock}
+    <p style="font-size:15px;line-height:1.6;color:#1A3458;margin:24px 0 12px;font-weight:600;">
+      Y como eres parte oficial de la comunidad, ya tienes acceso a:
+    </p>
+    <ul style="font-size:14px;line-height:1.8;color:#1A3458;padding-left:20px;margin:0 0 24px;">
+      <li>El feed de la <a href="https://cristianhdz.com/comunidad" style="color:${GOLD};font-weight:600;">comunidad privada</a></li>
+      <li>Directorio de miembros + DMs</li>
+      <li>Talleres en vivo del mes</li>
+      <li>Biblioteca de recursos (plantillas, notebooks, PDFs)</li>
+    </ul>
+    <div style="text-align:center;margin:20px 0;">
+      <a href="https://cristianhdz.com/comunidad"
+         style="display:inline-block;background:white;color:${BRAND_COLOR};padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;border:1.5px solid ${BRAND_COLOR};">
+        Entrar a la comunidad →
+      </a>
+    </div>
+    <p style="font-size:13px;color:#6E7A91;line-height:1.6;margin:16px 0 0;">
+      ¿Algún problema? Escríbeme a <a href="mailto:info@cristianhdz.com" style="color:${GOLD};font-weight:600;">info@cristianhdz.com</a> y te respondo personalmente.
+    </p>
+  `;
+  return shell(`Tu copia de "${bookTitle}" está lista`, body);
+}
+
 function escapeHtml(s: string): string {
   return String(s ?? "")
     .replace(/&/g, "&amp;")

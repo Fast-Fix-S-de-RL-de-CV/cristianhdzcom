@@ -13,10 +13,11 @@ export default async function ConfirmacionLibroPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ order?: string }>;
+  searchParams: Promise<{ order?: string; new?: string }>;
 }) {
   const { slug } = await params;
-  const { order: orderId } = await searchParams;
+  const { order: orderId, new: isNewAccount } = await searchParams;
+  const accountWasCreated = isNewAccount === "1";
 
   // Datos del producto comprado (para mostrar título + cover)
   const [product] = await db.select().from(schema.books).where(eq(schema.books.slug, slug)).limit(1);
@@ -118,6 +119,22 @@ export default async function ConfirmacionLibroPage({
                 </div>
               )}
 
+              {/* Acceso a la comunidad — clave: al comprar son clientes,
+                  tienen cuenta y acceso al feed privado de inmediato. */}
+              <div>
+                <div className="row" style={{ gap: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: 22 }}>💬</span>
+                  <strong style={{ fontSize: 15 }}>
+                    {accountWasCreated ? "Te creamos cuenta + acceso a la comunidad" : "Tu acceso a la comunidad"}
+                  </strong>
+                </div>
+                <p style={{ fontSize: 14, color: "var(--ink-2)", marginLeft: 32, lineHeight: 1.55 }}>
+                  {accountWasCreated
+                    ? "Como acabas de convertirte en cliente, te creamos una cuenta y ya estás logueado. La contraseña temporal se mandó a tu correo — entra a 'Mi cuenta' para cambiarla."
+                    : "Ya eres parte oficial de la comunidad. Tienes acceso al feed privado, directorio de miembros y mensajería."}
+                </p>
+              </div>
+
               {/* Garantía */}
               <div>
                 <div className="row" style={{ gap: 10, marginBottom: 8 }}>
@@ -132,11 +149,11 @@ export default async function ConfirmacionLibroPage({
           </Card>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 32, flexWrap: "wrap" }}>
+            <Link href="/comunidad">
+              <Button>Entrar a la comunidad →</Button>
+            </Link>
             <Link href="/libros">
               <Button variant="ghost">Ver más libros</Button>
-            </Link>
-            <Link href="/programas">
-              <Button>Ver talleres en vivo →</Button>
             </Link>
           </div>
         </div>

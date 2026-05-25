@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { nanoid } from "nanoid";
 import { db, schema } from "@/db";
 import { eq, sql } from "drizzle-orm";
-import { getCurrentUser } from "@/lib/auth";
+import { createSession, getCurrentUser, hashPassword } from "@/lib/auth";
 import { basePrice } from "@/lib/book-bumps";
+import { bookPurchaseEmailHtml, sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -127,16 +129,47 @@ export async function POST(req: Request) {
   const totalUsd = baseUsd + bumpsUsd;
   const totalCents = totalUsd * 100;
 
-  // 7. Resolver user_id si el comprador ya tiene cuenta
+  // 7. Resolver user_id — CLAVE: al comprar libros se convierten en clientes
+  //    con cuenta + sesión, para que tengan acceso a la comunidad
+  //    inmediatamente. Mismo patrón que /api/checkout (programas).
   const me = await getCurrentUser();
   let userId: string | null = me?.id ?? null;
+  let createdNewAccount = false;
+  let tempPassword: string | null = null;
+
   if (!userId) {
+    // ¿Ya existe un user con este email? (alguien que registró antes pero sin pagar)
     const [existingUser] = await db
       .select({ id: schema.users.id })
       .from(schema.users)
       .where(sql`lower(${schema.users.email}) = ${data.buyer.email}`)
       .limit(1);
-    if (existingUser) userId = existingUser.id;
+    if (existingUser) {
+      userId = existingUser.id;
+      // No creamos sesión automática para no usurpar cuenta existente. El
+      // dueño verá en su email "tu compra está lista" y entrará con su
+      // password normal.
+    } else {
+      // Cuenta nueva: la creamos con una password temporal, le mandamos el
+      // correo, y abrimos sesión inmediata para que pueda navegar a la
+      // comunidad sin fricción.
+      tempPassword = nanoid(12);
+      const passwordHash = await hashPassword(tempPassword);
+      const [created] = await db
+        .insert(schema.users)
+        .values({
+          email: data.buyer.email,
+          name: data.buyer.name,
+          country: data.shipping?.country ?? null,
+          phone: data.shipping?.phone ?? null,
+          passwordHash,
+          role: "member",
+        })
+        .returning({ id: schema.users.id });
+      userId = created.id;
+      createdNewAccount = true;
+      await createSession(created.id);
+    }
   }
 
   // 8. Decrementar stock físico (best-effort, no transaccional)
@@ -188,9 +221,41 @@ export async function POST(req: Request) {
     })
     .returning();
 
+  // 10. Email post-compra — fire and forget. Si el SMTP no está configurado
+  //     simplemente loggea; no rompemos el checkout por un fallo de email.
+  const firstName = data.buyer.name.split(" ")[0] || data.buyer.name;
+  const isPhysicalDelivery =
+    data.format === "physical" || (data.format === "bundle" && product.hasPhysical);
+  sendEmail({
+    to: data.buyer.email,
+    subject: `Tu copia de "${product.title}" está lista`,
+    html: bookPurchaseEmailHtml({
+      firstName,
+      bookTitle: product.title,
+      format: data.format,
+      isPhysical: isPhysicalDelivery,
+      tempPassword,
+      digitalFileUrl: product.digitalFileUrl ?? null,
+    }),
+  }).catch((err) => {
+    console.error("[checkout/book] email send failed:", err);
+  });
+
+  // 11. Activity feed para el dashboard del admin.
+  await db
+    .insert(schema.activity)
+    .values({
+      kind: "purchase",
+      icon: "📖",
+      text: `${firstName} compró ${product.title} · $${totalUsd}`,
+      color: "var(--accent)",
+    })
+    .catch(() => undefined);
+
   return NextResponse.json({
     ok: true,
     orderId: order.id,
-    redirectTo: `/checkout/libro/${product.slug}/confirmacion?order=${order.id}`,
+    createdNewAccount,
+    redirectTo: `/checkout/libro/${product.slug}/confirmacion?order=${order.id}${createdNewAccount ? "&new=1" : ""}`,
   });
 }
