@@ -23,6 +23,9 @@ export default async function TalleresPage() {
       attending: schema.events.attending,
       hot: schema.events.hot,
       link: schema.events.link,
+      priceUsd: schema.events.priceUsd,
+      recordingUrl: schema.events.recordingUrl,
+      includedInMembership: schema.events.includedInMembership,
     })
     .from(schema.events)
     .orderBy(desc(schema.events.startsAt));
@@ -39,6 +42,13 @@ export default async function TalleresPage() {
     attending: r.attending,
     hot: r.hot,
     link: r.link ?? "",
+    priceUsd: r.priceUsd ?? null,
+    recordingUrl: r.recordingUrl ?? null,
+    includedInMembership: ((r.includedInMembership === "silver" ||
+      r.includedInMembership === "gold" ||
+      r.includedInMembership === "black"
+      ? r.includedInMembership
+      : null) as "silver" | "gold" | "black" | null),
   }));
 
   return (

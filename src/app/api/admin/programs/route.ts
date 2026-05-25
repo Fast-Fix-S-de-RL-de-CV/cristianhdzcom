@@ -42,6 +42,7 @@ const body = z
     coverKind: z.enum(["image", "video"]).nullable().optional(),
     isActive: z.boolean().optional(),
     isFeatured: z.boolean().optional(),
+    includedInMembership: z.enum(["silver", "gold", "black"]).nullable().optional(),
   })
   .superRefine((data, ctx) => {
     // Precio comparativo (tachado) debe ser MAYOR que el precio único.
@@ -105,6 +106,7 @@ export async function POST(req: Request) {
         coverKind: data.coverKind ?? null,
         isActive: data.isActive ?? true,
         isFeatured: data.isFeatured ?? false,
+        includedInMembership: data.includedInMembership ?? null,
       })
       .returning();
     return NextResponse.json({ program: row });

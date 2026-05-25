@@ -137,6 +137,14 @@ export const programs = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     stripePriceId: varchar("stripe_price_id", { length: 120 }),
     sortOrder: integer("sort_order").notNull().default(0),
+    /**
+     * Si está set, el contenido del curso/programa es accesible para usuarios
+     * con membresía igual o superior al plan indicado, MIENTRAS LA MEMBRESÍA
+     * ESTÉ ACTIVA. No reemplaza la compra one-shot: si quieres tenerlo para
+     * siempre, lo compras. Valores: 'silver' | 'gold' | 'black' | null.
+     * (Por defecto null → solo accesible comprándolo.)
+     */
+    includedInMembership: varchar("included_in_membership", { length: 20 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ slugIdx: uniqueIndex("programs_slug_idx").on(t.slug) }),
@@ -329,7 +337,7 @@ export const comments = pgTable("comments", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/* ─────────── EVENTS ─────────── */
+/* ─────────── EVENTS (talleres + livestreams) ─────────── */
 export const events = pgTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: varchar("title", { length: 200 }).notNull(),
@@ -342,7 +350,115 @@ export const events = pgTable("events", {
   attending: integer("attending").notNull().default(0),
   hot: boolean("hot").notNull().default(false),
   link: text("link"),
+  /** Precio del taller como producto one-shot (USD). Null = solo membresía. */
+  priceUsd: integer("price_usd"),
+  /** Plan mínimo de membresía que ya lo trae incluido (livestream + grabación). */
+  includedInMembership: varchar("included_in_membership", { length: 20 }),
+  /** URL de la grabación una vez termina el livestream. Visible para
+   *  compradores y miembros del plan que aplica. */
+  recordingUrl: text("recording_url"),
 });
+
+/* ─────────── MEMBERSHIP PLANS (catálogo) ─────────── */
+/**
+ * Catálogo de planes. Solo 3 filas (silver, gold, black) seedeadas.
+ * Editables desde /admin/membresias para ajustar precios/beneficios.
+ */
+export const membershipPlans = pgTable("membership_plans", {
+  id: serial("id").primaryKey(),
+  slug: varchar("slug", { length: 20 }).notNull().unique(), // silver | gold | black
+  label: varchar("label", { length: 40 }).notNull(),
+  emoji: varchar("emoji", { length: 8 }).notNull(),
+  priceUsdMonthly: integer("price_usd_monthly").notNull(),
+  priceUsdYearly: integer("price_usd_yearly"),
+  /** % de descuento en productos one-shot. 10 = 10%. */
+  discountPercent: integer("discount_percent").notNull().default(0),
+  /** % de cada pago que se acumula como crédito. 50 = 50%. */
+  creditAccrualPercent: integer("credit_accrual_percent").notNull().default(50),
+  tagline: text("tagline"),
+  bullets: jsonb("bullets").$type<string[]>().notNull().default([]),
+  badgeColor: varchar("badge_color", { length: 30 }),
+  /** Cupo máximo si aplica (ej. Black = 50). Null = ilimitado. */
+  maxSeats: integer("max_seats"),
+  /** Cuántos miembros activos hay actualmente (denormalizado para queries rápidas). */
+  activeMembers: integer("active_members").notNull().default(0),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  stripePriceIdMonthly: varchar("stripe_price_id_monthly", { length: 120 }),
+  stripePriceIdYearly: varchar("stripe_price_id_yearly", { length: 120 }),
+});
+
+/* ─────────── MEMBERSHIPS (suscripciones activas) ─────────── */
+export const memberships = pgTable(
+  "memberships",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    planSlug: varchar("plan_slug", { length: 20 }).notNull(), // 'silver' | 'gold' | 'black'
+    /**
+     * Estado de la suscripción:
+     *   - 'active'      → al día, beneficios activos
+     *   - 'past_due'    → falló el cargo, beneficios suspendidos
+     *   - 'canceled'    → cancelada (todavía vigente hasta currentPeriodEnd si cancelAtPeriodEnd)
+     *   - 'expired'     → ya pasó currentPeriodEnd
+     *   - 'paused'      → pausada temporalmente (admin override)
+     */
+    status: varchar("status", { length: 20 }).notNull().default("active"),
+    billingCycle: varchar("billing_cycle", { length: 10 }).notNull().default("monthly"), // monthly | yearly
+    priceUsd: integer("price_usd").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    currentPeriodStart: timestamp("current_period_start", { withTimezone: true }).notNull().defaultNow(),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }).notNull(),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    canceledAt: timestamp("canceled_at", { withTimezone: true }),
+    stripeSubscriptionId: varchar("stripe_subscription_id", { length: 120 }),
+    stripeCustomerId: varchar("stripe_customer_id", { length: 120 }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userIdx: index("memberships_user_idx").on(t.userId),
+    statusIdx: index("memberships_status_idx").on(t.status),
+  }),
+);
+
+/* ─────────── MEMBERSHIP CREDITS (bolsa apply-to-purchase) ─────────── */
+/**
+ * Cada user tiene UNA fila (créditos acumulados). Cuando paga membresía
+ * suma el N% configurado en el plan. Cuando compra producto, se decrementa.
+ *
+ * `historyEntries` registra cada cambio para auditoría.
+ */
+export const membershipCredits = pgTable("membership_credits", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  balanceCents: integer("balance_cents").notNull().default(0),
+  lifetimeAccruedCents: integer("lifetime_accrued_cents").notNull().default(0),
+  lifetimeRedeemedCents: integer("lifetime_redeemed_cents").notNull().default(0),
+  expiresAt: timestamp("expires_at", { withTimezone: true }), // 90 días después de cancelar
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Historial de movimientos de crédito (auditable). */
+export const membershipCreditHistory = pgTable(
+  "membership_credit_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    /** 'accrual' | 'redemption' | 'expiration' | 'admin_adjust' */
+    kind: varchar("kind", { length: 30 }).notNull(),
+    deltaCents: integer("delta_cents").notNull(), // + para accrual, - para redemption
+    newBalanceCents: integer("new_balance_cents").notNull(),
+    sourceMembershipId: uuid("source_membership_id").references(() => memberships.id, { onDelete: "set null" }),
+    sourceOrderId: uuid("source_order_id").references(() => orders.id, { onDelete: "set null" }),
+    note: varchar("note", { length: 200 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userIdx: index("credit_history_user_idx").on(t.userId),
+  }),
+);
 
 /* ─────────── BLOG ─────────── */
 export const blogPosts = pgTable(

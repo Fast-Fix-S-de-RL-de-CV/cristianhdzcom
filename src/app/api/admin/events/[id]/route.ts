@@ -21,6 +21,9 @@ const body = z.object({
   isLive: z.boolean().optional(),
   hot: z.boolean().optional(),
   link: z.string().max(2000).optional().nullable(),
+  priceUsd: z.number().int().min(0).max(99999).nullable().optional(),
+  recordingUrl: z.string().nullable().optional(),
+  includedInMembership: z.enum(["silver", "gold", "black"]).nullable().optional(),
 });
 
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {

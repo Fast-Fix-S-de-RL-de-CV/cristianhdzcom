@@ -1,7 +1,17 @@
 # Modelo de Negocio · cristianhdz.com
 
-**Versión:** 1.0 (Mayo 2026)
-**Status:** Propuesta para aprobación antes de implementación
+**Versión:** 1.1 (Mayo 2026) — **APROBADO por Cristian**
+**Status:** Sprint 1 en implementación
+
+## Decisiones finales tomadas
+
+- **Descuentos por tier**: Plata 10% · Oro 20% · Black 30% ✅
+- **Crédito apply-to-purchase**: 50% de lo pagado en membresía ✅
+- **Talleres**: livestream + grabación quedan incluidos para Oro/Black ✅
+- **Inner Circle Black**: límite 50 personas (lista de espera cuando se llene) ✅
+- **Regla clave**: cada producto nuevo (curso/taller/etc) debe tener input
+  explícito en admin `includedInMembership` para que el sistema sepa si
+  desbloquea automáticamente con la membresía.
 
 ## La tensión que tenemos que resolver
 

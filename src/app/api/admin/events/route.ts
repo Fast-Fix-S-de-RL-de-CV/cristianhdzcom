@@ -18,6 +18,9 @@ const body = z.object({
   isLive: z.boolean().optional(),
   hot: z.boolean().optional(),
   link: z.string().max(2000).optional().nullable(),
+  priceUsd: z.number().int().min(0).max(99999).nullable().optional(),
+  recordingUrl: z.string().nullable().optional(),
+  includedInMembership: z.enum(["silver", "gold", "black"]).nullable().optional(),
 });
 
 export async function POST(req: Request) {
@@ -40,6 +43,9 @@ export async function POST(req: Request) {
         isLive: data.isLive ?? false,
         hot: data.hot ?? false,
         link: data.link || null,
+        priceUsd: data.priceUsd ?? null,
+        recordingUrl: data.recordingUrl ?? null,
+        includedInMembership: data.includedInMembership ?? null,
       })
       .returning();
     return NextResponse.json({ event: row });

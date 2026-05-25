@@ -32,6 +32,7 @@ export default async function CursosPage() {
       coverKind: schema.programs.coverKind,
       isActive: schema.programs.isActive,
       isFeatured: schema.programs.isFeatured,
+      includedInMembership: schema.programs.includedInMembership,
       modulesCount: sql<number>`(SELECT COUNT(*)::int FROM ${schema.modules} WHERE program_id = ${schema.programs.id})`,
       enrollmentsCount: sql<number>`(SELECT COUNT(*)::int FROM ${schema.enrollments} WHERE program_id = ${schema.programs.id})`,
     })
@@ -55,6 +56,11 @@ export default async function CursosPage() {
     installmentCount: r.installmentCount ?? null,
     pricePerMonth: r.pricePerMonth ?? null,
     pricePerYear: r.pricePerYear ?? null,
+    includedInMembership: ((r.includedInMembership === "silver" ||
+      r.includedInMembership === "gold" ||
+      r.includedInMembership === "black"
+      ? r.includedInMembership
+      : null) as "silver" | "gold" | "black" | null),
     modulesCount: Number(r.modulesCount),
     enrollmentsCount: Number(r.enrollmentsCount),
   }));

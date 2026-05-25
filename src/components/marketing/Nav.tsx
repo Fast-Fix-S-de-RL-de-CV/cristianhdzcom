@@ -12,6 +12,7 @@ const NAV_ITEMS: [string, string][] = [
   ["Inicio", "/"],
   ["Programas", "/programas"],
   ["Libros", "/libros"],
+  ["Membresía", "/membresia"],
   ["Comunidad", "/comunidad"],
   ["Blog", "/blog"],
 ];

@@ -6,6 +6,7 @@ const ITEMS = [
   ["🎯", "Prospectos", "/admin/prospectos"],
   ["👥", "Alumnos", "/admin/alumnos"],
   ["💼", "Clientes", "/admin/clientes"],
+  ["✨", "Membresías", "/admin/membresias"],
   ["💳", "Suscripciones", "/admin/suscripciones"],
   ["💰", "Pagos", "/admin/pagos"],
   ["📚", "Cursos", "/admin/cursos"],

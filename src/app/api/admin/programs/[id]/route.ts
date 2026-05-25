@@ -37,6 +37,7 @@ const body = z
     coverKind: z.enum(["image", "video"]).nullable().optional(),
     isActive: z.boolean().optional(),
     isFeatured: z.boolean().optional(),
+    includedInMembership: z.enum(["silver", "gold", "black"]).nullable().optional(),
     sortOrder: z.number().int().optional(),
   })
   .superRefine((data, ctx) => {

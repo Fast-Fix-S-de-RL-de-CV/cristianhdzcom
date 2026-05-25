@@ -43,6 +43,7 @@ type Row = {
   coverKind: "image" | "video" | null;
   isActive: boolean;
   isFeatured: boolean;
+  includedInMembership: "silver" | "gold" | "black" | null;
   modulesCount: number;
   enrollmentsCount: number;
 };
@@ -404,6 +405,11 @@ function ProgramDialog({
     coverKind: (program?.coverKind ?? null) as "image" | "video" | null,
     isActive: program?.isActive ?? true,
     isFeatured: program?.isFeatured ?? false,
+    includedInMembership: (program?.includedInMembership ?? null) as
+      | "silver"
+      | "gold"
+      | "black"
+      | null,
   });
   // True once the user has manually edited slug — disables auto-fill from title.
   const [slugTouched, setSlugTouched] = useState(!!program?.slug);
@@ -660,6 +666,37 @@ function ProgramDialog({
               Destacado (featured)
             </label>
           </div>
+
+          <Field label="Incluido en membresía">
+            <select
+              value={form.includedInMembership ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                setForm({
+                  ...form,
+                  includedInMembership:
+                    v === "silver" || v === "gold" || v === "black" ? v : null,
+                });
+              }}
+              style={input()}
+            >
+              <option value="">No incluido (solo compra)</option>
+              <option value="silver">🥈 Plata o superior</option>
+              <option value="gold">🥇 Oro o superior</option>
+              <option value="black">🖤 Solo Black</option>
+            </select>
+            <div
+              className="mono"
+              style={{
+                fontSize: 10,
+                color: "var(--muted)",
+                marginTop: 4,
+                lineHeight: 1.5,
+              }}
+            >
+              Si está marcado, los miembros del plan elegido (o superior) acceden gratis MIENTRAS la membresía esté activa. No afecta compras one-shot — sigue siendo comprable también.
+            </div>
+          </Field>
         </div>
 
         {err && (

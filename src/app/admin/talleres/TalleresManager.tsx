@@ -23,6 +23,9 @@ type Row = {
   attending: number;
   hot: boolean;
   link: string;
+  priceUsd: number | null;
+  recordingUrl: string | null;
+  includedInMembership: "silver" | "gold" | "black" | null;
 };
 
 export function TalleresManager({ rows }: { rows: Row[] }) {
@@ -291,6 +294,13 @@ function EventDialog({
     isLive: event?.isLive ?? false,
     hot: event?.hot ?? false,
     link: event?.link || "",
+    priceUsd: event?.priceUsd ?? null,
+    recordingUrl: event?.recordingUrl || "",
+    includedInMembership: (event?.includedInMembership ?? null) as
+      | "silver"
+      | "gold"
+      | "black"
+      | null,
   });
 
   return (
@@ -386,6 +396,63 @@ function EventDialog({
               style={inputStyle()}
             />
           </Field>
+          <Field label="Precio del taller (USD)">
+            <input
+              type="number"
+              min={0}
+              max={99999}
+              value={form.priceUsd ?? ""}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === "") {
+                  setForm({ ...form, priceUsd: null });
+                } else {
+                  const n = parseInt(raw, 10);
+                  setForm({ ...form, priceUsd: Number.isFinite(n) ? n : null });
+                }
+              }}
+              placeholder="Vacío = solo membresía"
+              style={inputStyle()}
+            />
+          </Field>
+          <Field label="URL de grabación (post-evento)">
+            <input
+              value={form.recordingUrl}
+              onChange={(e) => setForm({ ...form, recordingUrl: e.target.value })}
+              placeholder="https://vimeo.com/..."
+              style={inputStyle()}
+            />
+          </Field>
+          <Field label="Incluido en membresía">
+            <select
+              value={form.includedInMembership ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                setForm({
+                  ...form,
+                  includedInMembership:
+                    v === "silver" || v === "gold" || v === "black" ? v : null,
+                });
+              }}
+              style={inputStyle()}
+            >
+              <option value="">No incluido (solo compra)</option>
+              <option value="silver">🥈 Plata o superior</option>
+              <option value="gold">🥇 Oro o superior</option>
+              <option value="black">🖤 Solo Black</option>
+            </select>
+            <div
+              className="mono"
+              style={{
+                fontSize: 10,
+                color: "var(--muted)",
+                marginTop: 4,
+                lineHeight: 1.5,
+              }}
+            >
+              Si está marcado, los miembros del plan elegido (o superior) acceden gratis MIENTRAS la membresía esté activa. No afecta compras one-shot — sigue siendo comprable también.
+            </div>
+          </Field>
           <div className="row" style={{ gap: 18 }}>
             <label className="row" style={{ gap: 6, fontSize: 13, cursor: "pointer" }}>
               <input
@@ -430,6 +497,7 @@ function EventDialog({
               onSave({
                 ...form,
                 startsAt: new Date(form.startsAt).toISOString(),
+                recordingUrl: form.recordingUrl ? form.recordingUrl : null,
               })
             }
             disabled={busy || !form.title}
