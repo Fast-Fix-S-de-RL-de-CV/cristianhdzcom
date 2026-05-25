@@ -436,17 +436,17 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          {/* Banners horizontales en grid 1 o 2 columnas según cantidad */}
+          {/* Lista vertical: 1 taller por fila, card horizontal compacta */}
           <div
             className="talleres-banners"
             style={{
-              display: "grid",
-              gridTemplateColumns: talleres.length === 1 ? "1fr" : "repeat(2, 1fr)",
-              gap: 24,
+              display: "flex",
+              flexDirection: "column",
+              gap: 18,
             }}
           >
             {talleres.map((t, i) => (
-              <TallerBanner key={t.id} taller={t} flip={i % 2 === 1} />
+              <TallerBanner key={t.id} taller={t} index={i + 1} />
             ))}
           </div>
         </section>

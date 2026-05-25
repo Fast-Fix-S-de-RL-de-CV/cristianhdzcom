@@ -22,181 +22,249 @@ export type TallerBannerRow = {
 };
 
 /**
- * Banner horizontal estilo "paid ad" para talleres en vivo y evergreen.
- * Layout: imagen ancha (≈ 4:3 o 16:9) en una mitad + texto del otro lado.
+ * Banner horizontal COMPACTO para listado vertical de talleres.
  *
- * Lógica de fecha:
- *   - isEvergreen = true  → muestra evergreenScheduleHint (ej "Cada miércoles 7pm"),
- *                            badge "✦ EVERGREEN · DISPONIBLE SIEMPRE".
- *   - isEvergreen = false → muestra fecha real del startsAt + duración.
+ * Layout: 50/50 imagen-texto, altura fija (~220px desktop, ~auto en mobile)
+ * — la mitad del tamaño del banner grande anterior. Pensado para listar 4-6
+ * talleres uno debajo del otro sin que la página se vuelva infinita.
  *
- * Lógica de precio:
- *   - includedInMembership: pinta chip dorado "INCLUIDO EN ORO/BLACK".
- *   - priceUsd > 0:         muestra precio.
- *   - else:                 "GRATIS".
+ * El `index` se usa como numeración visual ("TALLER 01", "TALLER 02"…) en el
+ * eyebrow superior, para que el usuario perciba el orden curado de
+ * importancia.
  */
 export function TallerBanner({
   taller,
-  flip = false,
+  index,
 }: {
   taller: TallerBannerRow;
-  flip?: boolean;
+  index?: number;
 }) {
   const startsAtDate = taller.startsAt ? new Date(taller.startsAt) : null;
   const dateLabel = taller.isEvergreen
     ? taller.evergreenScheduleHint || "Disponible al inscribirte"
     : startsAtDate
-      ? formatDateLong(startsAtDate)
+      ? formatDateShort(startsAtDate)
       : "Próxima fecha por confirmar";
 
-  const priceLabel =
-    taller.includedInMembership
-      ? `INCLUIDO EN ${taller.includedInMembership.toUpperCase()}+`
-      : taller.priceUsd && taller.priceUsd > 0
-        ? `$${taller.priceUsd} USD`
-        : "GRATIS";
+  const priceLabel = taller.includedInMembership
+    ? `INCLUIDO EN ${taller.includedInMembership.toUpperCase()}+`
+    : taller.priceUsd && taller.priceUsd > 0
+      ? `$${taller.priceUsd} USD`
+      : "GRATIS";
   const isFree = !taller.includedInMembership && (!taller.priceUsd || taller.priceUsd === 0);
-
-  const cover = (
-    <div
-      style={{
-        position: "relative",
-        aspectRatio: "4/3",
-        borderRadius: 14,
-        overflow: "hidden",
-        background: taller.coverUrl
-          ? "transparent"
-          : "linear-gradient(135deg, oklch(35% 0.05 50), oklch(20% 0.04 60))",
-        boxShadow: "0 20px 50px rgba(15,17,21,0.18)",
-      }}
-    >
-      {taller.coverUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={taller.coverUrl}
-          alt=""
-          loading="lazy"
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        />
-      ) : (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "flex-end",
-            padding: 28,
-            color: "white",
-          }}
-        >
-          <span className="serif" style={{ fontSize: 32, lineHeight: 1.1, opacity: 0.9 }}>
-            {taller.title}
-          </span>
-        </div>
-      )}
-      {/* Badges encima */}
-      <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {taller.isEvergreen ? (
-          <Badge variant="evergreen">✦ EVERGREEN</Badge>
-        ) : taller.isLive ? (
-          <Badge variant="live">● EN VIVO</Badge>
-        ) : (
-          <Badge variant="warm">EN VIVO PRÓXIMAMENTE</Badge>
-        )}
-        {taller.hot && <Badge variant="hot">🔥 HOT</Badge>}
-      </div>
-    </div>
-  );
-
-  const text = (
-    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%" }}>
-      {taller.tagline && (
-        <span
-          className="mono"
-          style={{ fontSize: 11, color: "var(--accent)", letterSpacing: "0.1em", marginBottom: 10 }}
-        >
-          {taller.tagline.toUpperCase()}
-        </span>
-      )}
-      <h3 className="serif" style={{ fontSize: "clamp(28px, 3.5vw, 40px)", lineHeight: 1.05, marginBottom: 14 }}>
-        {taller.title}
-      </h3>
-      {taller.description && (
-        <p style={{ fontSize: 15, color: "var(--ink-2)", lineHeight: 1.55, marginBottom: 18 }}>
-          {taller.description.length > 180 ? taller.description.slice(0, 178) + "…" : taller.description}
-        </p>
-      )}
-      <div style={{ display: "flex", gap: 22, flexWrap: "wrap", marginBottom: 22, fontSize: 13 }}>
-        <Meta icon="📅" label={dateLabel} />
-        <Meta icon="⏱" label={`${taller.durationMinutes} min`} />
-        {taller.host && <Meta icon="🎙" label={taller.host} />}
-      </div>
-      <div className="row" style={{ gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <Link
-          href={taller.link || `/programas`}
-          style={{
-            padding: "12px 22px",
-            background: "var(--ink)",
-            color: "white",
-            borderRadius: 10,
-            fontSize: 14,
-            fontWeight: 700,
-            textDecoration: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          {isFree ? "Apartar mi lugar gratis" : taller.isEvergreen ? "Verlo ahora" : "Reservar lugar"} →
-        </Link>
-        <span
-          className="mono"
-          style={{
-            fontSize: 12,
-            fontWeight: 700,
-            padding: "8px 14px",
-            borderRadius: 999,
-            background: isFree
-              ? "color-mix(in srgb, var(--green-soft) 60%, white)"
-              : taller.includedInMembership
-                ? "color-mix(in srgb, var(--accent) 18%, white)"
-                : "var(--bg-2)",
-            color: isFree
-              ? "var(--green-strong)"
-              : taller.includedInMembership
-                ? "var(--accent)"
-                : "var(--ink)",
-            border: "1px solid var(--line)",
-            letterSpacing: "0.04em",
-          }}
-        >
-          {priceLabel}
-        </span>
-        {taller.capacity != null && !taller.isEvergreen && (
-          <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-            {taller.attending}/{taller.capacity} reservados
-          </span>
-        )}
-      </div>
-    </div>
-  );
 
   return (
     <div
+      className="taller-banner-compact"
       style={{
         display: "grid",
-        gridTemplateColumns: "1.05fr 1fr",
-        gap: 32,
-        padding: 24,
-        borderRadius: 18,
+        gridTemplateColumns: "1fr 1fr",
+        gap: 0,
+        padding: 0,
+        borderRadius: 14,
         background: "white",
         border: "1px solid var(--line)",
-        alignItems: "stretch",
+        overflow: "hidden",
+        minHeight: 200,
       }}
-      className="taller-banner"
     >
-      {flip ? text : cover}
-      {flip ? cover : text}
+      {/* IMAGEN — mitad izquierda */}
+      <div
+        style={{
+          position: "relative",
+          background: taller.coverUrl
+            ? "transparent"
+            : "linear-gradient(135deg, oklch(35% 0.05 50), oklch(20% 0.04 60))",
+          minHeight: 200,
+        }}
+      >
+        {taller.coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={taller.coverUrl}
+            alt=""
+            loading="lazy"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+              position: "absolute",
+              inset: 0,
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "flex-end",
+              padding: 20,
+              color: "white",
+            }}
+          >
+            <span className="serif" style={{ fontSize: 22, lineHeight: 1.1, opacity: 0.9 }}>
+              {taller.title}
+            </span>
+          </div>
+        )}
+        {/* Badges sobrepuestos */}
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            left: 10,
+            display: "flex",
+            gap: 6,
+            flexWrap: "wrap",
+            zIndex: 2,
+          }}
+        >
+          {taller.isEvergreen ? (
+            <Badge variant="evergreen">✦ EVERGREEN</Badge>
+          ) : taller.isLive ? (
+            <Badge variant="live">● EN VIVO</Badge>
+          ) : (
+            <Badge variant="warm">EN VIVO PRÓXIMAMENTE</Badge>
+          )}
+          {taller.hot && <Badge variant="hot">🔥 HOT</Badge>}
+        </div>
+      </div>
+
+      {/* TEXTO — mitad derecha */}
+      <div
+        style={{
+          padding: "18px 22px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          gap: 6,
+          minWidth: 0,
+        }}
+      >
+        <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {index != null && (
+            <span
+              className="mono"
+              style={{
+                fontSize: 10,
+                color: "var(--accent)",
+                letterSpacing: "0.1em",
+                fontWeight: 700,
+              }}
+            >
+              TALLER {String(index).padStart(2, "0")}
+            </span>
+          )}
+          {taller.tagline && (
+            <span
+              className="mono"
+              style={{
+                fontSize: 10,
+                color: "var(--muted)",
+                letterSpacing: "0.08em",
+                paddingLeft: index != null ? 10 : 0,
+                borderLeft: index != null ? "1px solid var(--line)" : "none",
+              }}
+            >
+              {taller.tagline.toUpperCase()}
+            </span>
+          )}
+        </div>
+        <h3
+          className="serif"
+          style={{
+            fontSize: "clamp(18px, 2vw, 24px)",
+            lineHeight: 1.15,
+            margin: 0,
+            color: "var(--ink)",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {taller.title}
+        </h3>
+        {taller.description && (
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--ink-2)",
+              lineHeight: 1.45,
+              margin: 0,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {taller.description}
+          </p>
+        )}
+        <div
+          className="row"
+          style={{
+            gap: 12,
+            flexWrap: "wrap",
+            fontSize: 11,
+            color: "var(--muted)",
+            marginTop: 2,
+          }}
+        >
+          <span className="mono">📅 {dateLabel}</span>
+          <span className="mono">⏱ {taller.durationMinutes} min</span>
+        </div>
+
+        <div
+          className="row"
+          style={{
+            gap: 8,
+            alignItems: "center",
+            marginTop: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <Link
+            href={taller.link || `/programas`}
+            style={{
+              padding: "8px 14px",
+              background: "var(--ink)",
+              color: "white",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 700,
+              textDecoration: "none",
+            }}
+          >
+            {isFree ? "Apartar gratis" : taller.isEvergreen ? "Verlo ahora" : "Reservar"} →
+          </Link>
+          <span
+            className="mono"
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              padding: "5px 9px",
+              borderRadius: 999,
+              background: isFree
+                ? "color-mix(in srgb, var(--green-soft) 60%, white)"
+                : taller.includedInMembership
+                  ? "color-mix(in srgb, var(--accent) 18%, white)"
+                  : "var(--bg-2)",
+              color: isFree
+                ? "var(--green-strong)"
+                : taller.includedInMembership
+                  ? "var(--accent)"
+                  : "var(--ink)",
+              border: "1px solid var(--line)",
+              letterSpacing: "0.04em",
+            }}
+          >
+            {priceLabel}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -211,21 +279,21 @@ function Badge({
   const map = {
     evergreen: { bg: "rgba(11, 37, 72, 0.9)", color: "#F2C65A" },
     live: { bg: "#DC4949", color: "white" },
-    warm: { bg: "rgba(255,255,255,0.9)", color: "#A85A2B" },
-    hot: { bg: "rgba(255,255,255,0.9)", color: "#A85A2B" },
+    warm: { bg: "rgba(255,255,255,0.92)", color: "#A85A2B" },
+    hot: { bg: "rgba(255,255,255,0.92)", color: "#A85A2B" },
   };
   const m = map[variant];
   return (
     <span
       className="mono"
       style={{
-        padding: "4px 9px",
+        padding: "3px 7px",
         borderRadius: 999,
         background: m.bg,
         color: m.color,
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: 800,
-        letterSpacing: "0.08em",
+        letterSpacing: "0.06em",
         textTransform: "uppercase",
       }}
     >
@@ -234,20 +302,10 @@ function Badge({
   );
 }
 
-function Meta({ icon, label }: { icon: string; label: string }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--ink-2)" }}>
-      <span style={{ fontSize: 15 }}>{icon}</span>
-      <span style={{ fontWeight: 600 }}>{label}</span>
-    </span>
-  );
-}
-
-function formatDateLong(d: Date): string {
+function formatDateShort(d: Date): string {
   return d.toLocaleString("es-MX", {
-    weekday: "long",
     day: "numeric",
-    month: "long",
+    month: "short",
     hour: "2-digit",
     minute: "2-digit",
   });
