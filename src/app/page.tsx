@@ -11,6 +11,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { CourseCover } from "@/components/marketing/CourseCover";
 import { TallerBanner } from "@/components/marketing/TallerBanner";
 import { ProgramsCarousel } from "@/components/marketing/ProgramsCarousel";
+import { ServicesGrid } from "@/components/marketing/ServicesGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -47,76 +48,6 @@ const PATHS = [
   },
 ];
 
-const SAAS = [
-  {
-    name: "BengalPOS",
-    dom: "bengalpos.com",
-    tag: "PUNTO DE VENTA",
-    desc: "POS en la nube para restaurantes y retail. Inventario, cocina, facturación y reportería con IA.",
-    users: "+ 2.400 negocios",
-    price: "Desde $29/mes",
-    hue: 22,
-    glyph: "B",
-    badge: "INSIGNIA",
-  },
-  {
-    name: "Tienda Syscom",
-    dom: "tiendasyscom.com",
-    tag: "E-COMMERCE",
-    desc: "Tu tienda online con catálogo, pagos LATAM y recomendaciones con IA. Sin código, lista en 1 día.",
-    users: "+ 1.100 tiendas",
-    price: "Desde $19/mes",
-    hue: 195,
-    glyph: "TS",
-    badge: "TOP LATAM",
-  },
-  {
-    name: "MejorPRO",
-    dom: "mejorpro.com",
-    tag: "SERVICIOS · MARKETPLACE",
-    desc: "Marketplace para profesionales independientes — agenda, cobro, reputación y captación con IA.",
-    users: "+ 8.300 profesionales",
-    price: "Comisión 8%",
-    hue: 165,
-    glyph: "M+",
-    badge: "NUEVO",
-  },
-  {
-    name: "RifaBase",
-    dom: "rifabase.com",
-    tag: "RIFAS Y SORTEOS",
-    desc: "Plataforma legal para organizar rifas en línea. Pagos, sorteo verificado y notificaciones automáticas.",
-    users: "+ $4M sorteados",
-    price: "Comisión 4%",
-    hue: 50,
-    glyph: "RB",
-    badge: "TRENDING",
-  },
-  {
-    name: "Organimarketing",
-    dom: "organimarketing.com",
-    tag: "MARKETING · IA",
-    desc: "Agencia de marketing automatizada con agentes IA: copy, anuncios, calendario y reportes en una plataforma.",
-    users: "+ 320 marcas",
-    price: "Desde $89/mes",
-    hue: 30,
-    glyph: "OM",
-    badge: "AGENCIA",
-  },
-  {
-    name: "Tu próximo SaaS",
-    dom: "agencia.ch",
-    tag: "AGENCIA · CONSTRUIMOS",
-    desc: "¿Tienes una idea? Nuestra agencia construye tu SaaS con el mismo método. Cotización en 48h.",
-    users: "Proyecto a medida",
-    price: "Hablemos",
-    hue: 0,
-    glyph: "+",
-    badge: "",
-    cta: true,
-  },
-];
-
 const TESTIMONIALS = [
   {
     name: "María R.",
@@ -150,7 +81,7 @@ const BRANDS = [
 
 export default async function HomePage() {
   const now = new Date();
-  const [user, featured, talleres] = await Promise.all([
+  const [user, featured, talleres, services] = await Promise.all([
     getCurrentUser(),
     // Programas y certificaciones (excluye talleres — esos viven en su propia
     // sección de banners arriba). Trae varios para alimentar el carrusel.
@@ -180,6 +111,13 @@ export default async function HomePage() {
         sql`${schema.events.isEvergreen} desc, ${schema.events.startsAt} asc`,
       )
       .limit(4),
+    // Empresas y servicios del estudio (alimenta la sección "Empresas y Servicios").
+    db
+      .select()
+      .from(schema.services)
+      .where(eq(schema.services.isActive, true))
+      .orderBy(asc(schema.services.sortOrder))
+      .limit(12),
   ]);
 
   return (
@@ -536,143 +474,43 @@ export default async function HomePage() {
 
       <div className="rule" />
 
-      {/* SAAS SHOWCASE */}
+      {/* EMPRESAS Y SERVICIOS — alimentado desde DB (admin/servicios) */}
       <section id="saas" className="sec" style={{ paddingTop: 80 }}>
         <div className="between" style={{ alignItems: "flex-end", marginBottom: 56, flexWrap: "wrap", gap: 24 }}>
           <div>
-            <Eyebrow>Estudio · Nuestros SaaS</Eyebrow>
+            <Eyebrow>Estudio · Empresas y Servicios</Eyebrow>
             <h2 style={{ fontSize: "clamp(48px, 6vw, 72px)", marginTop: 16 }}>
-              5 productos en vivo,
+              {services.filter((s) => !s.isCtaCard).length} empresas en operación,
               <br />
-              construidos con <span style={{ color: "var(--accent)" }}>IA</span>.
+              construidas con <span style={{ color: "var(--accent)" }}>IA</span>.
             </h2>
           </div>
           <p style={{ maxWidth: 360, color: "var(--muted)", lineHeight: 1.55, fontSize: 16 }}>
-            Cada producto es un caso real de cómo aplicamos IA + negocios. Úsalos en tu empresa o aprende del repo en mis
-            generaciones.
+            SaaS productizados, software a medida, consultoría y agencia. Cada uno es un caso real de
+            cómo aplicamos IA + negocios. Úsalos en tu empresa.
           </p>
         </div>
 
-        <div className="grid-3" style={{ gap: 20 }}>
-          {SAAS.map((p, i) => {
-            const isCta = p.cta;
-            return (
-              <Card key={i} hover style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <div
-                  style={{
-                    height: 200,
-                    background: isCta
-                      ? "repeating-linear-gradient(135deg, var(--bg-2) 0 1px, transparent 1px 10px), var(--bg)"
-                      : `linear-gradient(135deg, oklch(58% 0.18 ${p.hue}), oklch(42% 0.14 ${p.hue}))`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    position: "relative",
-                    borderBottom: "1px solid var(--line)",
-                  }}
-                >
-                  {!isCta && (
-                    <>
-                      {p.badge && (
-                        <span
-                          style={{
-                            position: "absolute",
-                            top: 16,
-                            left: 16,
-                            padding: "4px 10px",
-                            background: "rgba(255,255,255,0.18)",
-                            color: "white",
-                            fontSize: 10,
-                            fontFamily: "var(--font-mono)",
-                            borderRadius: 999,
-                            letterSpacing: "0.08em",
-                            backdropFilter: "blur(8px)",
-                          }}
-                        >
-                          {p.badge}
-                        </span>
-                      )}
-                      <span
-                        style={{
-                          position: "absolute",
-                          top: 16,
-                          right: 16,
-                          padding: "4px 10px",
-                          background: "rgba(0,0,0,0.3)",
-                          color: "white",
-                          fontSize: 10,
-                          fontFamily: "var(--font-mono)",
-                          borderRadius: 999,
-                          letterSpacing: "0.08em",
-                        }}
-                      >
-                        ● EN VIVO
-                      </span>
-                      <div
-                        style={{
-                          width: 88,
-                          height: 88,
-                          borderRadius: 22,
-                          background: "rgba(255,255,255,0.95)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontFamily: "var(--font-serif)",
-                          fontSize: 40,
-                          color: `oklch(42% 0.14 ${p.hue})`,
-                          boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {p.glyph}
-                      </div>
-                      <span
-                        className="mono"
-                        style={{ position: "absolute", bottom: 14, left: 16, fontSize: 11, color: "rgba(255,255,255,0.7)", letterSpacing: "0.08em" }}
-                      >
-                        {p.dom}
-                      </span>
-                    </>
-                  )}
-                  {isCta && (
-                    <div style={{ textAlign: "center", color: "var(--muted)" }}>
-                      <div className="serif" style={{ fontSize: 64, color: "var(--ink)" }}>
-                        +
-                      </div>
-                      <div className="mono" style={{ fontSize: 11, letterSpacing: "0.1em" }}>
-                        TU PRODUCTO AQUÍ
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ padding: 22, display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
-                  <div className="row" style={{ justifyContent: "space-between" }}>
-                    <span className="mono" style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.08em" }}>
-                      {p.tag}
-                    </span>
-                    {!isCta && (
-                      <span className="mono" style={{ fontSize: 11, color: "var(--accent)" }}>
-                        {p.users}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="serif" style={{ fontSize: 28, lineHeight: 1.05 }}>
-                    {p.name}
-                  </h3>
-                  <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.5, flex: 1 }}>{p.desc}</p>
-                  <div className="rule" />
-                  <div className="between">
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{p.price}</span>
-                    <Button variant={isCta ? "primary" : "ghost"} size="sm">
-                      {isCta ? "Cotizar →" : "Ver SaaS →"}
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+        <ServicesGrid
+          services={services.map((s) => ({
+            id: s.id,
+            slug: s.slug,
+            name: s.name,
+            domain: s.domain,
+            kind: s.kind,
+            tagline: s.tagline,
+            description: s.description,
+            glyph: s.glyph,
+            hue: s.hue,
+            badge: s.badge,
+            metricLabel: s.metricLabel,
+            priceLabel: s.priceLabel,
+            ctaLabel: s.ctaLabel,
+            ctaUrl: s.ctaUrl,
+            isCtaCard: s.isCtaCard,
+            showLiveBadge: s.showLiveBadge,
+          }))}
+        />
 
         {/* SaaS stats */}
         <Card style={{ marginTop: 40, padding: 40, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 32 }}>

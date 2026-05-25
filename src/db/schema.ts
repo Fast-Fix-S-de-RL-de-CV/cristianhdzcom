@@ -557,6 +557,64 @@ export const activity = pgTable(
   (t) => ({ createdIdx: index("activity_created_idx").on(t.createdAt) }),
 );
 
+/* ─────────── SERVICES & EMPRESAS ─────────── */
+/**
+ * Catálogo de servicios/empresas del estudio de Cristian. Esto es lo que se
+ * muestra en la sección "Empresas y Servicios" del home (lo que antes era
+ * "5 productos en vivo, construidos con IA" hardcoded).
+ *
+ * Incluye:
+ *   - SaaS productizados (BengalPOS, Tienda Syscom, MejorPRO, Rifabase…)
+ *   - Software a medida / consultoría / desarrollo
+ *   - Card especial "Tu próximo SaaS" (isCtaCard=true) que el admin puede
+ *     mostrar al final del grid como CTA "agencia construye tu producto".
+ *
+ * El diseño de la card lo controla por completo el admin: colores via `hue`
+ * (0-360 OKLCH), iniciales mostradas en el cuadrado central (`glyph`),
+ * badges (INSIGNIA, NUEVO, TOP LATAM), métrica destacada y precio.
+ */
+export const services = pgTable(
+  "services",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    slug: varchar("slug", { length: 80 }).notNull(),
+    name: varchar("name", { length: 120 }).notNull(),
+    domain: varchar("domain", { length: 120 }),
+    /** 'saas' | 'software' | 'consulting' | 'agency' | 'service' */
+    kind: varchar("kind", { length: 30 }).notNull().default("saas"),
+    /** Eyebrow corto sobre el nombre. Ej: "PUNTO DE VENTA", "E-COMMERCE". */
+    tagline: varchar("tagline", { length: 80 }),
+    /** Descripción larga en la card. */
+    description: text("description"),
+    /** Iniciales / glyph del logo en el cuadrado central (e.g. "B", "TS", "M+"). */
+    glyph: varchar("glyph", { length: 4 }),
+    /** Hue OKLCH 0-360 para el gradiente. 22 = naranja, 195 = teal, etc. */
+    hue: integer("hue").notNull().default(22),
+    /** Badge superior izquierdo. Ej: "INSIGNIA", "TOP LATAM", "NUEVO". */
+    badge: varchar("badge", { length: 40 }),
+    /** Métrica destacada. Ej: "+ 2.400 negocios", "+ $4M sorteados". */
+    metricLabel: varchar("metric_label", { length: 80 }),
+    /** Precio mostrado abajo. Ej: "Desde $29/mes", "Comisión 8%", "Hablemos". */
+    priceLabel: varchar("price_label", { length: 60 }),
+    /** Texto del CTA. Default "Ver SaaS →". */
+    ctaLabel: varchar("cta_label", { length: 60 }).notNull().default("Ver SaaS →"),
+    /** URL destino del CTA (puede ser dominio externo). */
+    ctaUrl: text("cta_url"),
+    /**
+     * Si true, la card se renderea como "Tu próximo SaaS / cotiza" — patrón
+     * cross-hatched, sin gradiente colorido, CTA distinto. Diseñada para
+     * cerrar el grid invitando a la agencia.
+     */
+    isCtaCard: boolean("is_cta_card").notNull().default(false),
+    /** Chip "● EN VIVO" en la esquina top-right. Off por default si es servicio sin URL. */
+    showLiveBadge: boolean("show_live_badge").notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ slugIdx: uniqueIndex("services_slug_idx").on(t.slug) }),
+);
+
 /* ─────────── BOOKS + BUNDLES ─────────── */
 /**
  * Catálogo de productos editoriales. Una sola tabla cubre dos tipos:
