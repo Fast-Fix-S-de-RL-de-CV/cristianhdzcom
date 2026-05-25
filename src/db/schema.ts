@@ -357,6 +357,20 @@ export const events = pgTable("events", {
   /** URL de la grabación una vez termina el livestream. Visible para
    *  compradores y miembros del plan que aplica. */
   recordingUrl: text("recording_url"),
+  /** Imagen tipo banner ad para promocionar el taller en la home + landing.
+   *  Aspect ratio recomendado: 16:9 o 4:3 (estilo cover de YouTube). */
+  coverUrl: text("cover_url"),
+  /**
+   * Talleres "evergreen": webinars siempre disponibles (no tienen una fecha
+   * fija, se ejecutan en automático o el alumno los puede agendar). Si true,
+   * la UI NO muestra startsAt como fecha-hora fija; muestra el
+   * `evergreenScheduleHint` ("Disponible al inscribirte" / "Cada miércoles 7pm").
+   */
+  isEvergreen: boolean("is_evergreen").notNull().default(false),
+  /** Texto libre que describe el horario cuando es evergreen. */
+  evergreenScheduleHint: varchar("evergreen_schedule_hint", { length: 120 }),
+  /** Eyebrow / tagline corto que aparece sobre el título del banner. */
+  tagline: varchar("tagline", { length: 120 }),
 });
 
 /* ─────────── MEMBERSHIP PLANS (catálogo) ─────────── */

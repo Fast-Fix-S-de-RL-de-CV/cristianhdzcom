@@ -26,6 +26,10 @@ export default async function TalleresPage() {
       priceUsd: schema.events.priceUsd,
       recordingUrl: schema.events.recordingUrl,
       includedInMembership: schema.events.includedInMembership,
+      coverUrl: schema.events.coverUrl,
+      isEvergreen: schema.events.isEvergreen,
+      evergreenScheduleHint: schema.events.evergreenScheduleHint,
+      tagline: schema.events.tagline,
     })
     .from(schema.events)
     .orderBy(desc(schema.events.startsAt));
@@ -49,6 +53,10 @@ export default async function TalleresPage() {
       r.includedInMembership === "black"
       ? r.includedInMembership
       : null) as "silver" | "gold" | "black" | null),
+    coverUrl: r.coverUrl ?? null,
+    isEvergreen: r.isEvergreen ?? false,
+    evergreenScheduleHint: r.evergreenScheduleHint ?? null,
+    tagline: r.tagline ?? null,
   }));
 
   return (

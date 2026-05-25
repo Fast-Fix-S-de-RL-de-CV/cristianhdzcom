@@ -26,6 +26,10 @@ type Row = {
   priceUsd: number | null;
   recordingUrl: string | null;
   includedInMembership: "silver" | "gold" | "black" | null;
+  coverUrl: string | null;
+  isEvergreen: boolean;
+  evergreenScheduleHint: string | null;
+  tagline: string | null;
 };
 
 export function TalleresManager({ rows }: { rows: Row[] }) {
@@ -301,6 +305,10 @@ function EventDialog({
       | "gold"
       | "black"
       | null,
+    coverUrl: event?.coverUrl || "",
+    tagline: event?.tagline || "",
+    isEvergreen: event?.isEvergreen ?? false,
+    evergreenScheduleHint: event?.evergreenScheduleHint || "",
   });
 
   return (
@@ -423,6 +431,73 @@ function EventDialog({
               style={inputStyle()}
             />
           </Field>
+          <Field label="Imagen banner (URL o /uploads/…)">
+            <input
+              value={form.coverUrl}
+              onChange={(e) => setForm({ ...form, coverUrl: e.target.value })}
+              placeholder="/uploads/2026-05/xxxx.png"
+              style={inputStyle()}
+            />
+            <div
+              className="mono"
+              style={{
+                fontSize: 10,
+                color: "var(--muted)",
+                marginTop: 4,
+                lineHeight: 1.5,
+              }}
+            >
+              Aspect ratio 4:3 recomendado. Aparece grande en la home en el taller-banner.
+            </div>
+          </Field>
+          <Field label="Tagline corto">
+            <input
+              value={form.tagline}
+              onChange={(e) => setForm({ ...form, tagline: e.target.value })}
+              placeholder="MASTERCLASS · ABIERTA"
+              maxLength={120}
+              style={inputStyle()}
+            />
+            <div
+              className="mono"
+              style={{
+                fontSize: 10,
+                color: "var(--muted)",
+                marginTop: 4,
+                lineHeight: 1.5,
+              }}
+            >
+              Eyebrow encima del título en el banner. Ej: &apos;MASTERCLASS · ABIERTA&apos;
+            </div>
+          </Field>
+          <label className="row" style={{ gap: 6, fontSize: 13, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={form.isEvergreen}
+              onChange={(e) => setForm({ ...form, isEvergreen: e.target.checked })}
+            />
+            Es taller evergreen (siempre disponible)
+          </label>
+          <Field label="Horario evergreen">
+            <input
+              value={form.evergreenScheduleHint}
+              onChange={(e) => setForm({ ...form, evergreenScheduleHint: e.target.value })}
+              placeholder="Cada miércoles 7pm CDMX"
+              maxLength={120}
+              style={inputStyle()}
+            />
+            <div
+              className="mono"
+              style={{
+                fontSize: 10,
+                color: "var(--muted)",
+                marginTop: 4,
+                lineHeight: 1.5,
+              }}
+            >
+              Ej: &apos;Cada miércoles 7pm CDMX&apos; o &apos;Disponible al inscribirte&apos;. Solo aplica si el toggle anterior está activo.
+            </div>
+          </Field>
           <Field label="Incluido en membresía">
             <select
               value={form.includedInMembership ?? ""}
@@ -498,6 +573,11 @@ function EventDialog({
                 ...form,
                 startsAt: new Date(form.startsAt).toISOString(),
                 recordingUrl: form.recordingUrl ? form.recordingUrl : null,
+                coverUrl: form.coverUrl ? form.coverUrl : null,
+                tagline: form.tagline ? form.tagline : null,
+                evergreenScheduleHint: form.evergreenScheduleHint
+                  ? form.evergreenScheduleHint
+                  : null,
               })
             }
             disabled={busy || !form.title}

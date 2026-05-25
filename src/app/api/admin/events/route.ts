@@ -21,6 +21,10 @@ const body = z.object({
   priceUsd: z.number().int().min(0).max(99999).nullable().optional(),
   recordingUrl: z.string().nullable().optional(),
   includedInMembership: z.enum(["silver", "gold", "black"]).nullable().optional(),
+  coverUrl: z.string().nullable().optional(),
+  isEvergreen: z.boolean().optional(),
+  evergreenScheduleHint: z.string().max(120).nullable().optional(),
+  tagline: z.string().max(120).nullable().optional(),
 });
 
 export async function POST(req: Request) {
@@ -46,6 +50,10 @@ export async function POST(req: Request) {
         priceUsd: data.priceUsd ?? null,
         recordingUrl: data.recordingUrl ?? null,
         includedInMembership: data.includedInMembership ?? null,
+        coverUrl: data.coverUrl ?? null,
+        isEvergreen: data.isEvergreen ?? false,
+        evergreenScheduleHint: data.evergreenScheduleHint ?? null,
+        tagline: data.tagline ?? null,
       })
       .returning();
     return NextResponse.json({ event: row });

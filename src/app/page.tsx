@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db, schema } from "@/db";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, gt, ne, or, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { CourseCover } from "@/components/marketing/CourseCover";
+import { TallerBanner } from "@/components/marketing/TallerBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -147,14 +148,37 @@ const BRANDS = [
 ];
 
 export default async function HomePage() {
-  const [user, featured] = await Promise.all([
+  const now = new Date();
+  const [user, featured, talleres] = await Promise.all([
     getCurrentUser(),
+    // Cursos completos: filtra type='curso' o 'certificación' (no talleres ni consultoría)
     db
       .select()
       .from(schema.programs)
-      .where(eq(schema.programs.isActive, true))
+      .where(
+        and(
+          eq(schema.programs.isActive, true),
+          // Excluir talleres del grid de cursos (los talleres tienen su propia sección)
+          ne(schema.programs.type, "taller"),
+        ),
+      )
       .orderBy(asc(schema.programs.sortOrder))
       .limit(3),
+    // Talleres en vivo: evergreen siempre + próximos en fecha (≤ 60 días)
+    db
+      .select()
+      .from(schema.events)
+      .where(
+        or(
+          eq(schema.events.isEvergreen, true),
+          gt(schema.events.startsAt, now),
+        ),
+      )
+      .orderBy(
+        // Evergreen primero (siempre disponibles), después por fecha más próxima
+        sql`${schema.events.isEvergreen} desc, ${schema.events.startsAt} asc`,
+      )
+      .limit(4),
   ]);
 
   return (
@@ -426,7 +450,47 @@ export default async function HomePage() {
 
       <div className="rule" />
 
-      {/* PROGRAMAS DESTACADOS · desde DB */}
+      {/* TALLERES EN VIVO + EVERGREEN · banners horizontales */}
+      {talleres.length > 0 && (
+        <section className="sec">
+          <div
+            className="between"
+            style={{ alignItems: "flex-end", marginBottom: 32, flexWrap: "wrap", gap: 24 }}
+          >
+            <div>
+              <Eyebrow>Talleres · en vivo y on-demand</Eyebrow>
+              <h2 style={{ fontSize: "clamp(40px, 5vw, 64px)", marginTop: 16 }}>
+                Aprende <span style={{ color: "var(--warm)" }}>de mí en vivo</span>.
+              </h2>
+              <p style={{ color: "var(--muted)", marginTop: 10, fontSize: 16, maxWidth: 600, lineHeight: 1.55 }}>
+                Sesiones en vivo y webinars siempre disponibles (evergreen). Aplica lo que aprendes
+                en tiempo real con casos reales.
+              </p>
+            </div>
+            <Link href="/programas?filtro=taller">
+              <Button variant="ghost">Ver todos los talleres →</Button>
+            </Link>
+          </div>
+
+          {/* Banners horizontales en grid 1 o 2 columnas según cantidad */}
+          <div
+            className="talleres-banners"
+            style={{
+              display: "grid",
+              gridTemplateColumns: talleres.length === 1 ? "1fr" : "repeat(2, 1fr)",
+              gap: 24,
+            }}
+          >
+            {talleres.map((t, i) => (
+              <TallerBanner key={t.id} taller={t} flip={i % 2 === 1} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className="rule" />
+
+      {/* CURSOS COMPLETOS · desde DB (excluye talleres) */}
       {featured.length > 0 && (
         <section className="sec">
           <div
@@ -434,10 +498,14 @@ export default async function HomePage() {
             style={{ alignItems: "flex-end", marginBottom: 40, flexWrap: "wrap", gap: 24 }}
           >
             <div>
-              <Eyebrow>Programas en curso · 2026</Eyebrow>
+              <Eyebrow>Cursos completos · 2026</Eyebrow>
               <h2 style={{ fontSize: "clamp(40px, 5vw, 64px)", marginTop: 16 }}>
-                Próximos <span style={{ color: "var(--accent)" }}>talleres y cursos</span>.
+                Programas <span style={{ color: "var(--accent)" }}>auto-aplicables</span>.
               </h2>
+              <p style={{ color: "var(--muted)", marginTop: 10, fontSize: 16, maxWidth: 600, lineHeight: 1.55 }}>
+                Contenido grabado profesional, módulos completos con plan de pagos, comunidad
+                propia del curso y garantía 30 días.
+              </p>
             </div>
             <Link href="/programas">
               <Button variant="ghost">Ver todos los programas →</Button>
