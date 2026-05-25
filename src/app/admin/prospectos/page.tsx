@@ -1,34 +1,44 @@
-import { db } from "@/db";
-import { sql } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { desc, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
-import { ProspectosTable, type ProspectoRow } from "./ProspectosTable";
+import { ProspectosShell } from "./ProspectosShell";
+import type { ProspectoRow } from "./ProspectosTable";
+import type { LeadRow } from "./LeadsTab";
 
 export const dynamic = "force-dynamic";
 
 /**
- * /admin/prospectos
+ * /admin/prospectos  — Embudo de marketing unificado
  *
- * Definición acordada:
- *   - Prospecto = usuario registrado SIN ninguna order con status='succeeded'.
- *     Aunque esté inscrito en cursos/talleres gratis, sigue siendo prospecto
- *     hasta que pague algo.
+ * Dos sub-vistas que viven bajo este URL:
+ *
+ *   1. PROSPECTOS  → usuarios registrados (cuenta + password) sin orden pagada.
+ *                    Aunque hayan tomado cursos gratis, siguen siendo prospectos
+ *                    hasta que paguen algo. Origen: tabla `users`.
+ *
+ *   2. LEADS       → emails capturados (newsletter, popups, lead magnets) sin
+ *                    cuenta. Solo email + source + tag. Origen: tabla `leads`.
+ *
+ * El embudo completo: anónimo → LEAD → PROSPECTO → CLIENTE → ALUMNO.
+ *
+ * Definiciones operativas:
  *   - Cliente = usuario con al menos una order succeeded.
- *   - Alumno = usuario con al menos una enrollment (puede ser prospecto o cliente
- *     dependiendo de si pagó).
- *
- * El listado se ordena por "qué tan caliente está el prospecto":
- *   1. Cuántos eventos/cursos gratis ha tomado (engagement)
- *   2. Su XP (actividad)
- *   3. Fecha de registro (recencia)
+ *   - Alumno  = usuario con al menos una enrollment (puede ser prospecto o
+ *               cliente dependiendo de si pagó).
  */
-type Row = ProspectoRow;
-
-export default async function ProspectosPage() {
+export default async function ProspectosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const user = (await getCurrentUser())!;
+  const { tab } = await searchParams;
+  const initialTab = tab === "leads" ? "leads" : "prospects";
 
-  const res = (await db.execute(sql`
+  // ── 1. Prospectos (users sin orden pagada), ordenados por "tan caliente" ──
+  const prospectsRes = (await db.execute(sql`
     SELECT
       u.id::text                    AS "id",
       u.name                        AS "name",
@@ -57,22 +67,56 @@ export default async function ProspectosPage() {
       u.xp DESC,
       u.created_at DESC
     LIMIT 500
-  `)) as unknown as { rows?: Row[] } | Row[];
-  const rows: Row[] = Array.isArray(res) ? res : (res.rows ?? []);
+  `)) as unknown as { rows?: ProspectoRow[] } | ProspectoRow[];
+  const prospects: ProspectoRow[] = Array.isArray(prospectsRes) ? prospectsRes : (prospectsRes.rows ?? []);
 
-  // Estadística rápida de "qué tan tibio está cada uno"
-  const hot = rows.filter((r) => r.enrollmentsCount > 0 || r.lessonsDone > 0).length;
-  const cold = rows.length - hot;
+  // ── 2. Leads (emails capturados sin cuenta) ──
+  const leadsRaw = await db
+    .select({
+      id: schema.leads.id,
+      email: schema.leads.email,
+      source: schema.leads.source,
+      tag: schema.leads.tag,
+      createdAt: schema.leads.createdAt,
+      hasPurchased: sql<number>`(
+        SELECT COUNT(*)::int FROM ${schema.orders}
+        WHERE ${schema.orders.email} = ${schema.leads.email}
+          AND ${schema.orders.status} = 'succeeded'
+      )`,
+    })
+    .from(schema.leads)
+    .orderBy(desc(schema.leads.createdAt));
+  const leads: LeadRow[] = leadsRaw.map((l) => ({
+    id: l.id,
+    email: l.email,
+    source: l.source ?? "",
+    tag: l.tag ?? "",
+    createdAt: l.createdAt.toISOString(),
+    hasPurchased: Number(l.hasPurchased) > 0,
+  }));
+
+  // ── Subtítulo: muestra los totales de las dos sub-vistas ──
+  const hot = prospects.filter((r) => r.enrollmentsCount > 0 || r.lessonsDone > 0).length;
+  const cold = prospects.length - hot;
+  const converted = leads.filter((l) => l.hasPurchased).length;
+  const subtitle =
+    `${prospects.length} prospectos (${hot} con actividad · ${cold} fríos) ` +
+    `· ${leads.length} leads (${converted} ya compraron)`;
 
   return (
     <AdminPageShell
       user={user}
       active="/admin/prospectos"
-      title="Prospectos"
-      subtitle={`${rows.length} registrados sin compra · ${hot} con actividad · ${cold} fríos`}
+      title="Prospectos & Leads"
+      subtitle={subtitle}
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <ProspectosTable rows={rows} currentUserId={user.id} />
+        <ProspectosShell
+          prospects={prospects}
+          leads={leads}
+          currentUserId={user.id}
+          initialTab={initialTab}
+        />
       </Card>
     </AdminPageShell>
   );

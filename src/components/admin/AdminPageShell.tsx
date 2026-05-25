@@ -3,7 +3,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 
 const ITEMS = [
   ["◎", "Dashboard", "/admin"],
-  ["✨", "Prospectos", "/admin/prospectos"],
+  ["🎯", "Prospectos", "/admin/prospectos"],
   ["👥", "Alumnos", "/admin/alumnos"],
   ["💼", "Clientes", "/admin/clientes"],
   ["💳", "Suscripciones", "/admin/suscripciones"],
@@ -12,7 +12,6 @@ const ITEMS = [
   ["✍️", "Blog", "/admin/blog"],
   ["🎙️", "Talleres", "/admin/talleres"],
   ["💬", "Comunidad", "/admin/comunidad"],
-  ["🎯", "Marketing", "/admin/marketing"],
   ["📞", "Soporte", "/admin/soporte"],
   ["⚙️", "Ajustes", "/admin/ajustes"],
 ] as const;
