@@ -142,23 +142,37 @@ export default async function HomePage() {
           <div>
             <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
               <Chip variant="accent" dot pulse style={{ color: "var(--accent)" }}>
-                Disponible · generación Mar 2026
+                G20 · Brasil 2024 · Sudáfrica 2025
               </Chip>
-              <Chip>AUTOR · FUNDADOR · MENTOR</Chip>
+              <Chip>HUAWEI SPARK 2023</Chip>
             </div>
             <Eyebrow style={{ marginBottom: 18 }}>Hola, soy</Eyebrow>
-            <h1 style={{ fontSize: "clamp(64px, 8vw, 108px)", marginBottom: 24, lineHeight: 0.92 }}>
-              Cristian
-              <br />
-              <span style={{ color: "var(--accent)" }}>Hernández.</span>
+            <h1 style={{ fontSize: "clamp(56px, 7vw, 96px)", marginBottom: 22, lineHeight: 0.95 }}>
+              Cristian Hernández.
             </h1>
-            <p style={{ fontSize: 22, color: "var(--ink-2)", lineHeight: 1.45, maxWidth: 560, marginBottom: 20 }}>
-              Programador profesional con IA, autor de 2 libros y fundador de una agencia de software. Llevo más de una década
-              enseñando a profesionales y empresarios a construir negocios reales.
+            <h2
+              className="serif"
+              style={{
+                fontSize: "clamp(24px, 3vw, 36px)",
+                lineHeight: 1.15,
+                color: "var(--ink-2)",
+                marginBottom: 28,
+                fontWeight: 500,
+              }}
+            >
+              <span style={{ color: "var(--accent)" }}>Arquitecto de Software</span> y Empresario.
+            </h2>
+            <p style={{ fontSize: 19, color: "var(--ink-2)", lineHeight: 1.5, maxWidth: 580, marginBottom: 20 }}>
+              Delegado mexicano en la Cumbre del G20 (Brasil 2024, Sudáfrica 2025). Director de{" "}
+              <strong style={{ color: "var(--ink)" }}>Fast Fix</strong>, agencia de software a medida, y de{" "}
+              <strong style={{ color: "var(--ink)" }}>Click Thunder</strong>, holding propietaria de 14 marcas SaaS.
+              También opero empresas del sector restaurantero.
             </p>
-            <p style={{ fontSize: 16, color: "var(--muted)", lineHeight: 1.55, maxWidth: 540, marginBottom: 36 }}>
-              Hoy construyo SaaS, escribo y educo desde un mismo lugar. Si vienes a aprender, a usar mis productos o a que mi
-              equipo construya el tuyo — estás en casa.
+            <p style={{ fontSize: 15, color: "var(--muted)", lineHeight: 1.6, maxWidth: 560, marginBottom: 36 }}>
+              Ganador del <strong style={{ color: "var(--ink-2)" }}>Premio Huawei Spark 2023</strong> por expansión
+              en el sector informático. He compartido foros con empresarios como Marcus Dantus y Ernesto Coppel, y
+              mantengo relación directa con los consulados de Brasil y México. Trabajar conmigo es sinónimo de{" "}
+              <em>confianza, compromiso y resultados</em>.
             </p>
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <Link href={user ? "/plataforma" : "/registro"}>
@@ -168,7 +182,7 @@ export default async function HomePage() {
               </Link>
               <Link href="#saas">
                 <Button size="lg" variant="ghost">
-                  Ver mis SaaS
+                  Ver mis empresas
                 </Button>
               </Link>
               <Link href="/programas">
@@ -182,30 +196,39 @@ export default async function HomePage() {
           {/* RIGHT: Portrait */}
           <div style={{ position: "relative" }}>
             <div
-              className="ph"
               style={{
                 aspectRatio: "4/5",
                 borderRadius: 22,
-                background: "linear-gradient(135deg, oklch(78% 0.04 245), oklch(68% 0.05 252))",
-                border: "none",
-                color: "rgba(255,255,255,0.7)",
                 position: "relative",
                 overflow: "hidden",
                 boxShadow: "0 30px 60px rgba(15,17,21,0.18)",
+                background: "linear-gradient(135deg, oklch(78% 0.04 245), oklch(68% 0.05 252))",
               }}
             >
-              <span
-                className="mono"
-                style={{ fontSize: 11, position: "absolute", top: 20, left: 20, color: "rgba(255,255,255,0.85)", letterSpacing: "0.12em" }}
-              >
-                RETRATO · CRISTIAN H.
-              </span>
-              <span
-                className="serif"
-                style={{ fontSize: 220, color: "rgba(255,255,255,0.18)", position: "absolute", bottom: -40, right: 20, lineHeight: 1 }}
-              >
-                C
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/uploads/cristian-portrait.jpg"
+                alt="Cristian Hernández — Arquitecto de Software y Empresario"
+                loading="eager"
+                decoding="async"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  objectPosition: "center top",
+                  display: "block",
+                }}
+              />
+              {/* Overlay gradient sutil para legibilidad del chip inferior */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.45) 100%)",
+                  pointerEvents: "none",
+                }}
+              />
               <div
                 style={{
                   position: "absolute",
@@ -215,16 +238,17 @@ export default async function HomePage() {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "flex-end",
+                  zIndex: 2,
                 }}
               >
                 <div>
                   <div
                     className="mono"
-                    style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", letterSpacing: "0.12em" }}
+                    style={{ fontSize: 10, color: "rgba(255,255,255,0.9)", letterSpacing: "0.12em" }}
                   >
-                    FUNDADOR · AGENCIA · AUTOR
+                    FAST FIX · CLICK THUNDER · G20
                   </div>
-                  <div className="serif" style={{ fontSize: 28, color: "white", marginTop: 4 }}>
+                  <div className="serif" style={{ fontSize: 26, color: "white", marginTop: 4, textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>
                     Cristian Hernández
                   </div>
                 </div>
@@ -251,13 +275,13 @@ export default async function HomePage() {
               <Eyebrow style={{ marginBottom: 8 }}>Trayectoria</Eyebrow>
               <div className="grid-2" style={{ gap: 12 }}>
                 {[
-                  ["12+", "AÑOS ENSEÑANDO"],
-                  ["5", "SAAS EN VIVO"],
+                  ["14", "MARCAS SAAS"],
+                  ["G20", "DELEGADO MEXICANO"],
                   ["2", "LIBROS PUBLICADOS"],
-                  ["2.8k", "ALUMNOS CERTIFICADOS"],
+                  ["2023", "HUAWEI SPARK"],
                 ].map(([n, l]) => (
                   <div key={l}>
-                    <div className="serif" style={{ fontSize: 32, lineHeight: 1 }}>
+                    <div className="serif" style={{ fontSize: 30, lineHeight: 1 }}>
                       {n}
                     </div>
                     <div className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.06em" }}>
@@ -274,7 +298,7 @@ export default async function HomePage() {
               style={{ position: "absolute", top: 32, right: -28, padding: 16, width: 230, borderLeft: "3px solid var(--accent)" }}
             >
               <span className="serif" style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: "var(--ink)" }}>
-                &ldquo;Programar dejó de ser una habilidad técnica — es lenguaje de negocio.&rdquo;
+                &ldquo;Confianza, compromiso y resultados — esa es la promesa.&rdquo;
               </span>
               <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 8, letterSpacing: "0.08em" }}>
                 — CRISTIAN H. · 2026
