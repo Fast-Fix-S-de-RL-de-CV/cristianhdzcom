@@ -264,6 +264,19 @@ export const categories = pgTable("categories", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
+/**
+ * Posts en comunidad. Sistema de visibilidad escalonada:
+ *
+ *   - Body text → siempre visible para usuarios registrados (sin importar tier).
+ *   - `attachments` (links, videos, PDFs, imágenes adicionales) → visibles
+ *     SOLO si el viewer tiene tier ≥ tier del autor al momento del post.
+ *     Esto crea FOMO: "Ve el post, pero el PDF necesita Oro+".
+ *   - `minTierRequired` → si está set, el body completo se blurea para users
+ *     con menor tier. Útil para "Posts solo para Black".
+ *
+ * Visitantes anónimos → ven solo preview (300 chars) + título + autor. El
+ * paywall server-side los empuja a /registro con CTA.
+ */
 export const posts = pgTable(
   "posts",
   {
@@ -273,6 +286,18 @@ export const posts = pgTable(
     title: varchar("title", { length: 240 }).notNull(),
     body: text("body").notNull(),
     imageUrl: text("image_url"),
+    /** Adjuntos premium: aparecen blureados a quien no califica.
+     *  Cada uno tiene { kind, url, title, sizeBytes? } */
+    attachments: jsonb("attachments")
+      .$type<Array<{ kind: "link" | "video" | "pdf" | "image"; url: string; title: string; sizeBytes?: number }>>()
+      .notNull()
+      .default([]),
+    /** Snapshot del tier del autor cuando publicó. Sirve como puerta default
+     *  para los adjuntos: si tu tier < authorTierAtPost → adjuntos blureados.
+     *  Si null, los adjuntos son libres (posts viejos o legacy). */
+    authorTierAtPost: varchar("author_tier_at_post", { length: 20 }),
+    /** Override manual del admin: forzar tier mínimo para ver el body. */
+    minTierRequired: varchar("min_tier_required", { length: 20 }),
     pinned: boolean("pinned").notNull().default(false),
     hot: boolean("hot").notNull().default(false),
     likesCount: integer("likes_count").notNull().default(0),
