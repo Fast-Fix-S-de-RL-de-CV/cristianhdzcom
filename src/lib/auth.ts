@@ -56,6 +56,9 @@ export async function getCurrentUser() {
       xp: schema.users.xp,
       streakDays: schema.users.streakDays,
       hearts: schema.users.hearts,
+      tier: schema.users.tier,
+      tierScore: schema.users.tierScore,
+      lifetimeSpendCents: schema.users.lifetimeSpendCents,
     })
     .from(schema.sessions)
     .innerJoin(schema.users, eq(schema.users.id, schema.sessions.userId))

@@ -24,6 +24,8 @@ type ShellUser = {
   xp: number;
   streakDays: number;
   hearts: number;
+  tier?: string;
+  tierScore?: number;
 };
 
 /**
@@ -68,6 +70,8 @@ export function AlumnoShell({
           xp: user.xp,
           streakDays: user.streakDays,
           hearts: user.hearts,
+          tier: user.tier,
+          tierScore: user.tierScore,
         }}
         active={active}
       />

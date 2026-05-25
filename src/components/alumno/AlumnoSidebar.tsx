@@ -124,6 +124,39 @@ const COMUNIDAD: NavLink[] = [
   { key: "ranking", href: "/comunidad/ranking", label: "Ranking", icon: Icon.Trophy },
 ];
 
+/** Mini-chip de tier para el sidebar. Sólo el emoji + nombre del nivel,
+ *  diseñado para vivir dentro de la línea "Nivel X" sin romper el layout. */
+function TierMiniBadge({ tier }: { tier: string }) {
+  const meta: Record<string, { emoji: string; label: string; color: string }> = {
+    bronze: { emoji: "🥉", label: "Bronce", color: "#E8B484" },
+    silver: { emoji: "🥈", label: "Plata", color: "#C5CCD8" },
+    gold: { emoji: "🥇", label: "Oro", color: "#F2C65A" },
+    black: { emoji: "🖤", label: "Black", color: "#FFFFFF" },
+  };
+  const m = meta[tier];
+  if (!m) return null;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 3,
+        padding: "1px 6px",
+        borderRadius: 999,
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.15)",
+        color: m.color,
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: "0.04em",
+      }}
+    >
+      <span style={{ fontSize: 10 }}>{m.emoji}</span>
+      {m.label.toUpperCase()}
+    </span>
+  );
+}
+
 type SidebarUser = {
   id: string;
   name: string;
@@ -133,6 +166,8 @@ type SidebarUser = {
   xp: number;
   streakDays: number;
   hearts: number;
+  tier?: string;
+  tierScore?: number;
 };
 
 /**
@@ -291,8 +326,21 @@ export function AlumnoSidebar({
               >
                 {user.name}
               </div>
-              <div className="mono" style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>
-                Nivel {user.level}
+              <div
+                className="mono"
+                style={{
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.55)",
+                  marginTop: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <span>Nivel {user.level}</span>
+                {user.tier && user.tier !== "visitor" && (
+                  <TierMiniBadge tier={user.tier} />
+                )}
               </div>
             </div>
           </div>

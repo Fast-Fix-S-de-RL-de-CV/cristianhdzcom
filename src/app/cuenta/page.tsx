@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
+import { TierProgressCard } from "@/components/tier/TierProgressCard";
+import type { Tier } from "@/lib/experience";
 import { LogoutButton, PasswordForm, ProfileForm } from "./AccountForms";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +27,12 @@ export default async function CuentaPage() {
           </div>
 
           <div className="col" style={{ gap: 20 }}>
+            <TierProgressCard
+              tier={user.tier as Tier}
+              tierScore={user.tierScore}
+              lifetimeSpendCents={user.lifetimeSpendCents}
+            />
+
             <Card style={{ padding: 28 }}>
               <div style={{ marginBottom: 20 }}>
                 <h2 className="serif" style={{ fontSize: 22 }}>

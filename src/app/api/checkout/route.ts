@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { getCurrentUser, hashPassword, createSession } from "@/lib/auth";
+import { recomputeUserTier } from "@/lib/experience";
 import { nanoid } from "nanoid";
 
 const body = z.object({
@@ -56,6 +57,9 @@ export async function POST(req: Request) {
           xp: existing.xp,
           streakDays: existing.streakDays,
           hearts: existing.hearts,
+          tier: existing.tier,
+          tierScore: existing.tierScore,
+          lifetimeSpendCents: existing.lifetimeSpendCents,
         };
       } else {
         const tempPass = nanoid(12);
@@ -81,6 +85,9 @@ export async function POST(req: Request) {
           xp: created.xp,
           streakDays: created.streakDays,
           hearts: created.hearts,
+          tier: created.tier,
+          tierScore: created.tierScore,
+          lifetimeSpendCents: created.lifetimeSpendCents,
         };
         await createSession(created.id);
       }
@@ -132,6 +139,11 @@ export async function POST(req: Request) {
         .insert(schema.enrollments)
         .values({ userId: user.id, programId: program.id, status: "active" })
         .onConflictDoNothing();
+
+      // Recalcular tier — la compra suma puntos al user. (ver docs/EXPERIENCE_MODEL.md)
+      await recomputeUserTier(user.id, { reason: "order_paid", sourceOrderId: order.id }).catch(
+        (e) => console.error("[checkout] recomputeUserTier failed:", e),
+      );
 
       await db.insert(schema.activity).values({
         kind: "purchase",

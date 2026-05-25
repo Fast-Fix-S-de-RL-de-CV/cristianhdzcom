@@ -35,11 +35,47 @@ export const users = pgTable(
     streakLastAt: timestamp("streak_last_at", { withTimezone: true }),
     hearts: integer("hearts").notNull().default(5),
     heartsRefilledAt: timestamp("hearts_refilled_at", { withTimezone: true }),
+
+    // ── Tier system (ver docs/EXPERIENCE_MODEL.md) ──
+    // tierScore: 0-10000 (representa 0.00% a 100.00% con 2 decimales).
+    // $1 USD pagado = 10 puntos. Se cap en 10000.
+    tierScore: integer("tier_score").notNull().default(0),
+    // tier: derivable de tierScore, pero stored para queries rápidas e indexing.
+    // 'visitor' | 'bronze' | 'silver' | 'gold' | 'black'
+    tier: varchar("tier", { length: 20 }).notNull().default("visitor"),
+    // Lifetime spend en USD cents — para perks históricos aunque el tierScore cape en 100%.
+    lifetimeSpendCents: integer("lifetime_spend_cents").notNull().default(0),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     emailIdx: uniqueIndex("users_email_idx").on(t.email),
+    tierIdx: index("users_tier_idx").on(t.tier),
+  }),
+);
+
+/**
+ * Ledger de cambios de tierScore. Cada vez que un user gana o pierde
+ * experience (compra, pago de plan a plazos, reembolso, suscripción mensual)
+ * se inserta una fila aquí. Útil para auditoría y para mostrar "historial
+ * de tu progreso" en /cuenta.
+ */
+export const experienceLedger = pgTable(
+  "experience_ledger",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    deltaScore: integer("delta_score").notNull(), // puede ser negativo (refund)
+    newScore: integer("new_score").notNull(),     // score resultante después del delta
+    reason: varchar("reason", { length: 80 }).notNull(),
+    // 'order_paid' | 'order_refunded' | 'membership_renewal' | 'admin_adjust' | 'backfill'
+    sourceOrderId: uuid("source_order_id").references(() => orders.id, { onDelete: "set null" }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userIdx: index("experience_ledger_user_idx").on(t.userId),
   }),
 );
 

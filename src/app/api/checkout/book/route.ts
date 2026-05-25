@@ -6,6 +6,7 @@ import { eq, sql } from "drizzle-orm";
 import { createSession, getCurrentUser, hashPassword } from "@/lib/auth";
 import { basePrice } from "@/lib/book-bumps";
 import { bookPurchaseEmailHtml, sendEmail } from "@/lib/email";
+import { recomputeUserTier } from "@/lib/experience";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -221,7 +222,15 @@ export async function POST(req: Request) {
     })
     .returning();
 
-  // 10. Email post-compra — fire and forget. Si el SMTP no está configurado
+  // 10. Recalcular tier del comprador — la compra le sube su Tier Score.
+  //     (ver docs/EXPERIENCE_MODEL.md)
+  if (userId) {
+    await recomputeUserTier(userId, { reason: "order_paid", sourceOrderId: order.id }).catch(
+      (e) => console.error("[checkout/book] recomputeUserTier failed:", e),
+    );
+  }
+
+  // 11. Email post-compra — fire and forget. Si el SMTP no está configurado
   //     simplemente loggea; no rompemos el checkout por un fallo de email.
   const firstName = data.buyer.name.split(" ")[0] || data.buyer.name;
   const isPhysicalDelivery =
