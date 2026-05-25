@@ -1,3 +1,4 @@
+import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
@@ -6,8 +7,33 @@ import { PaymentMethodsCard } from "./PaymentMethodsCard";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Resuelve el modo efectivo de Stripe combinando dos fuentes:
+ *   1. Tabla `payment_settings` (gestionada desde la UI más abajo).
+ *   2. Variables de entorno `STRIPE_SECRET_KEY` (cableo de servidor).
+ *
+ * Se considera "LIVE" sólo si una de las dos tiene una secret_key real con
+ * prefijo `sk_live_` Y el toggle enableStripe está activo (o existe en .env).
+ */
+function detectStripeMode(opts: {
+  dbKey: string | null;
+  dbMode: string | null;
+  dbEnabled: boolean;
+  envKey: string | undefined;
+}): "LIVE" | "TEST" | "—" {
+  const sources = [opts.envKey, opts.dbKey].filter(Boolean) as string[];
+  if (sources.some((k) => k.startsWith("sk_live_"))) return "LIVE";
+  if (sources.some((k) => k.startsWith("sk_test_"))) return "TEST";
+  if (opts.dbEnabled && opts.dbMode === "live") return "LIVE";
+  if (opts.dbEnabled && opts.dbMode === "test") return "TEST";
+  return "—";
+}
+
 export default async function AjustesPage() {
   const user = (await getCurrentUser())!;
+
+  // Single source of truth para el indicador: combinar .env + DB.
+  const [pay] = await db.select().from(schema.paymentSettings).limit(1);
 
   const env = {
     smtpHost: process.env.SMTP_HOST || "",
@@ -15,11 +41,12 @@ export default async function AjustesPage() {
     smtpPort: process.env.SMTP_PORT || "",
     mailFrom: process.env.MAIL_FROM || "",
     appUrl: process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || "",
-    stripeMode: process.env.STRIPE_SECRET_KEY?.startsWith("sk_live_")
-      ? "LIVE"
-      : process.env.STRIPE_SECRET_KEY?.startsWith("sk_test_")
-        ? "TEST"
-        : "—",
+    stripeMode: detectStripeMode({
+      dbKey: pay?.stripeSecretKey ?? null,
+      dbMode: pay?.stripeMode ?? null,
+      dbEnabled: !!pay?.enableStripe,
+      envKey: process.env.STRIPE_SECRET_KEY,
+    }),
     databaseHost: (() => {
       try {
         return process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).host : "";

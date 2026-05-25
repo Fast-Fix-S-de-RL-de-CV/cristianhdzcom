@@ -109,9 +109,12 @@ export async function POST(req: Request) {
     }
     const totalCents = Math.max(0, subtotalCents - discountCents);
 
-    // Without Stripe wired we mark the order as "pending" — webhook would flip it to "succeeded".
-    // For dev demo we mark "succeeded" so the flow shows the confirmation screen.
-    const status = process.env.STRIPE_SECRET_KEY ? "pending" : "succeeded";
+    // MODO DEMO: hoy todas las órdenes se marcan succeeded en este endpoint —
+    // el cobro real con Stripe (Checkout Sessions + webhook) no está cableado
+    // todavía. Cuando se conecte, el webhook flippeará pending→succeeded y
+    // ahí volvemos a depender de un PaymentIntent real.
+    // Mismo patrón que /api/checkout/book y /api/checkout/membership.
+    const status: "succeeded" | "pending" = "succeeded";
 
     const [order] = await db
       .insert(schema.orders)

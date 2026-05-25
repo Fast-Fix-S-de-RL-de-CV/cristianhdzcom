@@ -20,9 +20,10 @@ export const runtime = "nodejs";
  *
  * Body: { planSlug, billingCycle, buyer: { name, email } }
  *
- * En modo demo (sin STRIPE_SECRET_KEY): marca la membresía como `active`
- * con currentPeriodEnd = ahora + 30 días (o 365 días si yearly).
- * Acumula crédito desde el primer pago.
+ * MODO DEMO (Stripe Checkout aún no cableado): marca la membresía como
+ * `active` con currentPeriodEnd = ahora + 30 días (o 365 si yearly) y
+ * acumula crédito desde el primer pago. Cuando se conecte Stripe Billing,
+ * `currentPeriodEnd` y `status` vendrán del webhook de subscription.
  */
 const Body = z.object({
   planSlug: z.enum(["silver", "gold", "black"]),
