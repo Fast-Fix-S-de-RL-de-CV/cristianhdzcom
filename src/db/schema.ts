@@ -366,7 +366,20 @@ export const activity = pgTable(
   (t) => ({ createdIdx: index("activity_created_idx").on(t.createdAt) }),
 );
 
-/* ─────────── BOOKS ─────────── */
+/* ─────────── BOOKS + BUNDLES ─────────── */
+/**
+ * Catálogo de productos editoriales. Una sola tabla cubre dos tipos:
+ *
+ *   - Libros (isBundle=false): cada uno tiene precio digital + físico
+ *     independientes. El admin puede activar solo uno de los dos formatos.
+ *   - Bundles (isBundle=true): paquetes que combinan varios libros
+ *     (`bundleIncludes.books = ["slug1", "slug2"]`) y opcionalmente
+ *     programas/talleres (`bundleIncludes.programs = ["slug"]`). Tiene un
+ *     `priceBundleUsd` propio y muestra el ahorro vs comprar suelto.
+ *
+ * El `digitalFileUrl` es la URL del PDF/EPUB que se entrega POST-compra
+ * (solo se renderea para usuarios con orden succeeded matching el slug).
+ */
 export const books = pgTable(
   "books",
   {
@@ -377,11 +390,42 @@ export const books = pgTable(
     description: text("description"),
     coverUrl: text("cover_url"),
     pages: integer("pages"),
+
+    // ── Pricing (USD whole dollars) ──
     priceDigitalUsd: integer("price_digital_usd"),
     pricePrintUsd: integer("price_print_usd"),
+    /** Precio "tachado" mostrado al lado para crear contraste de ahorro. */
+    priceCompareUsd: integer("price_compare_usd"),
+    /** Solo aplica cuando isBundle=true. */
+    priceBundleUsd: integer("price_bundle_usd"),
+
+    // ── Inventario y formatos ──
+    /** Si false → no se vende el formato digital del libro. */
+    hasDigital: boolean("has_digital").notNull().default(true),
+    /** Si false → no se vende el formato físico (solo ebook). */
+    hasPhysical: boolean("has_physical").notNull().default(true),
+    /** null = stock ilimitado. Cuando llega a 0 se desactiva el botón físico. */
+    stockPhysical: integer("stock_physical"),
+    /** URL del archivo digital (PDF/EPUB) entregado tras la compra. */
+    digitalFileUrl: text("digital_file_url"),
+
+    // ── Bundle ──
+    isBundle: boolean("is_bundle").notNull().default(false),
+    /** Contenidos del bundle: slugs de libros y/o programas incluidos. */
+    bundleIncludes: jsonb("bundle_includes")
+      .$type<{ books?: string[]; programs?: string[] }>()
+      .notNull()
+      .default({}),
+
+    // ── Display ──
     ratingAvg: integer("rating_avg"), // 0-50 (4.9 stored as 49)
     ratingCount: integer("rating_count").notNull().default(0),
     bullets: jsonb("bullets").$type<string[]>().notNull().default([]),
+    /** Acento visual: 'warm' | 'accent' | 'ink'. */
+    accent: varchar("accent", { length: 20 }).notNull().default("accent"),
+    /** Etiqueta destacada tipo "RECOMENDADO", "MÁS ELEGIDO". Null = sin badge. */
+    badge: varchar("badge", { length: 40 }),
+
     sortOrder: integer("sort_order").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

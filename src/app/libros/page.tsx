@@ -9,13 +9,33 @@ import { asc, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
-const COVER_GRADIENTS = [
-  "linear-gradient(135deg, oklch(35% 0.05 50), oklch(20% 0.04 60))",
-  "linear-gradient(135deg, oklch(40% 0.12 252), oklch(22% 0.08 245))",
-  "linear-gradient(135deg, oklch(38% 0.10 150), oklch(22% 0.05 160))",
-];
-
-const ACCENTS: Array<"warm" | "accent"> = ["warm", "accent"];
+/**
+ * /libros — Catálogo público de libros + bundles.
+ *
+ * Estrategia de venta aplicada:
+ *
+ *   1. Bookblocks alternados (Vol. I a la izquierda, Vol. II a la derecha) con
+ *      portada premium en gradiente, rating + páginas, dos precios (digital y
+ *      físico) y CTAs directos al checkout.
+ *
+ *   2. Cross-sell entre libros: chip discreto "Llévate ambos y ahorras $X"
+ *      después de cada precio individual, que linkea al bundle digital.
+ *
+ *   3. Escalera de valor con 3 bundles ordenados de menor a mayor compromiso:
+ *      digital → físico firmado → completo con talleres (badge RECOMENDADO).
+ *
+ *   4. Precio comparativo tachado para crear contraste de ahorro inmediato.
+ *
+ *   5. Urgencia honesta: si stockPhysical < 50, "Quedan X copias firmadas".
+ *
+ * Todo se renderea desde DB (tabla `books`). Admin puede crear/editar libros
+ * y bundles desde /admin/libros sin tocar código.
+ */
+const ACCENT_GRADIENTS: Record<string, string> = {
+  warm: "linear-gradient(135deg, oklch(35% 0.05 50), oklch(20% 0.04 60))",
+  accent: "linear-gradient(135deg, oklch(40% 0.12 252), oklch(22% 0.08 245))",
+  ink: "linear-gradient(135deg, oklch(38% 0.10 150), oklch(22% 0.05 160))",
+};
 
 function formatRating(avg: number | null, count: number) {
   if (avg == null) return `${count.toLocaleString("es-MX")} reseñas`;
@@ -24,11 +44,22 @@ function formatRating(avg: number | null, count: number) {
 }
 
 export default async function BooksPage() {
-  const books = await db
+  const allRows = await db
     .select()
     .from(schema.books)
     .where(eq(schema.books.isActive, true))
     .orderBy(asc(schema.books.sortOrder));
+
+  const books = allRows.filter((b) => !b.isBundle);
+  const bundles = allRows.filter((b) => b.isBundle);
+
+  // Bundle digital de referencia para cross-sell entre libros individuales.
+  const digitalBundle = bundles.find(
+    (b) =>
+      (b.bundleIncludes?.books?.length ?? 0) >= 2 &&
+      (b.bundleIncludes?.programs?.length ?? 0) === 0 &&
+      b.hasDigital,
+  );
 
   return (
     <div>
@@ -40,21 +71,27 @@ export default async function BooksPage() {
           El arte de hacer <span style={{ color: "var(--warm)" }}>negocios</span>.
         </h1>
         <p style={{ fontSize: 20, color: "var(--muted)", maxWidth: 700, marginTop: 20, lineHeight: 1.5 }}>
-          Dos manuales prácticos. Uno para empezar sin capital, otro para construir desde internet. Los mismos principios que se
-          enseñan en los talleres.
+          Dos manuales prácticos. Uno para empezar sin capital, otro para construir desde internet. Los mismos
+          principios que se enseñan en los talleres.
         </p>
       </section>
 
       <div className="rule" />
 
       {books.map((b, idx) => {
-        const accent = ACCENTS[idx % ACCENTS.length];
-        const gradient = COVER_GRADIENTS[idx % COVER_GRADIENTS.length];
+        const accent = (b.accent === "warm" ? "warm" : "accent") as "warm" | "accent";
+        const gradient = ACCENT_GRADIENTS[b.accent] ?? ACCENT_GRADIENTS.accent;
         const volLabel = `VOLUMEN ${toRoman(idx + 1)}`;
         const metaLabel = b.pages ? `${b.pages} págs` : `${idx + 1} de ${books.length}`;
+        // Ahorro al comprar ambos vs individual digital.
+        const savings =
+          digitalBundle?.priceBundleUsd != null && b.priceDigitalUsd != null
+            ? books.reduce((sum, x) => sum + (x.priceDigitalUsd ?? 0), 0) - digitalBundle.priceBundleUsd
+            : null;
         return (
           <BookBlock
             key={b.id}
+            slug={b.slug}
             vol={volLabel}
             accent={accent}
             flip={idx % 2 === 1}
@@ -63,116 +100,63 @@ export default async function BooksPage() {
             bullets={b.bullets ?? []}
             digital={b.priceDigitalUsd ?? 0}
             physical={b.pricePrintUsd ?? 0}
+            priceCompare={b.priceCompareUsd}
+            hasDigital={b.hasDigital}
+            hasPhysical={b.hasPhysical}
+            stockPhysical={b.stockPhysical}
             rating={formatRating(b.ratingAvg, b.ratingCount)}
             meta={metaLabel}
             coverGradient={gradient}
+            crossSellBundleSlug={digitalBundle?.slug ?? null}
+            crossSellSavings={savings}
           />
         );
       })}
 
-      {/* Bundle / oferta editorial */}
-      <section className="sec" style={{ background: "var(--bg-2)", borderRadius: 32, margin: "0 56px 96px" }}>
-        <div className="between" style={{ alignItems: "flex-end", marginBottom: 48, flexWrap: "wrap", gap: 24 }}>
-          <div>
-            <Eyebrow>Bundle + Taller</Eyebrow>
-            <h2 style={{ fontSize: 64, color: "var(--ink)", marginTop: 16 }}>
-              Los 2 libros + el taller del mismo nombre.
-            </h2>
-          </div>
-          <span className="serif" style={{ fontSize: 22, color: "var(--muted)", maxWidth: 320, textAlign: "right" }}>
-            La forma más rápida de aplicar lo que leíste con Cristian en vivo.
-          </span>
-        </div>
-        <div className="books-bundle-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 0.8fr", gap: 24 }}>
-          <div style={{ border: "1px solid var(--line)", borderRadius: 18, padding: 28, background: "white" }}>
-            <Chip>BUNDLE LIBROS</Chip>
-            <div className="serif" style={{ fontSize: 56, color: "var(--ink)", marginTop: 16 }}>
-              $49
+      {/* Bundles section */}
+      {bundles.length > 0 && (
+        <section
+          className="sec"
+          style={{ background: "var(--bg-2)", borderRadius: 32, margin: "0 56px 96px" }}
+        >
+          <div
+            className="between"
+            style={{ alignItems: "flex-end", marginBottom: 48, flexWrap: "wrap", gap: 24 }}
+          >
+            <div>
+              <Eyebrow>Paquetes con descuento</Eyebrow>
+              <h2 style={{ fontSize: 64, color: "var(--ink)", marginTop: 16 }}>
+                Combos pensados para ahorrarte tiempo y dinero.
+              </h2>
             </div>
-            <div style={{ color: "var(--muted)", marginTop: 4 }}>Vol. I + Vol. II en digital · ahorra $14</div>
-            <Link href="/registro">
-              <Button size="lg" variant="ghost" style={{ marginTop: 24 }}>
-                Comprar bundle
-              </Button>
-            </Link>
+            <span className="serif" style={{ fontSize: 22, color: "var(--muted)", maxWidth: 360, textAlign: "right" }}>
+              Comprar todo junto siempre sale más barato — y te llega bien empaquetado.
+            </span>
           </div>
           <div
+            className="books-bundle-grid"
             style={{
-              border: "2px solid var(--accent)",
-              background: "white",
-              borderRadius: 18,
-              padding: 28,
-              position: "relative",
-              boxShadow: "0 16px 40px rgba(15,17,21,0.08)",
+              display: "grid",
+              gridTemplateColumns: `repeat(${Math.min(bundles.length, 3)}, 1fr)`,
+              gap: 24,
             }}
           >
-            <div
-              style={{
-                position: "absolute",
-                top: -12,
-                left: 28,
-                background: "var(--accent)",
-                color: "white",
-                padding: "4px 10px",
-                borderRadius: 999,
-                fontSize: 11,
-                fontFamily: "var(--font-mono)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
-            >
-              RECOMENDADO
-            </div>
-            <Chip>LIBROS + 2 TALLERES</Chip>
-            <div className="serif" style={{ fontSize: 56, color: "var(--ink)", marginTop: 16 }}>
-              $189
-            </div>
-            <div style={{ color: "var(--ink-2)", marginTop: 4 }}>Bundle + 2 talleres en vivo de Cristian (4h c/u)</div>
-            <Link href="/programas">
-              <Button size="lg" variant="accent" style={{ marginTop: 24 }}>
-                Quiero esto →
-              </Button>
-            </Link>
+            {bundles.map((bundle) => (
+              <BundleCard key={bundle.id} bundle={bundle} />
+            ))}
           </div>
-          <div style={{ border: "1px solid var(--line)", borderRadius: 18, padding: 28, background: "white" }}>
-            <Chip>FÍSICOS</Chip>
-            <div className="serif" style={{ fontSize: 56, color: "var(--ink)", marginTop: 16 }}>
-              $89
-            </div>
-            <div style={{ color: "var(--muted)", marginTop: 4 }}>2 libros físicos firmados + envío LATAM</div>
-            <Link href="/registro">
-              <Button size="lg" variant="ghost" style={{ marginTop: 24 }}>
-                Comprar físicos
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <Footer />
     </div>
   );
 }
 
-function toRoman(n: number): string {
-  const map: Array<[number, string]> = [
-    [10, "X"],
-    [9, "IX"],
-    [5, "V"],
-    [4, "IV"],
-    [1, "I"],
-  ];
-  let out = "";
-  for (const [val, sym] of map) {
-    while (n >= val) {
-      out += sym;
-      n -= val;
-    }
-  }
-  return out || "I";
-}
+/* ─────────── Componente: Bookblock individual ─────────── */
 
 function BookBlock({
+  slug,
   vol,
   accent,
   title,
@@ -180,11 +164,18 @@ function BookBlock({
   bullets,
   digital,
   physical,
+  priceCompare,
+  hasDigital,
+  hasPhysical,
+  stockPhysical,
   rating,
   meta,
   coverGradient,
   flip,
+  crossSellBundleSlug,
+  crossSellSavings,
 }: {
+  slug: string;
   vol: string;
   accent: "warm" | "accent";
   title: string;
@@ -192,10 +183,16 @@ function BookBlock({
   bullets: string[];
   digital: number;
   physical: number;
+  priceCompare: number | null;
+  hasDigital: boolean;
+  hasPhysical: boolean;
+  stockPhysical: number | null;
   rating: string;
   meta: string;
   coverGradient: string;
   flip?: boolean;
+  crossSellBundleSlug: string | null;
+  crossSellSavings: number | null;
 }) {
   const accentColor = accent === "warm" ? "var(--warm)" : "var(--accent)";
   const cover = (
@@ -233,7 +230,7 @@ function BookBlock({
               textAlign: "left",
             }}
           >
-            {title.replace(".", "")}
+            {title.replace(/\.$/, "")}
           </span>
           <span
             style={{
@@ -249,9 +246,12 @@ function BookBlock({
           </span>
         </div>
       </div>
-      <div className="row" style={{ marginTop: 24, gap: 12 }}>
+      <div className="row" style={{ marginTop: 24, gap: 12, flexWrap: "wrap" }}>
         <Chip variant={accent === "warm" ? "warm" : "accent"}>{rating}</Chip>
         <Chip>{meta}</Chip>
+        {hasPhysical && stockPhysical != null && stockPhysical < 50 && stockPhysical > 0 && (
+          <Chip variant="warm">🔥 Quedan {stockPhysical} firmadas</Chip>
+        )}
       </div>
     </div>
   );
@@ -271,33 +271,73 @@ function BookBlock({
         ))}
       </div>
       <div className="row" style={{ gap: 16, paddingTop: 24, borderTop: "1px solid var(--line)", flexWrap: "wrap" }}>
-        <div>
-          <div className="serif" style={{ fontSize: 44 }}>
-            ${digital}
+        {hasDigital && (
+          <div>
+            <div className="serif" style={{ fontSize: 44 }}>
+              ${digital}
+              {priceCompare && priceCompare > digital ? (
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: 14,
+                    color: "var(--muted)",
+                    textDecoration: "line-through",
+                    marginLeft: 8,
+                    fontWeight: 400,
+                  }}
+                >
+                  ${priceCompare}
+                </span>
+              ) : null}
+            </div>
+            <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
+              DIGITAL · USD
+            </div>
           </div>
-          <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-            DIGITAL · USD
+        )}
+        {hasPhysical && (
+          <div>
+            <div className="serif" style={{ fontSize: 44 }}>
+              ${physical}
+            </div>
+            <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
+              FÍSICO · ENVÍO LATAM
+            </div>
           </div>
-        </div>
-        <div>
-          <div className="serif" style={{ fontSize: 44 }}>
-            ${physical}
-          </div>
-          <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-            FÍSICO · ENVÍO
-          </div>
-        </div>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
-          <Link href="/blog">
+        )}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Link href={`/blog`}>
             <Button size="lg" variant="ghost">
               Leer extracto
             </Button>
           </Link>
-          <Link href="/registro">
-            <Button size="lg">Comprar →</Button>
+          <Link href={`/checkout/libro/${slug}`}>
+            <Button size="lg">Comprar ahora →</Button>
           </Link>
         </div>
       </div>
+      {crossSellBundleSlug && crossSellSavings && crossSellSavings > 0 && (
+        <Link
+          href={`/checkout/libro/${crossSellBundleSlug}`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            marginTop: 18,
+            padding: "8px 14px",
+            background: "color-mix(in srgb, var(--accent) 12%, white)",
+            color: "var(--accent)",
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 700,
+            fontFamily: "var(--font-mono)",
+            textDecoration: "none",
+            border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
+          }}
+        >
+          💡 LLEVA LOS 2 LIBROS Y AHORRA ${crossSellSavings} →
+        </Link>
+      )}
     </div>
   );
 
@@ -317,4 +357,109 @@ function BookBlock({
       </div>
     </section>
   );
+}
+
+/* ─────────── Componente: Bundle card ─────────── */
+
+function BundleCard({ bundle }: { bundle: typeof schema.books.$inferSelect }) {
+  const isRecommended = bundle.badge != null;
+  const includesCount =
+    (bundle.bundleIncludes?.books?.length ?? 0) + (bundle.bundleIncludes?.programs?.length ?? 0);
+
+  return (
+    <div
+      style={{
+        border: isRecommended ? "2px solid var(--accent)" : "1px solid var(--line)",
+        background: "white",
+        borderRadius: 18,
+        padding: 28,
+        position: "relative",
+        boxShadow: isRecommended ? "0 16px 40px rgba(15,17,21,0.08)" : undefined,
+      }}
+    >
+      {isRecommended && (
+        <div
+          style={{
+            position: "absolute",
+            top: -12,
+            left: 28,
+            background: "var(--accent)",
+            color: "white",
+            padding: "4px 10px",
+            borderRadius: 999,
+            fontSize: 11,
+            fontFamily: "var(--font-mono)",
+            textTransform: "uppercase",
+            letterSpacing: "0.06em",
+          }}
+        >
+          {bundle.badge}
+        </div>
+      )}
+      <Chip>
+        {bundle.hasPhysical && bundle.hasDigital
+          ? "DIGITAL + FÍSICO"
+          : bundle.hasPhysical
+            ? "FÍSICOS"
+            : "DIGITAL"}
+        {(bundle.bundleIncludes?.programs?.length ?? 0) > 0 ? " + TALLERES" : ""}
+      </Chip>
+      <div className="serif" style={{ fontSize: 56, color: "var(--ink)", marginTop: 16 }}>
+        ${bundle.priceBundleUsd}
+        {bundle.priceCompareUsd && bundle.priceCompareUsd > (bundle.priceBundleUsd ?? 0) ? (
+          <span
+            className="mono"
+            style={{
+              fontSize: 18,
+              color: "var(--muted)",
+              textDecoration: "line-through",
+              marginLeft: 10,
+              fontWeight: 400,
+            }}
+          >
+            ${bundle.priceCompareUsd}
+          </span>
+        ) : null}
+      </div>
+      <div style={{ color: isRecommended ? "var(--ink-2)" : "var(--muted)", marginTop: 6, fontSize: 14 }}>
+        {bundle.subtitle ?? `${includesCount} productos incluidos`}
+      </div>
+      {(bundle.bullets?.length ?? 0) > 0 && (
+        <div className="col" style={{ gap: 8, marginTop: 18 }}>
+          {bundle.bullets.map((b) => (
+            <div key={b} className="row" style={{ gap: 8, fontSize: 13 }}>
+              <span style={{ color: "var(--accent)" }}>✓</span> {b}
+            </div>
+          ))}
+        </div>
+      )}
+      <Link href={`/checkout/libro/${bundle.slug}`}>
+        <Button
+          size="lg"
+          variant={isRecommended ? "accent" : "ghost"}
+          style={{ marginTop: 24, width: "100%", justifyContent: "center" }}
+        >
+          {isRecommended ? "Quiero esto →" : "Comprar bundle"}
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+function toRoman(n: number): string {
+  const map: Array<[number, string]> = [
+    [10, "X"],
+    [9, "IX"],
+    [5, "V"],
+    [4, "IV"],
+    [1, "I"],
+  ];
+  let out = "";
+  for (const [val, sym] of map) {
+    while (n >= val) {
+      out += sym;
+      n -= val;
+    }
+  }
+  return out || "I";
 }

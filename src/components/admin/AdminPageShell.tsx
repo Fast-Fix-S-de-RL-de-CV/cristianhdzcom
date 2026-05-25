@@ -9,6 +9,7 @@ const ITEMS = [
   ["💳", "Suscripciones", "/admin/suscripciones"],
   ["💰", "Pagos", "/admin/pagos"],
   ["📚", "Cursos", "/admin/cursos"],
+  ["📖", "Libros", "/admin/libros"],
   ["✍️", "Blog", "/admin/blog"],
   ["🎙️", "Talleres", "/admin/talleres"],
   ["💬", "Comunidad", "/admin/comunidad"],
