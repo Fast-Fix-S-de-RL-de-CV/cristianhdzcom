@@ -12,6 +12,7 @@ import { CourseCover } from "@/components/marketing/CourseCover";
 import { TallerBanner } from "@/components/marketing/TallerBanner";
 import { ProgramsCarousel } from "@/components/marketing/ProgramsCarousel";
 import { ServicesGrid } from "@/components/marketing/ServicesGrid";
+import { HeroPortraitImg } from "@/components/marketing/HeroPortraitImg";
 import { getSiteSettings, renderMarkdownLight } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
@@ -215,19 +216,9 @@ export default async function HomePage() {
               }}
             >
               {hero.heroPortraitUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <HeroPortraitImg
                   src={hero.heroPortraitUrl}
                   alt={`${hero.heroTitle} — ${hero.heroSubtitleAccent ?? ""} ${hero.heroSubtitleRest ?? ""}`.trim()}
-                  loading="eager"
-                  decoding="async"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    objectPosition: "center top",
-                    display: "block",
-                  }}
                 />
               ) : null}
               {/* Overlay gradient sutil para legibilidad del chip inferior */}

@@ -30,7 +30,9 @@ function defaults(): typeof schema.siteSettings.$inferSelect {
       "Ganador del **Premio Huawei Spark 2023** por expansión en el sector informático. He compartido foros con empresarios como Marcus Dantus y Ernesto Coppel, y mantengo relación directa con los consulados de Brasil y México. Trabajar conmigo es sinónimo de *confianza, compromiso y resultados*.",
     heroCtaPrimaryLabel: "Empezar gratis →",
     heroCtaSecondaryLabel: "Ver mis empresas",
-    heroPortraitUrl: "/uploads/cristian-portrait.jpg",
+    // Null por default: hasta que el admin suba foto desde /admin/ajustes/hero,
+    // la home muestra solo el gradient azul (sin broken-image icon).
+    heroPortraitUrl: null,
     heroPortraitFooterLine: "FAST FIX · CLICK THUNDER · G20",
     heroPortraitChip: "● Disponible",
     heroStats: [
