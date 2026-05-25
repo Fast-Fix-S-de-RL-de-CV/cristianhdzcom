@@ -19,16 +19,31 @@ type Props = {
   style?: CSSProperties;
   /** Optional className passthrough. */
   className?: string;
+  /**
+   * Cómo encajar la imagen en el contenedor:
+   *   - 'contain' (default): muestra la imagen COMPLETA sin cortarla. Para
+   *     evitar bordes vacíos, renderea la misma imagen como fondo blureado
+   *     detrás (técnica YouTube/Spotify).
+   *   - 'cover': recorta la imagen para llenar el contenedor. Útil cuando
+   *     sabes que la imagen ya viene en el aspect ratio correcto.
+   */
+  fit?: "contain" | "cover";
 };
 
 /**
- * Renders a program's cover (uploaded image or video) with a graceful fallback.
- * The fallback preserves the existing visual rhythm of cards using the big
- * serif numeral (01, 02, 03…) when no media is set.
+ * Renderiza la portada de un programa/curso con dos modos:
  *
- * - `image`  →  responsive <img> with object-fit: cover
- * - `video`  →  muted, autoplaying loop (acts as animated cover)
- * - empty    →  placeholder block with the `fallback` text in serif
+ *   fit='contain' (DEFAULT) — la imagen se ve completa, centrada. Si su
+ *     aspect ratio no coincide con el contenedor (ej. imagen 1:1 en card
+ *     ancha), los lados se llenan con la MISMA imagen blureada de fondo.
+ *     Es lo que hacen YouTube y Spotify con videos verticales / álbumes
+ *     cuadrados en cards rectangulares: no se ve cropped y conserva el
+ *     mood cromático.
+ *
+ *   fit='cover' — comportamiento clásico, llena recortando. Solo úsalo si
+ *     estás seguro que la imagen viene con el aspect correcto.
+ *
+ * Para videos siempre usa cover (los videos UI suelen estar pensados así).
  */
 export function CourseCover({
   coverUrl,
@@ -41,12 +56,14 @@ export function CourseCover({
   bottomDivider = false,
   style,
   className,
+  fit = "contain",
 }: Props) {
   const wrapperStyle: CSSProperties = {
     position: "relative",
     overflow: "hidden",
     borderRadius: radius,
     width: "100%",
+    background: "var(--bg-2)",
     ...(height ? { height } : null),
     ...(aspectRatio ? { aspectRatio } : null),
     ...(bottomDivider ? { borderBottom: "1px solid var(--line)" } : null),
@@ -56,6 +73,7 @@ export function CourseCover({
   // Real cover present → render media.
   if (coverUrl && coverUrl.trim() !== "") {
     if (coverKind === "video") {
+      // Videos siempre usan cover — están pensados así por defecto.
       return (
         <div style={wrapperStyle} className={className}>
           <video
@@ -75,22 +93,69 @@ export function CourseCover({
         </div>
       );
     }
-    // Default to image (image, or any non-video kind).
+
+    // Imagen: contain (default) o cover.
+    if (fit === "cover") {
+      return (
+        <div style={wrapperStyle} className={className}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={coverUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        </div>
+      );
+    }
+
+    // fit === "contain" → la imagen se ve completa.
+    // Detrás de ella va la misma imagen pero blureada y escalada, para que
+    // los lados vacíos no se vean como un cuadro gris feo.
     return (
       <div style={wrapperStyle} className={className}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={coverUrl}
-          alt=""
-          loading="lazy"
-          decoding="async"
+        {/* Capa 1: imagen blureada de fondo (mismo URL, scaled + blurred). */}
+        <div
+          aria-hidden="true"
           style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            display: "block",
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url(${cssQuoteUrl(coverUrl)})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            filter: "blur(28px) saturate(1.4) brightness(0.9)",
+            transform: "scale(1.15)",
+            opacity: 0.85,
           }}
         />
+        {/* Capa 2: la imagen real, completa y centrada. */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={coverUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              width: "auto",
+              height: "auto",
+              objectFit: "contain",
+              display: "block",
+              boxShadow: "0 8px 24px rgba(15,17,21,0.18)",
+            }}
+          />
+        </div>
       </div>
     );
   }
@@ -105,4 +170,9 @@ export function CourseCover({
       ) : null}
     </div>
   );
+}
+
+/** Escapa la URL para meterla en una propiedad CSS `url(...)` sin romper. */
+function cssQuoteUrl(url: string): string {
+  return url.replace(/"/g, '\\"').replace(/\)/g, "\\)");
 }
