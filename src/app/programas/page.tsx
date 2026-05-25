@@ -100,7 +100,7 @@ export default async function ProgramsPage() {
                   coverKind={p.coverKind}
                   fallback={String(i + 1).padStart(2, "0")}
                   accent={accentColor}
-                  height={180}
+                  aspectRatio="1/1"
                   bottomDivider
                 />
 

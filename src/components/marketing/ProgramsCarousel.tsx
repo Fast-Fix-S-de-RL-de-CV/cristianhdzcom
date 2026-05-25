@@ -209,7 +209,7 @@ function ProgramCardItem({
         coverKind={program.coverKind}
         fallback={String(index + 1).padStart(2, "0")}
         accent={accentColor}
-        height={170}
+        aspectRatio="1/1"
         bottomDivider
       />
 
