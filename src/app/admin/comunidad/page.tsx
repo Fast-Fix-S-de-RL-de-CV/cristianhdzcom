@@ -60,34 +60,36 @@ export default async function ComunidadAdminPage() {
       subtitle={`${posts.length} posts · ${comments.length} comentarios · ${categories.length} categorías`}
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <ComunidadManager
-          posts={posts.map((p) => ({
-            id: p.id,
-            title: p.title,
-            body: p.body,
-            pinned: p.pinned,
-            likesCount: p.likesCount,
-            commentsCount: p.commentsCount,
-            viewsCount: p.viewsCount,
-            createdAt: p.createdAt.toISOString(),
-            authorName: p.authorName || "—",
-          }))}
-          comments={comments.map((c) => ({
-            id: c.id,
-            postId: c.postId,
-            body: c.body,
-            createdAt: c.createdAt.toISOString(),
-            authorName: c.authorName || "—",
-          }))}
-          categories={categories.map((c) => ({
-            id: c.id,
-            slug: c.slug,
-            name: c.name,
-            emoji: c.emoji || "",
-            color: c.color || "",
-            sortOrder: c.sortOrder,
-          }))}
-        />
+        <div className="admin-table-wrap">
+          <ComunidadManager
+            posts={posts.map((p) => ({
+              id: p.id,
+              title: p.title,
+              body: p.body,
+              pinned: p.pinned,
+              likesCount: p.likesCount,
+              commentsCount: p.commentsCount,
+              viewsCount: p.viewsCount,
+              createdAt: p.createdAt.toISOString(),
+              authorName: p.authorName || "—",
+            }))}
+            comments={comments.map((c) => ({
+              id: c.id,
+              postId: c.postId,
+              body: c.body,
+              createdAt: c.createdAt.toISOString(),
+              authorName: c.authorName || "—",
+            }))}
+            categories={categories.map((c) => ({
+              id: c.id,
+              slug: c.slug,
+              name: c.name,
+              emoji: c.emoji || "",
+              color: c.color || "",
+              sortOrder: c.sortOrder,
+            }))}
+          />
+        </div>
       </Card>
     </AdminPageShell>
   );

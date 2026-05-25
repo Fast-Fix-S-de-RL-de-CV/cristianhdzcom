@@ -57,7 +57,9 @@ export default async function ClientesPage() {
       subtitle={`${data.length} clientes · LTV total $${Math.round(totalLifetime / 100).toLocaleString("es-MX")}`}
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <ClientesTable rows={data} currentUserId={user.id} />
+        <div className="admin-table-wrap">
+          <ClientesTable rows={data} currentUserId={user.id} />
+        </div>
       </Card>
     </AdminPageShell>
   );

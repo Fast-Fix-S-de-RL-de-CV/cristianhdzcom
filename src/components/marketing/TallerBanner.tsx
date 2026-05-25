@@ -68,36 +68,67 @@ export function TallerBanner({
         minHeight: 200,
       }}
     >
-      {/* IMAGEN — mitad izquierda */}
+      {/* IMAGEN — mitad izquierda
+          Patrón YouTube/Spotify: imagen completa (object-fit: contain)
+          + halo blureado del mismo color detrás para llenar bordes vacíos.
+          Así una imagen 1:1 o 16:9 se ve íntegra sin recortes. */}
       <div
         style={{
           position: "relative",
-          background: taller.coverUrl
-            ? "transparent"
-            : "linear-gradient(135deg, oklch(35% 0.05 50), oklch(20% 0.04 60))",
+          background: "var(--bg-2)",
           minHeight: 200,
+          overflow: "hidden",
         }}
       >
         {taller.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={taller.coverUrl}
-            alt=""
-            loading="lazy"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-              position: "absolute",
-              inset: 0,
-            }}
-          />
+          <>
+            {/* Capa 1: halo blureado de la misma imagen */}
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                backgroundImage: `url(${cssQuoteUrl(taller.coverUrl)})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                filter: "blur(24px) saturate(1.3) brightness(0.92)",
+                transform: "scale(1.15)",
+                opacity: 0.85,
+              }}
+            />
+            {/* Capa 2: imagen completa centrada */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={taller.coverUrl}
+                alt=""
+                loading="lazy"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  width: "auto",
+                  height: "auto",
+                  objectFit: "contain",
+                  display: "block",
+                  boxShadow: "0 6px 20px rgba(15,17,21,0.15)",
+                }}
+              />
+            </div>
+          </>
         ) : (
           <div
             style={{
               position: "absolute",
               inset: 0,
+              background: "linear-gradient(135deg, oklch(35% 0.05 50), oklch(20% 0.04 60))",
               display: "flex",
               alignItems: "flex-end",
               padding: 20,
@@ -309,4 +340,9 @@ function formatDateShort(d: Date): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/** Escapa la URL para CSS `url(...)`. */
+function cssQuoteUrl(url: string): string {
+  return url.replace(/"/g, '\\"').replace(/\)/g, "\\)");
 }

@@ -73,7 +73,9 @@ export default async function CursosPage() {
       subtitle={`${data.length} programas configurados`}
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <CursosManager rows={data} />
+        <div className="admin-table-wrap">
+          <CursosManager rows={data} />
+        </div>
       </Card>
     </AdminPageShell>
   );

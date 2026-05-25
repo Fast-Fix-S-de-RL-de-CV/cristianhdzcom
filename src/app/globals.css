@@ -1059,6 +1059,94 @@ html { scroll-behavior: smooth; }
   /* Community header sits tighter on tablet too */
   .community-header-grid { padding-left: 24px !important; padding-right: 24px !important; }
   .community-grid { padding: 24px !important; }
+
+  /* Hero editor del admin: stack form + preview */
+  .hero-editor-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  .hero-editor-preview {
+    position: relative !important;
+    top: auto !important;
+  }
+
+  /* Membresía cuenta: stack las 2 columnas de info */
+  .membresia-stack { grid-template-columns: 1fr !important; }
+
+  /* Hero portrait orbital rings: se ven raros en tablet */
+  .hero-orbit { opacity: 0.4; }
+}
+
+/* ─────────── MOBILE (≤640px) ─────────── */
+@media (max-width: 640px) {
+  /* Taller banner compact: stack imagen arriba, texto abajo */
+  .taller-banner-compact {
+    grid-template-columns: 1fr !important;
+    min-height: auto !important;
+  }
+  .taller-banner-compact > div:first-child {
+    min-height: 180px !important;
+    aspect-ratio: 16 / 9;
+  }
+
+  /* Carrusel de programas: 1 card visible + peek de la siguiente */
+  .programs-carousel-track > div {
+    flex: 0 0 calc(85% - 12px) !important;
+  }
+
+  /* Hero del home: portrait más bajo, no aspect 4:5 (queda enorme) */
+  .hero-grid {
+    gap: 32px !important;
+  }
+  .hero-grid > div:last-child > div[style*="aspect-ratio: 4/5"] {
+    aspect-ratio: 1 / 1 !important;
+  }
+
+  /* Float credibility card → integrada full-width abajo */
+  .hero-credibility-float {
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* Tabla admin: scroll horizontal para evitar squeeze de columnas
+     (el patrón es display:flex con widths fijos en cada celda) */
+  .admin-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .admin-table-wrap > div {
+    min-width: 720px;
+  }
+
+  /* Bulk action bar flotante: ancho casi total en móvil, padding ajustado */
+  [role="region"][aria-label="Acciones masivas"] {
+    min-width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    padding: 10px 14px !important;
+    bottom: 14px !important;
+    flex-wrap: wrap;
+    gap: 10px !important;
+  }
+}
+
+/* ─────────── MOBILE EXTRA (≤480px) ─────────── */
+@media (max-width: 480px) {
+  .sec { padding: 36px 16px; }
+  .ch-nav { padding: 12px 16px; }
+  .ch-foot { padding: 36px 20px; }
+
+  /* Hero stack más compacto */
+  h1 { font-size: clamp(32px, 10vw, 48px) !important; }
+  h2 { font-size: clamp(26px, 8vw, 38px) !important; }
+
+  /* Cards de servicios: padding interno menor */
+  .grid-3 > .card { padding: 0; }
+
+  /* Eyebrow stats del hero - 2 columnas no 4 */
+  .hero-credibility-float .grid-2 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
 }
 
 /* Prevent body horizontal scroll always */

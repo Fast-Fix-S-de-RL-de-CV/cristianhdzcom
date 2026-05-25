@@ -36,7 +36,9 @@ export default async function LibrosAdminPage() {
       subtitle={`${totalBooks} ${totalBooks === 1 ? "libro" : "libros"} · ${totalBundles} ${totalBundles === 1 ? "bundle" : "bundles"}${inactive > 0 ? ` · ${inactive} inactivos` : ""}`}
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <LibrosManager rows={data} />
+        <div className="admin-table-wrap">
+          <LibrosManager rows={data} />
+        </div>
       </Card>
     </AdminPageShell>
   );

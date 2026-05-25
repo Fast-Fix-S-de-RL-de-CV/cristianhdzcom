@@ -161,7 +161,9 @@ export default async function ProspectosPage() {
       subtitle={subtitle}
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <ProspectosTable rows={rows} currentUserId={user.id} />
+        <div className="admin-table-wrap">
+          <ProspectosTable rows={rows} currentUserId={user.id} />
+        </div>
       </Card>
     </AdminPageShell>
   );

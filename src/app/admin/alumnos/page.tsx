@@ -39,7 +39,9 @@ export default async function AlumnosPage() {
       subtitle={`${rows.length} usuarios registrados`}
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <AlumnosTable rows={data} currentUserId={user.id} />
+        <div className="admin-table-wrap">
+          <AlumnosTable rows={data} currentUserId={user.id} />
+        </div>
       </Card>
     </AdminPageShell>
   );

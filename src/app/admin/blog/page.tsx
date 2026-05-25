@@ -47,7 +47,9 @@ export default async function BlogPage() {
       subtitle={`${data.length} posts (${data.filter((d) => d.publishedAt).length} publicados)`}
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <BlogManager rows={data} />
+        <div className="admin-table-wrap">
+          <BlogManager rows={data} />
+        </div>
       </Card>
     </AdminPageShell>
   );

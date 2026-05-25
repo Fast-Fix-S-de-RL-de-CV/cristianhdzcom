@@ -86,7 +86,7 @@ export function HeroEditor({ initial }: { initial: Settings }) {
 
   return (
     <div style={{ padding: 28 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 28, alignItems: "flex-start" }}>
+      <div className="hero-editor-grid" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 28, alignItems: "flex-start" }}>
         {/* ─────────── Form ─────────── */}
         <div className="col" style={{ gap: 22 }}>
           <Section title="Chips superiores">
@@ -381,6 +381,7 @@ export function HeroEditor({ initial }: { initial: Settings }) {
 
         {/* ─────────── Preview lateral sticky ─────────── */}
         <div
+          className="hero-editor-preview"
           style={{
             position: "sticky",
             top: 24,

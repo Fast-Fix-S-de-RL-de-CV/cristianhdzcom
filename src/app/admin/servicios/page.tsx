@@ -32,7 +32,9 @@ export default async function ServiciosAdminPage() {
       subtitle={`${total} en total · ${active} en operación${ctaCards ? ` · ${ctaCards} card${ctaCards > 1 ? "s" : ""} CTA` : ""}`}
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <ServiciosManager rows={data} />
+        <div className="admin-table-wrap">
+          <ServiciosManager rows={data} />
+        </div>
       </Card>
     </AdminPageShell>
   );

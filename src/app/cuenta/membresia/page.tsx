@@ -118,7 +118,7 @@ export default async function MembresiaCuentaPage() {
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, position: "relative" }}>
+              <div className="membresia-stack" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, position: "relative" }}>
                 <div
                   style={{
                     padding: 14,

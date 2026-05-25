@@ -67,7 +67,9 @@ export default async function TalleresPage() {
       subtitle={`${data.length} eventos · ${data.filter((d) => d.isLive).length} en vivo`}
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <TalleresManager rows={data} />
+        <div className="admin-table-wrap">
+          <TalleresManager rows={data} />
+        </div>
       </Card>
     </AdminPageShell>
   );
