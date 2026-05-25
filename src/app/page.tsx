@@ -10,6 +10,7 @@ import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { CourseCover } from "@/components/marketing/CourseCover";
 import { TallerBanner } from "@/components/marketing/TallerBanner";
+import { ProgramsCarousel } from "@/components/marketing/ProgramsCarousel";
 
 export const dynamic = "force-dynamic";
 
@@ -151,19 +152,19 @@ export default async function HomePage() {
   const now = new Date();
   const [user, featured, talleres] = await Promise.all([
     getCurrentUser(),
-    // Cursos completos: filtra type='curso' o 'certificación' (no talleres ni consultoría)
+    // Programas y certificaciones (excluye talleres — esos viven en su propia
+    // sección de banners arriba). Trae varios para alimentar el carrusel.
     db
       .select()
       .from(schema.programs)
       .where(
         and(
           eq(schema.programs.isActive, true),
-          // Excluir talleres del grid de cursos (los talleres tienen su propia sección)
           ne(schema.programs.type, "taller"),
         ),
       )
       .orderBy(asc(schema.programs.sortOrder))
-      .limit(3),
+      .limit(12),
     // Talleres en vivo: evergreen siempre + próximos en fecha (≤ 60 días)
     db
       .select()
@@ -490,7 +491,7 @@ export default async function HomePage() {
 
       <div className="rule" />
 
-      {/* CURSOS COMPLETOS · desde DB (excluye talleres) */}
+      {/* PROGRAMAS Y CERTIFICACIONES · carrusel horizontal con toggle inline */}
       {featured.length > 0 && (
         <section className="sec">
           <div
@@ -498,63 +499,38 @@ export default async function HomePage() {
             style={{ alignItems: "flex-end", marginBottom: 40, flexWrap: "wrap", gap: 24 }}
           >
             <div>
-              <Eyebrow>Cursos completos · 2026</Eyebrow>
+              <Eyebrow>Catálogo · 2026</Eyebrow>
               <h2 style={{ fontSize: "clamp(40px, 5vw, 64px)", marginTop: 16 }}>
-                Programas <span style={{ color: "var(--accent)" }}>auto-aplicables</span>.
+                Programas y <span style={{ color: "var(--accent)" }}>Certificaciones</span>.
               </h2>
               <p style={{ color: "var(--muted)", marginTop: 10, fontSize: 16, maxWidth: 600, lineHeight: 1.55 }}>
                 Contenido grabado profesional, módulos completos con plan de pagos, comunidad
-                propia del curso y garantía 30 días.
+                propia del curso y garantía 30 días. Da click en "Más info" para ver qué incluye
+                sin salir de aquí.
               </p>
             </div>
             <Link href="/programas">
               <Button variant="ghost">Ver todos los programas →</Button>
             </Link>
           </div>
-          <div className="grid-3">
-            {featured.map((p, i) => {
-              const accentColor =
-                p.accent === "warm" ? "var(--warm)" : p.accent === "ink" ? "var(--ink)" : "var(--accent)";
-              return (
-                <Link key={p.id} href={`/programas/${p.slug}`} style={{ display: "block" }}>
-                  <Card
-                    hover
-                    style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}
-                  >
-                    <CourseCover
-                      coverUrl={p.coverUrl}
-                      coverKind={p.coverKind}
-                      fallback={String(i + 1).padStart(2, "0")}
-                      accent={accentColor}
-                      height={160}
-                      bottomDivider
-                    />
-                    <div style={{ padding: 22, display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                      <span className="mono" style={{ fontSize: 11, color: accentColor, letterSpacing: "0.08em" }}>
-                        {p.type.toUpperCase()}
-                        {p.durationLabel ? ` · ${p.durationLabel.toUpperCase()}` : ""}
-                      </span>
-                      <h3 className="serif" style={{ fontSize: 24, lineHeight: 1.1 }}>
-                        {p.title}
-                      </h3>
-                      <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.5, flex: 1 }}>
-                        {p.subtitle}
-                      </p>
-                      <div className="rule" />
-                      <div className="between">
-                        <span className="serif" style={{ fontSize: 26 }}>
-                          {p.priceUsd === 0 ? "Gratis" : `$${p.priceUsd}`}
-                        </span>
-                        <span className="mono" style={{ fontSize: 13, color: "var(--accent)" }}>
-                          Ver detalles →
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
+          <ProgramsCarousel
+            programs={featured.map((p) => ({
+              id: p.id,
+              slug: p.slug,
+              title: p.title,
+              subtitle: p.subtitle,
+              description: p.description,
+              type: p.type,
+              accent: p.accent,
+              coverUrl: p.coverUrl,
+              coverKind: p.coverKind,
+              durationLabel: p.durationLabel,
+              modulesCount: p.modulesCount,
+              priceUsd: p.priceUsd,
+              priceCompareUsd: p.priceCompareUsd,
+              bullets: (p.bullets as string[] | null) ?? [],
+            }))}
+          />
         </section>
       )}
 
