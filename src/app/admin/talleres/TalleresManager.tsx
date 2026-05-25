@@ -3,6 +3,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import { DatePicker } from "@/components/ui/DatePicker";
+import {
+  BulkActionBar,
+  BulkCheckbox,
+  selectedRowBg,
+  useBulkDelete,
+  useBulkSelection,
+} from "@/components/admin/BulkActions";
 
 type Row = {
   id: string;
@@ -26,6 +33,18 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const bulk = useBulkSelection<string>();
+  const visibleIds = rows.map((e) => e.id);
+  const allSelected = visibleIds.length > 0 && visibleIds.every((id) => bulk.isSelected(id));
+  const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
+
+  const bulkDelete = useBulkDelete<string>({
+    url: "/api/admin/events/bulk-delete",
+    entityLabel: { singular: "evento", plural: "eventos" },
+    description:
+      "Se borran también las asistencias registradas. Esta acción no se puede deshacer.",
+    onSuccess: bulk.clear,
+  });
 
   async function save(method: "POST" | "PUT", url: string, data: Partial<Row>) {
     setBusy(true);
@@ -99,8 +118,18 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
           fontFamily: "var(--font-mono)",
           textTransform: "uppercase",
           letterSpacing: "0.08em",
+          gap: 12,
         }}
       >
+        <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+          <BulkCheckbox
+            checked={allSelected}
+            indeterminate={someSelected}
+            onChange={(c) => bulk.toggleAllVisible(c, visibleIds)}
+            disabled={visibleIds.length === 0}
+            ariaLabel="Seleccionar todos los eventos"
+          />
+        </span>
         <span style={{ flex: 1.5 }}>Evento</span>
         <span style={{ flex: 1 }}>Host</span>
         <span style={{ width: 160 }}>Fecha</span>
@@ -111,85 +140,96 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
       </div>
 
       <div className="col" style={{ gap: 0 }}>
-        {rows.map((e) => (
-          <div
-            key={e.id}
-            className="row"
-            style={{
-              padding: "12px 24px",
-              borderBottom: "1px solid var(--line)",
-              background: "white",
-            }}
-          >
-            <div style={{ flex: 1.5, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{e.title}</div>
-              {e.hot && (
+        {rows.map((e) => {
+          const isChecked = bulk.isSelected(e.id);
+          return (
+            <div
+              key={e.id}
+              className="row"
+              style={{
+                padding: "12px 24px",
+                borderBottom: "1px solid var(--line)",
+                gap: 12,
+                ...selectedRowBg(isChecked),
+              }}
+            >
+              <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+                <BulkCheckbox
+                  checked={isChecked}
+                  onChange={(c) => bulk.toggleOne(e.id, c)}
+                  ariaLabel={`Seleccionar ${e.title}`}
+                />
+              </span>
+              <div style={{ flex: 1.5, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{e.title}</div>
+                {e.hot && (
+                  <span
+                    className="mono"
+                    style={{
+                      fontSize: 9,
+                      padding: "2px 6px",
+                      background: "var(--warm-soft)",
+                      color: "var(--warm)",
+                      borderRadius: 4,
+                      fontWeight: 700,
+                      marginTop: 4,
+                      display: "inline-block",
+                    }}
+                  >
+                    🔥 HOT
+                  </span>
+                )}
+              </div>
+              <span style={{ flex: 1, fontSize: 13, color: "var(--ink-2)" }}>{e.host || "—"}</span>
+              <span className="mono" style={{ width: 160, fontSize: 11, color: "var(--muted)" }}>
+                {new Date(e.startsAt).toLocaleString("es-MX", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+              <span className="mono" style={{ width: 80, textAlign: "right", fontSize: 12 }}>
+                {e.durationMinutes}m
+              </span>
+              <span className="mono" style={{ width: 100, textAlign: "right", fontSize: 12 }}>
+                {e.attending}/{e.capacity}
+              </span>
+              <span style={{ width: 80 }}>
                 <span
                   className="mono"
                   style={{
-                    fontSize: 9,
-                    padding: "2px 6px",
-                    background: "var(--warm-soft)",
-                    color: "var(--warm)",
+                    fontSize: 10,
+                    padding: "3px 8px",
                     borderRadius: 4,
-                    fontWeight: 700,
-                    marginTop: 4,
-                    display: "inline-block",
+                    background: e.isLive ? "var(--green-soft)" : "var(--bg-3)",
+                    color: e.isLive ? "var(--green-strong)" : "var(--muted)",
+                    fontWeight: 600,
                   }}
                 >
-                  🔥 HOT
+                  {e.isLive ? "● LIVE" : "—"}
                 </span>
-              )}
-            </div>
-            <span style={{ flex: 1, fontSize: 13, color: "var(--ink-2)" }}>{e.host || "—"}</span>
-            <span className="mono" style={{ width: 160, fontSize: 11, color: "var(--muted)" }}>
-              {new Date(e.startsAt).toLocaleString("es-MX", {
-                day: "numeric",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-            <span className="mono" style={{ width: 80, textAlign: "right", fontSize: 12 }}>
-              {e.durationMinutes}m
-            </span>
-            <span className="mono" style={{ width: 100, textAlign: "right", fontSize: 12 }}>
-              {e.attending}/{e.capacity}
-            </span>
-            <span style={{ width: 80 }}>
-              <span
-                className="mono"
-                style={{
-                  fontSize: 10,
-                  padding: "3px 8px",
-                  borderRadius: 4,
-                  background: e.isLive ? "var(--green-soft)" : "var(--bg-3)",
-                  color: e.isLive ? "var(--green-strong)" : "var(--muted)",
-                  fontWeight: 600,
-                }}
-              >
-                {e.isLive ? "● LIVE" : "—"}
               </span>
-            </span>
-            <span className="row" style={{ width: 160, justifyContent: "flex-end", gap: 6 }}>
-              <button
-                onClick={() => setEditing(e)}
-                className="mono"
-                style={btnStyle("ghost")}
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => remove(e.id)}
-                disabled={busy}
-                className="mono"
-                style={btnStyle("danger")}
-              >
-                Borrar
-              </button>
-            </span>
-          </div>
-        ))}
+              <span className="row" style={{ width: 160, justifyContent: "flex-end", gap: 6 }}>
+                <button
+                  onClick={() => setEditing(e)}
+                  className="mono"
+                  style={btnStyle("ghost")}
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => remove(e.id)}
+                  disabled={busy}
+                  className="mono"
+                  style={btnStyle("danger")}
+                >
+                  Borrar
+                </button>
+              </span>
+            </div>
+          );
+        })}
         {rows.length === 0 && (
           <div style={{ padding: 40, textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
             Aún no hay eventos.
@@ -214,6 +254,14 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
           err={err}
         />
       )}
+
+      <BulkActionBar
+        selectedCount={bulk.size}
+        entityLabel={{ singular: "evento", plural: "eventos" }}
+        onCancel={bulk.clear}
+        onDelete={() => bulkDelete.run([...bulk.allSelected])}
+        pending={bulkDelete.pending}
+      />
     </>
   );
 }

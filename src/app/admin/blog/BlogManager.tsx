@@ -3,6 +3,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatRelative } from "@/lib/utils";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import {
+  BulkActionBar,
+  BulkCheckbox,
+  selectedRowBg,
+  useBulkDelete,
+  useBulkSelection,
+} from "@/components/admin/BulkActions";
 
 type Row = {
   id: string;
@@ -25,6 +32,17 @@ export function BlogManager({ rows }: { rows: Row[] }) {
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const bulk = useBulkSelection<string>();
+  const visibleIds = rows.map((p) => p.id);
+  const allSelected = visibleIds.length > 0 && visibleIds.every((id) => bulk.isSelected(id));
+  const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
+
+  const bulkDelete = useBulkDelete<string>({
+    url: "/api/admin/blog-posts/bulk-delete",
+    entityLabel: { singular: "post del blog", plural: "posts del blog" },
+    description: "Esta acción no se puede deshacer.",
+    onSuccess: bulk.clear,
+  });
 
   async function save(method: "POST" | "PUT", url: string, data: Partial<Row>) {
     setBusy(true);
@@ -101,8 +119,18 @@ export function BlogManager({ rows }: { rows: Row[] }) {
           fontFamily: "var(--font-mono)",
           textTransform: "uppercase",
           letterSpacing: "0.08em",
+          gap: 12,
         }}
       >
+        <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+          <BulkCheckbox
+            checked={allSelected}
+            indeterminate={someSelected}
+            onChange={(c) => bulk.toggleAllVisible(c, visibleIds)}
+            disabled={visibleIds.length === 0}
+            ariaLabel="Seleccionar todos los posts del blog"
+          />
+        </span>
         <span style={{ flex: 1 }}>Título</span>
         <span style={{ width: 120 }}>Categoría</span>
         <span style={{ width: 100 }}>Status</span>
@@ -112,65 +140,76 @@ export function BlogManager({ rows }: { rows: Row[] }) {
       </div>
 
       <div className="col" style={{ gap: 0 }}>
-        {rows.map((p) => (
-          <div
-            key={p.id}
-            className="row"
-            style={{
-              padding: "12px 24px",
-              borderBottom: "1px solid var(--line)",
-              background: "white",
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{p.title}</div>
-              <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
-                /blog/{p.slug}
-              </div>
-            </div>
-            <span className="mono" style={{ width: 120, fontSize: 11, color: "var(--ink-2)" }}>
-              {p.category || "—"}
-            </span>
-            <span style={{ width: 100 }}>
-              <span
-                className="mono"
-                style={{
-                  fontSize: 10,
-                  padding: "3px 8px",
-                  borderRadius: 4,
-                  background: p.publishedAt ? "var(--green-soft)" : "var(--bg-3)",
-                  color: p.publishedAt ? "var(--green-strong)" : "var(--muted)",
-                  fontWeight: 600,
-                }}
-              >
-                {p.publishedAt ? "PUBLISHED" : "DRAFT"}
+        {rows.map((p) => {
+          const isChecked = bulk.isSelected(p.id);
+          return (
+            <div
+              key={p.id}
+              className="row"
+              style={{
+                padding: "12px 24px",
+                borderBottom: "1px solid var(--line)",
+                gap: 12,
+                ...selectedRowBg(isChecked),
+              }}
+            >
+              <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+                <BulkCheckbox
+                  checked={isChecked}
+                  onChange={(c) => bulk.toggleOne(p.id, c)}
+                  ariaLabel={`Seleccionar ${p.title}`}
+                />
               </span>
-            </span>
-            <span className="mono" style={{ width: 80, textAlign: "right", fontSize: 12 }}>
-              {p.readMinutes} min
-            </span>
-            <span className="mono" style={{ width: 110, textAlign: "right", fontSize: 11, color: "var(--muted)" }}>
-              {formatRelative(new Date(p.createdAt))}
-            </span>
-            <span className="row" style={{ width: 160, justifyContent: "flex-end", gap: 6 }}>
-              <button
-                onClick={() => setEditing(p)}
-                className="mono"
-                style={btnStyle("ghost")}
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => remove(p.id)}
-                disabled={busy}
-                className="mono"
-                style={btnStyle("danger")}
-              >
-                Borrar
-              </button>
-            </span>
-          </div>
-        ))}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{p.title}</div>
+                <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
+                  /blog/{p.slug}
+                </div>
+              </div>
+              <span className="mono" style={{ width: 120, fontSize: 11, color: "var(--ink-2)" }}>
+                {p.category || "—"}
+              </span>
+              <span style={{ width: 100 }}>
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    padding: "3px 8px",
+                    borderRadius: 4,
+                    background: p.publishedAt ? "var(--green-soft)" : "var(--bg-3)",
+                    color: p.publishedAt ? "var(--green-strong)" : "var(--muted)",
+                    fontWeight: 600,
+                  }}
+                >
+                  {p.publishedAt ? "PUBLISHED" : "DRAFT"}
+                </span>
+              </span>
+              <span className="mono" style={{ width: 80, textAlign: "right", fontSize: 12 }}>
+                {p.readMinutes} min
+              </span>
+              <span className="mono" style={{ width: 110, textAlign: "right", fontSize: 11, color: "var(--muted)" }}>
+                {formatRelative(new Date(p.createdAt))}
+              </span>
+              <span className="row" style={{ width: 160, justifyContent: "flex-end", gap: 6 }}>
+                <button
+                  onClick={() => setEditing(p)}
+                  className="mono"
+                  style={btnStyle("ghost")}
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => remove(p.id)}
+                  disabled={busy}
+                  className="mono"
+                  style={btnStyle("danger")}
+                >
+                  Borrar
+                </button>
+              </span>
+            </div>
+          );
+        })}
         {rows.length === 0 && (
           <div style={{ padding: 40, textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
             Sin posts aún. Escribe el primero.
@@ -195,6 +234,14 @@ export function BlogManager({ rows }: { rows: Row[] }) {
           err={err}
         />
       )}
+
+      <BulkActionBar
+        selectedCount={bulk.size}
+        entityLabel={{ singular: "post del blog", plural: "posts del blog" }}
+        onCancel={bulk.clear}
+        onDelete={() => bulkDelete.run([...bulk.allSelected])}
+        pending={bulkDelete.pending}
+      />
     </>
   );
 }

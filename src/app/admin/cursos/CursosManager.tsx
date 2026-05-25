@@ -12,6 +12,13 @@ import {
   suggestPricing,
 } from "@/lib/money";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import {
+  BulkActionBar,
+  BulkCheckbox,
+  selectedRowBg,
+  useBulkDelete,
+  useBulkSelection,
+} from "@/components/admin/BulkActions";
 
 type Accent = "accent" | "warm" | "green" | "navy" | "gold";
 
@@ -51,6 +58,28 @@ export function CursosManager({ rows }: { rows: Row[] }) {
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const bulk = useBulkSelection<string>();
+  const visibleIds = rows.map((p) => p.id);
+  const allSelected = visibleIds.length > 0 && visibleIds.every((id) => bulk.isSelected(id));
+  const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
+
+  const bulkDelete = useBulkDelete<string>({
+    url: "/api/admin/programs/bulk-delete",
+    entityLabel: { singular: "programa", plural: "programas" },
+    description:
+      "Borra también módulos, lecciones, cohortes/generaciones e inscripciones. " +
+      "ATENCIÓN: programas con ventas pagadas NO se pueden eliminar — se preservan automáticamente. " +
+      "Esta acción no se puede deshacer.",
+    successMessage: (b) => {
+      const parts = [`${b.deleted} ${b.deleted === 1 ? "programa eliminado" : "programas eliminados"}`];
+      const blocked = (b as { blocked?: unknown[] }).blocked ?? [];
+      if (blocked.length > 0) {
+        parts.push(`${blocked.length} ${blocked.length === 1 ? "bloqueado" : "bloqueados"} por tener ventas pagadas`);
+      }
+      return parts.join(" · ");
+    },
+    onSuccess: bulk.clear,
+  });
 
   async function createProgram(data: Record<string, unknown>) {
     setBusy(true);
@@ -154,8 +183,18 @@ export function CursosManager({ rows }: { rows: Row[] }) {
           fontFamily: "var(--font-mono)",
           textTransform: "uppercase",
           letterSpacing: "0.08em",
+          gap: 12,
         }}
       >
+        <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+          <BulkCheckbox
+            checked={allSelected}
+            indeterminate={someSelected}
+            onChange={(c) => bulk.toggleAllVisible(c, visibleIds)}
+            disabled={visibleIds.length === 0}
+            ariaLabel="Seleccionar todos los programas"
+          />
+        </span>
         <span style={{ flex: 2 }}>Programa</span>
         <span style={{ width: 110 }}>Tipo</span>
         <span style={{ width: 90, textAlign: "right" }}>Precio</span>
@@ -166,128 +205,139 @@ export function CursosManager({ rows }: { rows: Row[] }) {
       </div>
 
       <div className="col" style={{ gap: 0 }}>
-        {rows.map((p) => (
-          <div
-            key={p.id}
-            className="row"
-            style={{
-              padding: "12px 24px",
-              borderBottom: "1px solid var(--line)",
-              background: "white",
-            }}
-          >
-            <div style={{ flex: 2, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{p.title}</div>
-              <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
-                /{p.slug}
-              </div>
-            </div>
-            <span
-              className="mono"
+        {rows.map((p) => {
+          const isChecked = bulk.isSelected(p.id);
+          return (
+            <div
+              key={p.id}
+              className="row"
               style={{
-                width: 110,
-                fontSize: 11,
-                color: "var(--ink-2)",
-                textTransform: "uppercase",
+                padding: "12px 24px",
+                borderBottom: "1px solid var(--line)",
+                gap: 12,
+                ...selectedRowBg(isChecked),
               }}
             >
-              {p.type}
-            </span>
-            <span className="mono" style={{ width: 90, textAlign: "right", fontSize: 13, fontWeight: 700 }}>
-              {formatMoney(p.priceUsd, p.currency)}
-            </span>
-            <span className="mono" style={{ width: 70, textAlign: "right", fontSize: 12 }}>
-              {p.modulesCount}
-            </span>
-            <span className="mono" style={{ width: 70, textAlign: "right", fontSize: 12 }}>
-              {p.enrollmentsCount}
-            </span>
-            <span style={{ width: 80 }}>
+              <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+                <BulkCheckbox
+                  checked={isChecked}
+                  onChange={(c) => bulk.toggleOne(p.id, c)}
+                  ariaLabel={`Seleccionar ${p.title}`}
+                />
+              </span>
+              <div style={{ flex: 2, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{p.title}</div>
+                <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
+                  /{p.slug}
+                </div>
+              </div>
               <span
                 className="mono"
                 style={{
-                  fontSize: 10,
-                  padding: "3px 8px",
-                  borderRadius: 4,
-                  background: p.isActive ? "var(--green-soft)" : "var(--bg-3)",
-                  color: p.isActive ? "var(--green-strong)" : "var(--muted)",
-                  fontWeight: 600,
+                  width: 110,
+                  fontSize: 11,
+                  color: "var(--ink-2)",
+                  textTransform: "uppercase",
                 }}
               >
-                {p.isActive ? "ACTIVE" : "DRAFT"}
+                {p.type}
               </span>
-            </span>
-            <span className="row" style={{ width: 260, justifyContent: "flex-end", gap: 6 }}>
-              <a
-                href={`/admin/cursos/${p.id}?tab=lessons`}
-                className="mono"
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  padding: "5px 10px",
-                  borderRadius: 6,
-                  background: "var(--accent-soft)",
-                  color: "var(--accent)",
-                  border: "1px solid var(--line)",
-                  cursor: "pointer",
-                  textDecoration: "none",
-                }}
-              >
-                Lecciones
-              </a>
-              <a
-                href={`/admin/cursos/${p.id}`}
-                className="mono"
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  padding: "5px 10px",
-                  borderRadius: 6,
-                  background: "var(--bg-2)",
-                  color: "var(--ink)",
-                  border: "1px solid var(--line)",
-                  cursor: "pointer",
-                  textDecoration: "none",
-                }}
-              >
-                Abrir
-              </a>
-              <button
-                onClick={() => setEditing(p)}
-                className="mono"
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  padding: "5px 10px",
-                  borderRadius: 6,
-                  background: "var(--bg-2)",
-                  color: "var(--ink)",
-                  border: "1px solid var(--line)",
-                  cursor: "pointer",
-                }}
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => deleteProgram(p.id)}
-                disabled={busy}
-                className="mono"
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  padding: "5px 10px",
-                  borderRadius: 6,
-                  background: "white",
-                  color: "var(--red)",
-                  border: "1px solid var(--line)",
-                  cursor: "pointer",
-                }}
-              >
-                Borrar
-              </button>
-            </span>
-          </div>
-        ))}
+              <span className="mono" style={{ width: 90, textAlign: "right", fontSize: 13, fontWeight: 700 }}>
+                {formatMoney(p.priceUsd, p.currency)}
+              </span>
+              <span className="mono" style={{ width: 70, textAlign: "right", fontSize: 12 }}>
+                {p.modulesCount}
+              </span>
+              <span className="mono" style={{ width: 70, textAlign: "right", fontSize: 12 }}>
+                {p.enrollmentsCount}
+              </span>
+              <span style={{ width: 80 }}>
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    padding: "3px 8px",
+                    borderRadius: 4,
+                    background: p.isActive ? "var(--green-soft)" : "var(--bg-3)",
+                    color: p.isActive ? "var(--green-strong)" : "var(--muted)",
+                    fontWeight: 600,
+                  }}
+                >
+                  {p.isActive ? "ACTIVE" : "DRAFT"}
+                </span>
+              </span>
+              <span className="row" style={{ width: 260, justifyContent: "flex-end", gap: 6 }}>
+                <a
+                  href={`/admin/cursos/${p.id}?tab=lessons`}
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: "5px 10px",
+                    borderRadius: 6,
+                    background: "var(--accent-soft)",
+                    color: "var(--accent)",
+                    border: "1px solid var(--line)",
+                    cursor: "pointer",
+                    textDecoration: "none",
+                  }}
+                >
+                  Lecciones
+                </a>
+                <a
+                  href={`/admin/cursos/${p.id}`}
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: "5px 10px",
+                    borderRadius: 6,
+                    background: "var(--bg-2)",
+                    color: "var(--ink)",
+                    border: "1px solid var(--line)",
+                    cursor: "pointer",
+                    textDecoration: "none",
+                  }}
+                >
+                  Abrir
+                </a>
+                <button
+                  onClick={() => setEditing(p)}
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: "5px 10px",
+                    borderRadius: 6,
+                    background: "var(--bg-2)",
+                    color: "var(--ink)",
+                    border: "1px solid var(--line)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => deleteProgram(p.id)}
+                  disabled={busy}
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: "5px 10px",
+                    borderRadius: 6,
+                    background: "white",
+                    color: "var(--red)",
+                    border: "1px solid var(--line)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Borrar
+                </button>
+              </span>
+            </div>
+          );
+        })}
         {rows.length === 0 && (
           <div style={{ padding: 40, textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
             Sin programas aún. Crea el primero.
@@ -308,6 +358,15 @@ export function CursosManager({ rows }: { rows: Row[] }) {
           err={err}
         />
       )}
+
+      <BulkActionBar
+        selectedCount={bulk.size}
+        entityLabel={{ singular: "programa", plural: "programas" }}
+        subtitle="PROGRAMAS CON VENTAS PAGADAS SE PRESERVAN AUTOMÁTICAMENTE"
+        onCancel={bulk.clear}
+        onDelete={() => bulkDelete.run([...bulk.allSelected])}
+        pending={bulkDelete.pending}
+      />
     </>
   );
 }

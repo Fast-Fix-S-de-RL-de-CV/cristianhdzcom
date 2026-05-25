@@ -3,6 +3,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatRelative } from "@/lib/utils";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import {
+  BulkActionBar,
+  BulkCheckbox,
+  selectedRowBg,
+  useBulkDelete,
+  useBulkSelection,
+} from "@/components/admin/BulkActions";
 
 type Post = {
   id: string;
@@ -94,11 +101,25 @@ export function ComunidadManager({
   );
 }
 
+/* ──────────────────── POSTS ──────────────────── */
+
 function PostsTab({ posts }: { posts: Post[] }) {
   const router = useRouter();
   const confirm = useConfirm();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
+  const bulk = useBulkSelection<string>();
+  const visibleIds = posts.map((p) => p.id);
+  const allSelected = visibleIds.length > 0 && visibleIds.every((id) => bulk.isSelected(id));
+  const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
+
+  const bulkDelete = useBulkDelete<string>({
+    url: "/api/admin/posts/bulk-delete",
+    entityLabel: { singular: "post", plural: "posts" },
+    description:
+      "Se borran también los likes y todos los comentarios asociados. Esta acción no se puede deshacer.",
+    onSuccess: bulk.clear,
+  });
 
   async function togglePin(id: string) {
     setBusy(id);
@@ -116,6 +137,7 @@ function PostsTab({ posts }: { posts: Post[] }) {
   async function remove(id: string) {
     const ok = await confirm({
       title: "¿Eliminar post?",
+      description: "Se borran también los likes y comentarios asociados.",
       confirmLabel: "Eliminar",
       tone: "danger",
     });
@@ -134,7 +156,16 @@ function PostsTab({ posts }: { posts: Post[] }) {
 
   return (
     <>
-      <div className="row" style={headerRowStyle()}>
+      <div className="row" style={{ ...headerRowStyle(), gap: 12 }}>
+        <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+          <BulkCheckbox
+            checked={allSelected}
+            indeterminate={someSelected}
+            onChange={(c) => bulk.toggleAllVisible(c, visibleIds)}
+            disabled={visibleIds.length === 0}
+            ariaLabel="Seleccionar todos los posts"
+          />
+        </span>
         <span style={{ width: 80 }}>ID</span>
         <span style={{ flex: 1 }}>Título / Autor</span>
         <span style={{ width: 60, textAlign: "right" }}>Likes</span>
@@ -144,74 +175,114 @@ function PostsTab({ posts }: { posts: Post[] }) {
         <span style={{ width: 100 }}>Fecha</span>
         <span style={{ width: 140, textAlign: "right" }}>Acciones</span>
       </div>
-      {posts.map((p) => (
-        <div key={p.id} className="row" style={rowStyle()}>
-          <span className="mono" style={{ width: 80, fontSize: 11, color: "var(--muted)" }}>
-            {p.id.slice(0, 8)}
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{p.title}</div>
-            <div className="mono" style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-              {p.authorName}
+      {posts.map((p) => {
+        const isChecked = bulk.isSelected(p.id);
+        return (
+          <div
+            key={p.id}
+            className="row"
+            style={{
+              padding: "12px 24px",
+              borderBottom: "1px solid var(--line)",
+              gap: 12,
+              ...selectedRowBg(isChecked),
+            }}
+          >
+            <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+              <BulkCheckbox
+                checked={isChecked}
+                onChange={(c) => bulk.toggleOne(p.id, c)}
+                ariaLabel={`Seleccionar ${p.title}`}
+              />
+            </span>
+            <span className="mono" style={{ width: 80, fontSize: 11, color: "var(--muted)" }}>
+              {p.id.slice(0, 8)}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{p.title}</div>
+              <div className="mono" style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                {p.authorName}
+              </div>
             </div>
+            <span className="mono" style={{ width: 60, textAlign: "right", fontSize: 12 }}>
+              {p.likesCount}
+            </span>
+            <span className="mono" style={{ width: 70, textAlign: "right", fontSize: 12 }}>
+              {p.commentsCount}
+            </span>
+            <span className="mono" style={{ width: 60, textAlign: "right", fontSize: 12 }}>
+              {p.viewsCount}
+            </span>
+            <span style={{ width: 80 }}>
+              <button
+                onClick={() => togglePin(p.id)}
+                disabled={busy === p.id}
+                className="mono"
+                style={{
+                  fontSize: 10,
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  background: p.pinned ? "var(--warm-soft)" : "var(--bg-2)",
+                  color: p.pinned ? "var(--warm)" : "var(--muted)",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border: "1px solid var(--line)",
+                }}
+              >
+                {p.pinned ? "📌 PIN" : "Pin"}
+              </button>
+            </span>
+            <span className="mono" style={{ width: 100, fontSize: 11, color: "var(--muted)" }}>
+              {formatRelative(new Date(p.createdAt))}
+            </span>
+            <span className="row" style={{ width: 140, justifyContent: "flex-end", gap: 6 }}>
+              <button
+                onClick={() => remove(p.id)}
+                disabled={busy === p.id}
+                className="mono"
+                style={btnStyle("danger")}
+              >
+                Borrar
+              </button>
+            </span>
           </div>
-          <span className="mono" style={{ width: 60, textAlign: "right", fontSize: 12 }}>
-            {p.likesCount}
-          </span>
-          <span className="mono" style={{ width: 70, textAlign: "right", fontSize: 12 }}>
-            {p.commentsCount}
-          </span>
-          <span className="mono" style={{ width: 60, textAlign: "right", fontSize: 12 }}>
-            {p.viewsCount}
-          </span>
-          <span style={{ width: 80 }}>
-            <button
-              onClick={() => togglePin(p.id)}
-              disabled={busy === p.id}
-              className="mono"
-              style={{
-                fontSize: 10,
-                padding: "3px 8px",
-                borderRadius: 4,
-                background: p.pinned ? "var(--warm-soft)" : "var(--bg-2)",
-                color: p.pinned ? "var(--warm)" : "var(--muted)",
-                fontWeight: 600,
-                cursor: "pointer",
-                border: "1px solid var(--line)",
-              }}
-            >
-              {p.pinned ? "📌 PIN" : "Pin"}
-            </button>
-          </span>
-          <span className="mono" style={{ width: 100, fontSize: 11, color: "var(--muted)" }}>
-            {formatRelative(new Date(p.createdAt))}
-          </span>
-          <span className="row" style={{ width: 140, justifyContent: "flex-end", gap: 6 }}>
-            <button
-              onClick={() => remove(p.id)}
-              disabled={busy === p.id}
-              className="mono"
-              style={btnStyle("danger")}
-            >
-              Borrar
-            </button>
-          </span>
-        </div>
-      ))}
+        );
+      })}
       {posts.length === 0 && (
         <div style={{ padding: 40, textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
           Sin posts.
         </div>
       )}
+
+      <BulkActionBar
+        selectedCount={bulk.size}
+        entityLabel={{ singular: "post", plural: "posts" }}
+        subtitle="LIKES Y COMENTARIOS TAMBIÉN SE BORRAN"
+        onCancel={bulk.clear}
+        onDelete={() => bulkDelete.run([...bulk.allSelected])}
+        pending={bulkDelete.pending}
+      />
     </>
   );
 }
+
+/* ──────────────────── COMMENTS ──────────────────── */
 
 function CommentsTab({ comments }: { comments: Comment[] }) {
   const router = useRouter();
   const confirm = useConfirm();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
+  const bulk = useBulkSelection<string>();
+  const visibleIds = comments.map((c) => c.id);
+  const allSelected = visibleIds.length > 0 && visibleIds.every((id) => bulk.isSelected(id));
+  const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
+
+  const bulkDelete = useBulkDelete<string>({
+    url: "/api/admin/comments/bulk-delete",
+    entityLabel: { singular: "comentario", plural: "comentarios" },
+    onSuccess: bulk.clear,
+  });
 
   async function remove(id: string) {
     const ok = await confirm({
@@ -234,56 +305,94 @@ function CommentsTab({ comments }: { comments: Comment[] }) {
 
   return (
     <>
-      <div className="row" style={headerRowStyle()}>
+      <div className="row" style={{ ...headerRowStyle(), gap: 12 }}>
+        <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+          <BulkCheckbox
+            checked={allSelected}
+            indeterminate={someSelected}
+            onChange={(c) => bulk.toggleAllVisible(c, visibleIds)}
+            disabled={visibleIds.length === 0}
+            ariaLabel="Seleccionar todos los comentarios"
+          />
+        </span>
         <span style={{ width: 140 }}>Autor</span>
         <span style={{ width: 100 }}>Post ID</span>
         <span style={{ flex: 1 }}>Fragmento</span>
         <span style={{ width: 100 }}>Fecha</span>
         <span style={{ width: 100, textAlign: "right" }}>Acciones</span>
       </div>
-      {comments.map((c) => (
-        <div key={c.id} className="row" style={rowStyle()}>
-          <span style={{ width: 140, fontSize: 13, fontWeight: 600 }}>{c.authorName}</span>
-          <span className="mono" style={{ width: 100, fontSize: 11, color: "var(--muted)" }}>
-            {c.postId.slice(0, 8)}
-          </span>
-          <span
+      {comments.map((c) => {
+        const isChecked = bulk.isSelected(c.id);
+        return (
+          <div
+            key={c.id}
+            className="row"
             style={{
-              flex: 1,
-              fontSize: 13,
-              color: "var(--ink-2)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              minWidth: 0,
+              padding: "12px 24px",
+              borderBottom: "1px solid var(--line)",
+              gap: 12,
+              ...selectedRowBg(isChecked),
             }}
           >
-            {c.body.slice(0, 120)}
-            {c.body.length > 120 ? "…" : ""}
-          </span>
-          <span className="mono" style={{ width: 100, fontSize: 11, color: "var(--muted)" }}>
-            {formatRelative(new Date(c.createdAt))}
-          </span>
-          <span className="row" style={{ width: 100, justifyContent: "flex-end" }}>
-            <button
-              onClick={() => remove(c.id)}
-              disabled={busy === c.id}
-              className="mono"
-              style={btnStyle("danger")}
+            <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+              <BulkCheckbox
+                checked={isChecked}
+                onChange={(checked) => bulk.toggleOne(c.id, checked)}
+                ariaLabel={`Seleccionar comentario de ${c.authorName}`}
+              />
+            </span>
+            <span style={{ width: 140, fontSize: 13, fontWeight: 600 }}>{c.authorName}</span>
+            <span className="mono" style={{ width: 100, fontSize: 11, color: "var(--muted)" }}>
+              {c.postId.slice(0, 8)}
+            </span>
+            <span
+              style={{
+                flex: 1,
+                fontSize: 13,
+                color: "var(--ink-2)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                minWidth: 0,
+              }}
             >
-              Borrar
-            </button>
-          </span>
-        </div>
-      ))}
+              {c.body.slice(0, 120)}
+              {c.body.length > 120 ? "…" : ""}
+            </span>
+            <span className="mono" style={{ width: 100, fontSize: 11, color: "var(--muted)" }}>
+              {formatRelative(new Date(c.createdAt))}
+            </span>
+            <span className="row" style={{ width: 100, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => remove(c.id)}
+                disabled={busy === c.id}
+                className="mono"
+                style={btnStyle("danger")}
+              >
+                Borrar
+              </button>
+            </span>
+          </div>
+        );
+      })}
       {comments.length === 0 && (
         <div style={{ padding: 40, textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
           Sin comentarios.
         </div>
       )}
+
+      <BulkActionBar
+        selectedCount={bulk.size}
+        entityLabel={{ singular: "comentario", plural: "comentarios" }}
+        onCancel={bulk.clear}
+        onDelete={() => bulkDelete.run([...bulk.allSelected])}
+        pending={bulkDelete.pending}
+      />
     </>
   );
 }
+
+/* ──────────────────── CATEGORIES ──────────────────── */
 
 function CategoriesTab({ categories }: { categories: Category[] }) {
   const router = useRouter();
@@ -293,6 +402,17 @@ function CategoriesTab({ categories }: { categories: Category[] }) {
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const bulk = useBulkSelection<number>();
+  const visibleIds = categories.map((c) => c.id);
+  const allSelected = visibleIds.length > 0 && visibleIds.every((id) => bulk.isSelected(id));
+  const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
+
+  const bulkDelete = useBulkDelete<number>({
+    url: "/api/admin/categories/bulk-delete",
+    entityLabel: { singular: "categoría", plural: "categorías" },
+    description: "Los posts asignados a estas categorías quedarán sin categoría (no se borran).",
+    onSuccess: bulk.clear,
+  });
 
   async function save(method: "POST" | "PUT", url: string, data: Partial<Category>) {
     setBusy(true);
@@ -343,7 +463,16 @@ function CategoriesTab({ categories }: { categories: Category[] }) {
           + Nueva categoría
         </button>
       </div>
-      <div className="row" style={headerRowStyle()}>
+      <div className="row" style={{ ...headerRowStyle(), gap: 12 }}>
+        <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+          <BulkCheckbox
+            checked={allSelected}
+            indeterminate={someSelected}
+            onChange={(c) => bulk.toggleAllVisible(c, visibleIds)}
+            disabled={visibleIds.length === 0}
+            ariaLabel="Seleccionar todas las categorías"
+          />
+        </span>
         <span style={{ width: 60 }}>ID</span>
         <span style={{ width: 60 }}>Emoji</span>
         <span style={{ flex: 1 }}>Nombre</span>
@@ -352,53 +481,80 @@ function CategoriesTab({ categories }: { categories: Category[] }) {
         <span style={{ width: 70, textAlign: "right" }}>Orden</span>
         <span style={{ width: 160, textAlign: "right" }}>Acciones</span>
       </div>
-      {categories.map((c) => (
-        <div key={c.id} className="row" style={rowStyle()}>
-          <span className="mono" style={{ width: 60, fontSize: 11, color: "var(--muted)" }}>
-            {c.id}
-          </span>
-          <span style={{ width: 60, fontSize: 18 }}>{c.emoji || "—"}</span>
-          <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{c.name}</span>
-          <span className="mono" style={{ flex: 1, fontSize: 11, color: "var(--muted)" }}>
-            {c.slug}
-          </span>
-          <span style={{ width: 100 }}>
-            {c.color ? (
-              <span
-                className="mono"
-                style={{
-                  fontSize: 10,
-                  padding: "2px 8px",
-                  borderRadius: 4,
-                  background: c.color,
-                  color: "white",
-                  fontWeight: 600,
-                }}
-              >
-                {c.color}
-              </span>
-            ) : (
-              <span style={{ color: "var(--muted)" }}>—</span>
-            )}
-          </span>
-          <span className="mono" style={{ width: 70, textAlign: "right", fontSize: 12 }}>
-            {c.sortOrder}
-          </span>
-          <span className="row" style={{ width: 160, justifyContent: "flex-end", gap: 6 }}>
-            <button onClick={() => setEditing(c)} className="mono" style={btnStyle("ghost")}>
-              Editar
-            </button>
-            <button onClick={() => remove(c.id)} disabled={busy} className="mono" style={btnStyle("danger")}>
-              Borrar
-            </button>
-          </span>
-        </div>
-      ))}
+      {categories.map((c) => {
+        const isChecked = bulk.isSelected(c.id);
+        return (
+          <div
+            key={c.id}
+            className="row"
+            style={{
+              padding: "12px 24px",
+              borderBottom: "1px solid var(--line)",
+              gap: 12,
+              ...selectedRowBg(isChecked),
+            }}
+          >
+            <span style={{ width: 24, display: "flex", alignItems: "center" }}>
+              <BulkCheckbox
+                checked={isChecked}
+                onChange={(checked) => bulk.toggleOne(c.id, checked)}
+                ariaLabel={`Seleccionar ${c.name}`}
+              />
+            </span>
+            <span className="mono" style={{ width: 60, fontSize: 11, color: "var(--muted)" }}>
+              {c.id}
+            </span>
+            <span style={{ width: 60, fontSize: 18 }}>{c.emoji || "—"}</span>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{c.name}</span>
+            <span className="mono" style={{ flex: 1, fontSize: 11, color: "var(--muted)" }}>
+              {c.slug}
+            </span>
+            <span style={{ width: 100 }}>
+              {c.color ? (
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    padding: "2px 8px",
+                    borderRadius: 4,
+                    background: c.color,
+                    color: "white",
+                    fontWeight: 600,
+                  }}
+                >
+                  {c.color}
+                </span>
+              ) : (
+                <span style={{ color: "var(--muted)" }}>—</span>
+              )}
+            </span>
+            <span className="mono" style={{ width: 70, textAlign: "right", fontSize: 12 }}>
+              {c.sortOrder}
+            </span>
+            <span className="row" style={{ width: 160, justifyContent: "flex-end", gap: 6 }}>
+              <button onClick={() => setEditing(c)} className="mono" style={btnStyle("ghost")}>
+                Editar
+              </button>
+              <button onClick={() => remove(c.id)} disabled={busy} className="mono" style={btnStyle("danger")}>
+                Borrar
+              </button>
+            </span>
+          </div>
+        );
+      })}
       {categories.length === 0 && (
         <div style={{ padding: 40, textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
           Sin categorías.
         </div>
       )}
+
+      <BulkActionBar
+        selectedCount={bulk.size}
+        entityLabel={{ singular: "categoría", plural: "categorías" }}
+        onCancel={bulk.clear}
+        onDelete={() => bulkDelete.run([...bulk.allSelected])}
+        pending={bulkDelete.pending}
+      />
 
       {(creating || editing) && (
         <CategoryDialog
@@ -587,13 +743,5 @@ function headerRowStyle(): React.CSSProperties {
     fontFamily: "var(--font-mono)",
     textTransform: "uppercase",
     letterSpacing: "0.08em",
-  };
-}
-
-function rowStyle(): React.CSSProperties {
-  return {
-    padding: "12px 24px",
-    borderBottom: "1px solid var(--line)",
-    background: "white",
   };
 }
