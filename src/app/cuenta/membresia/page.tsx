@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
@@ -9,10 +9,45 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { getActiveMembership, getCreditBalance } from "@/lib/membership";
 import { MembershipManageClient } from "./MembershipManageClient";
+import { getStripe, finalizeCheckoutSession, loginUserIfNeeded, isStripeConfigured } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
-export default async function MembresiaCuentaPage() {
+export default async function MembresiaCuentaPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ session_id?: string; welcome?: string; new?: string }>;
+}) {
+  const sp = searchParams ? await searchParams : {};
+
+  // Fallback al webhook si volvemos de Stripe con session_id.
+  if (sp.session_id && isStripeConfigured()) {
+    try {
+      const stripe = getStripe();
+      const session = await stripe.checkout.sessions.retrieve(sp.session_id, {
+        expand: ["subscription"],
+      });
+      const [existing] = await db
+        .select({ id: schema.orders.id, userId: schema.orders.userId })
+        .from(schema.orders)
+        .where(sql`${schema.orders.metadata}->>'stripeSessionId' = ${sp.session_id}`)
+        .limit(1);
+      if (!existing && (session.payment_status === "paid" || session.mode === "subscription")) {
+        const result = await finalizeCheckoutSession(session);
+        if (result.createdNewAccount) {
+          const [newOrder] = await db
+            .select({ userId: schema.orders.userId })
+            .from(schema.orders)
+            .where(eq(schema.orders.id, result.orderId))
+            .limit(1);
+          if (newOrder?.userId) await loginUserIfNeeded(newOrder.userId);
+        }
+      }
+    } catch (e) {
+      console.error("[cuenta/membresia] finalize:", e);
+    }
+  }
+
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/cuenta/membresia");
 

@@ -134,7 +134,15 @@ export function LibroCheckoutClient({
           toast.error(msg);
           return;
         }
-        router.push(json.redirectTo);
+        // ── MODO STRIPE: redirigir a Stripe Checkout ──
+        if (json.url) {
+          window.location.href = json.url;
+          return;
+        }
+        // ── MODO DEMO ──
+        if (json.redirectTo) {
+          router.push(json.redirectTo);
+        }
       } catch {
         toast.error("Error de red al procesar la compra.");
       }

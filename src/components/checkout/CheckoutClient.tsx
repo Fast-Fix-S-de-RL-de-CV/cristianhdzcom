@@ -105,14 +105,21 @@ export function CheckoutClient({
           country,
           phone,
           paymentMethod,
-          card: paymentMethod === "card" ? { number: cardNumber, exp: cardExp, cvc: cardCvc, zip: cardZip } : undefined,
           bumps: BUMPS.filter((b) => activeBumps[b.id]).map((b) => ({ id: b.id, title: b.title, priceCents: b.price * 100 })),
           couponCode: couponApplied ? coupon : undefined,
         }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || "Error");
-      router.push(`/checkout/${program.slug}/confirmacion?order=${j.orderId}`);
+      // ── MODO STRIPE: redirigir a Stripe Checkout ──
+      if (j.url) {
+        window.location.href = j.url;
+        return;
+      }
+      // ── MODO DEMO (sin Stripe): ir directo a confirmación ──
+      if (j.orderId) {
+        router.push(j.redirectTo ?? `/checkout/${program.slug}/confirmacion?order=${j.orderId}`);
+      }
     } catch (e: any) {
       setError(e.message || "No pudimos procesar tu pago.");
     } finally {

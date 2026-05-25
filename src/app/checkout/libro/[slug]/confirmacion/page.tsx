@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { getStripe, finalizeCheckoutSession, loginUserIfNeeded, isStripeConfigured } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +14,44 @@ export default async function ConfirmacionLibroPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ order?: string; new?: string }>;
+  searchParams: Promise<{ order?: string; new?: string; session_id?: string }>;
 }) {
   const { slug } = await params;
-  const { order: orderId, new: isNewAccount } = await searchParams;
-  const accountWasCreated = isNewAccount === "1";
+  const { order: orderIdParam, new: isNewAccount, session_id: sessionId } = await searchParams;
+  let orderId = orderIdParam ?? null;
+  let accountWasCreated = isNewAccount === "1";
+
+  // Si vino de Stripe (session_id), finalizar aquí como fallback al webhook.
+  if (!orderId && sessionId && isStripeConfigured()) {
+    try {
+      const stripe = getStripe();
+      const session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ["payment_intent"],
+      });
+      const [existing] = await db
+        .select({ id: schema.orders.id, userId: schema.orders.userId })
+        .from(schema.orders)
+        .where(sql`${schema.orders.metadata}->>'stripeSessionId' = ${sessionId}`)
+        .limit(1);
+      if (existing) {
+        orderId = existing.id;
+      } else if (session.payment_status === "paid") {
+        const result = await finalizeCheckoutSession(session);
+        orderId = result.orderId;
+        accountWasCreated = accountWasCreated || result.createdNewAccount;
+        if (result.createdNewAccount) {
+          const [newOrder] = await db
+            .select({ userId: schema.orders.userId })
+            .from(schema.orders)
+            .where(eq(schema.orders.id, result.orderId))
+            .limit(1);
+          if (newOrder?.userId) await loginUserIfNeeded(newOrder.userId);
+        }
+      }
+    } catch (e) {
+      console.error("[checkout/libro/confirmacion]", e);
+    }
+  }
 
   // Datos del producto comprado (para mostrar título + cover)
   const [product] = await db.select().from(schema.books).where(eq(schema.books.slug, slug)).limit(1);
