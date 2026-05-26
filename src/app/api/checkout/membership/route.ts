@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { getStripe, siteUrl, isStripeConfigured, finalizeCheckoutSession } from "@/lib/stripe";
+import { usdToMxnCents, MXN_PER_USD } from "@/lib/fx";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -107,29 +108,26 @@ export async function POST(req: Request) {
   }
 
   // ── MODO STRIPE BILLING (mode=subscription) ──
+  // Sesión en MXN para soporte LATAM + PayPal en suscripción.
+  // OXXO/SPEI no se permiten en suscripciones (limitación de Stripe).
   const stripe = getStripe();
 
-  // Crear (o reusar) un Price recurrente. Los hacemos inline con
-  // price_data → Stripe los crea y los recuerda por el `lookup_key`.
   const interval = billingCycle === "yearly" ? "year" : "month";
-  const lookupKey = `chdz-${planSlug}-${billingCycle}`;
+  const lookupKey = `chdz-${planSlug}-${billingCycle}-mxn`;
 
-  // Re-buscar Price existente con este lookup_key para no duplicar.
   const existingPrices = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 1 });
   let priceId: string;
   if (existingPrices.data.length > 0) {
     priceId = existingPrices.data[0].id;
   } else {
-    // Crear Product + Price
     const product = await stripe.products.create({
       name: `${plan.label} ${billingCycle === "yearly" ? "anual" : "mensual"}`,
       description: plan.tagline ?? undefined,
-      images: plan.emoji ? undefined : undefined,
     });
     const price = await stripe.prices.create({
       product: product.id,
-      unit_amount: priceUsd * 100,
-      currency: "usd",
+      unit_amount: usdToMxnCents(priceUsd),
+      currency: "mxn",
       recurring: { interval },
       lookup_key: lookupKey,
     });
@@ -138,7 +136,8 @@ export async function POST(req: Request) {
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
-    payment_method_types: ["card"],
+    // Sin payment_method_types: Stripe usa los activados que soporten
+    // suscripción (card + Link + PayPal cuando esté activado).
     line_items: [{ price: priceId, quantity: 1 }],
     customer_email: lower,
     success_url: `${siteUrl()}/cuenta/membresia?welcome=${planSlug}&session_id={CHECKOUT_SESSION_ID}`,
@@ -149,6 +148,7 @@ export async function POST(req: Request) {
       billingCycle,
       buyerName: buyer.name,
       buyerEmail: lower,
+      fxRate: String(MXN_PER_USD),
     },
     subscription_data: {
       metadata: {

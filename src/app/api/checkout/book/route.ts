@@ -9,6 +9,7 @@ import {
   isStripeConfigured,
   finalizeCheckoutSession,
 } from "@/lib/stripe";
+import { usdToMxnCents, MXN_PER_USD } from "@/lib/fx";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -146,13 +147,14 @@ export async function POST(req: Request) {
   }
 
   // ── MODO STRIPE ──
+  // Sesión en MXN para activar card + paypal + oxxo + customer_balance (SPEI).
   const stripe = getStripe();
   const line_items: import("stripe").Stripe.Checkout.SessionCreateParams.LineItem[] = [
     {
       quantity: 1,
       price_data: {
-        currency: "usd",
-        unit_amount: baseUsd * 100,
+        currency: "mxn",
+        unit_amount: usdToMxnCents(baseUsd),
         product_data: {
           name: product.title + (data.format === "physical" ? " (Físico firmado)" : data.format === "bundle" ? " (Bundle)" : " (Digital)"),
           description: product.subtitle ?? undefined,
@@ -163,8 +165,8 @@ export async function POST(req: Request) {
     ...validatedBumps.map((b) => ({
       quantity: 1,
       price_data: {
-        currency: "usd" as const,
-        unit_amount: b.priceUsd * 100,
+        currency: "mxn" as const,
+        unit_amount: usdToMxnCents(b.priceUsd),
         product_data: { name: b.title },
       },
     })),
@@ -172,7 +174,9 @@ export async function POST(req: Request) {
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
-    payment_method_types: ["card"],
+    // Sin payment_method_types: Stripe usa los activados en el dashboard
+    // (card + Apple/Google Pay + Link siempre; OXXO, SPEI, PayPal cuando
+    // estén activados).
     line_items,
     customer_email: data.buyer.email,
     shipping_address_collection: needsShipping
@@ -189,6 +193,7 @@ export async function POST(req: Request) {
       buyerEmail: data.buyer.email,
       shippingJson: data.shipping ? JSON.stringify(data.shipping) : "",
       bumpsJson: JSON.stringify(validatedBumps),
+      fxRate: String(MXN_PER_USD),
     },
   });
 

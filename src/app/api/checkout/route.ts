@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { getStripe, siteUrl, isStripeConfigured, finalizeCheckoutSession } from "@/lib/stripe";
+import { usdToMxnCents, MXN_PER_USD } from "@/lib/fx";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,11 +46,14 @@ export async function POST(req: Request) {
       return demoFlow(data, program);
     }
 
-    // ── MODO STRIPE: crear Checkout Session ──
+    // ── MODO STRIPE: crear Checkout Session en MXN ──
+    // OXXO + SPEI sólo se activan con currency=mxn. Convertimos USD→MXN con
+    // tasa fija (ver lib/fx.ts) y mantenemos el USD original en metadata
+    // para que la DB siga en USD.
     const stripe = getStripe();
 
     // Resolver descuento del cupón antes de armar line items.
-    let couponDiscountCents = 0;
+    let couponDiscountUsdCents = 0;
     if (data.couponCode) {
       const [coupon] = await db
         .select()
@@ -57,18 +61,19 @@ export async function POST(req: Request) {
         .where(eq(schema.coupons.code, data.couponCode.toUpperCase()))
         .limit(1);
       if (coupon?.active) {
-        const subtotal = program.priceUsd * 100 + data.bumps.reduce((s, b) => s + b.priceCents, 0);
-        couponDiscountCents =
-          coupon.kind === "amount" ? coupon.value : Math.round((subtotal * coupon.value) / 100);
+        const subtotalUsdCents = program.priceUsd * 100 + data.bumps.reduce((s, b) => s + b.priceCents, 0);
+        couponDiscountUsdCents =
+          coupon.kind === "amount" ? coupon.value : Math.round((subtotalUsdCents * coupon.value) / 100);
       }
     }
+    const couponDiscountMxnCents = Math.ceil(couponDiscountUsdCents * MXN_PER_USD);
 
     const line_items: import("stripe").Stripe.Checkout.SessionCreateParams.LineItem[] = [
       {
         quantity: 1,
         price_data: {
-          currency: "usd",
-          unit_amount: program.priceUsd * 100,
+          currency: "mxn",
+          unit_amount: usdToMxnCents(program.priceUsd),
           product_data: {
             name: program.title,
             description: program.subtitle ?? undefined,
@@ -79,8 +84,8 @@ export async function POST(req: Request) {
       ...data.bumps.map((b) => ({
         quantity: 1,
         price_data: {
-          currency: "usd",
-          unit_amount: b.priceCents,
+          currency: "mxn" as const,
+          unit_amount: Math.ceil(b.priceCents * MXN_PER_USD),
           product_data: { name: b.title },
         },
       })),
@@ -88,16 +93,16 @@ export async function POST(req: Request) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card"],
+      // Sin payment_method_types: Stripe muestra todos los activados en
+      // Dashboard → Settings → Payment methods que apliquen a la moneda
+      // (MXN). Cuando actives PayPal/OXXO/SPEI ahí, aparecen solos.
       line_items,
       customer_email: data.email,
-      // Stripe aplica el descuento como `discounts` (coupon o promotion code).
-      // Para mantenerlo simple usamos un coupon one-shot inline.
-      discounts: couponDiscountCents > 0
+      discounts: couponDiscountMxnCents > 0
         ? [{
             coupon: (await stripe.coupons.create({
-              amount_off: couponDiscountCents,
-              currency: "usd",
+              amount_off: couponDiscountMxnCents,
+              currency: "mxn",
               duration: "once",
               name: `Cupón ${data.couponCode ?? ""}`.trim(),
             })).id,
@@ -114,6 +119,7 @@ export async function POST(req: Request) {
         phone: data.phone ?? "",
         bumpsJson: JSON.stringify(data.bumps),
         couponCode: data.couponCode ?? "",
+        fxRate: String(MXN_PER_USD),
       },
     });
 
