@@ -48,7 +48,7 @@ export function ServicesGrid({ services }: { services: ServiceCard[] }) {
   );
 }
 
-function ServiceCardItem({ service: s }: { service: ServiceCard }) {
+export function ServiceCardItem({ service: s }: { service: ServiceCard }) {
   const isCta = s.isCtaCard;
   const accent = `oklch(42% 0.14 ${s.hue})`;
   const bannerBg = isCta

@@ -12,6 +12,7 @@ import { FAQAccordion } from "@/components/marketing/FAQAccordion";
 import { CurriculumAccordion } from "@/components/marketing/CurriculumAccordion";
 import { CourseCover } from "@/components/marketing/CourseCover";
 import { FreeEnrollButton } from "./FreeEnrollButton";
+import { getSiteSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
   const [program] = await db.select().from(schema.programs).where(eq(schema.programs.slug, slug)).limit(1);
   if (!program) notFound();
 
-  const [mods, openCohorts] = await Promise.all([
+  const [mods, openCohorts, hero] = await Promise.all([
     db.select().from(schema.modules).where(eq(schema.modules.programId, program.id)).orderBy(asc(schema.modules.sortOrder)),
     db
       .select()
@@ -49,6 +50,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
       .where(and(eq(schema.cohorts.programId, program.id), eq(schema.cohorts.isOpen, true)))
       .orderBy(asc(schema.cohorts.startsOn))
       .limit(1),
+    getSiteSettings(),
   ]);
   const nextCohort = openCohorts[0];
   const seatsLeft = nextCohort ? Math.max(0, nextCohort.seatsTotal - nextCohort.seatsTaken) : null;
@@ -65,38 +67,44 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
     });
   }
 
+  // Hero stat row derived ONLY from real program data — no invented claims.
+  // We show what we can actually verify: real module count, the program's
+  // own durationLabel if the admin set one, its type, and live cohort seats.
+  const programStats: [string, string][] = [];
+  if (mods.length > 0) programStats.push([String(mods.length), mods.length === 1 ? "Módulo" : "Módulos"]);
+  if (program.durationLabel && program.durationLabel.trim() !== "") {
+    programStats.push([program.durationLabel, "Duración"]);
+  }
+  programStats.push([program.type.charAt(0).toUpperCase() + program.type.slice(1), "Formato"]);
+  if (seatsLeft !== null && seatsLeft > 0) {
+    programStats.push([String(seatsLeft), seatsLeft === 1 ? "Cupo" : "Cupos"]);
+  }
+
   return (
     <div>
       <Nav />
 
-      {/* HERO */}
+      {/* HERO — izq: título + card de inscripción · der: foto + KPIs */}
       <section className="sec" style={{ paddingBottom: 56, position: "relative", overflow: "hidden" }}>
         <div className="mesh" />
         <div
           className="sales-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "1.2fr 1fr",
+            gridTemplateColumns: "1fr 1.1fr",
             gap: 56,
             position: "relative",
             alignItems: "flex-start",
           }}
         >
+          {/* ─── IZQUIERDA: breadcrumb + chips + título + subtítulo + CARD INSCRIBIR ─── */}
           <div>
             <div className="row" style={{ gap: 8, color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
               <Link href="/programas">Programas</Link>
               <span>/</span>
               <span style={{ color: "var(--ink)" }}>{program.title}</span>
             </div>
-            {program.coverUrl && program.coverUrl.trim() !== "" ? (
-              <CourseCover
-                coverUrl={program.coverUrl}
-                coverKind={program.coverKind}
-                radius={18}
-                aspectRatio="16/9"
-                style={{ marginBottom: 28, boxShadow: "0 18px 50px rgba(15,17,21,0.12)" }}
-              />
-            ) : null}
+
             <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
               {nextCohort && seatsLeft !== null && seatsLeft > 0 ? (
                 <>
@@ -111,34 +119,15 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
                 </Chip>
               )}
             </div>
-            <h1 style={{ fontSize: "clamp(56px, 7vw, 88px)", marginBottom: 24 }}>{program.title}</h1>
-            <p style={{ fontSize: 20, color: "var(--ink-2)", lineHeight: 1.5, maxWidth: 600 }}>
+
+            <h1 style={{ fontSize: "clamp(48px, 6vw, 76px)", marginBottom: 20, lineHeight: 1.05 }}>
+              {program.title}
+            </h1>
+            <p style={{ fontSize: 19, color: "var(--ink-2)", lineHeight: 1.5, marginBottom: 32, maxWidth: 560 }}>
               {program.subtitle}
             </p>
-            <div className="sales-stats-row" style={{ display: "flex", gap: 24, marginTop: 32, paddingTop: 24, borderTop: "1px solid var(--line)" }}>
-              {[
-                ["32h", "En vivo"],
-                [`${program.modulesCount || 12}`, "Módulos"],
-                ["4", "Productos reales"],
-                ["1:1", "Mentorías"],
-              ].map(([n, l]) => (
-                <div key={l} style={{ flex: 1 }}>
-                  <div className="serif" style={{ fontSize: 44 }}>
-                    {n}
-                  </div>
-                  <div
-                    className="mono"
-                    style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}
-                  >
-                    {l}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          <div>
-            <Card className="sales-pricing-sticky" style={{ padding: 28, position: "sticky", top: 100, boxShadow: "0 12px 40px rgba(15,17,21,0.08)" }}>
+            <Card className="sales-pricing-sticky" style={{ padding: 28, boxShadow: "0 12px 40px rgba(15,17,21,0.08)" }}>
               <div className="between" style={{ marginBottom: 16 }}>
                 <Chip variant="ink">{program.type.toUpperCase()} · GENERACIÓN</Chip>
                 <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
@@ -188,13 +177,10 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
                   ) : null}
 
                   <Link href={`/checkout/${program.slug}`}>
-                    <Button size="lg" style={{ width: "100%", justifyContent: "center", marginBottom: 10 }}>
+                    <Button size="lg" style={{ width: "100%", justifyContent: "center" }}>
                       Inscribirme ahora →
                     </Button>
                   </Link>
-                  <Button size="lg" variant="ghost" style={{ width: "100%", justifyContent: "center" }}>
-                    Reservar cupo con $99
-                  </Button>
                 </>
               )}
 
@@ -236,6 +222,60 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
               </div>
             </Card>
           </div>
+
+          {/* ─── DERECHA: foto del curso + KPIs ─── */}
+          <div style={{ position: "sticky", top: 100 }}>
+            {program.coverUrl && program.coverUrl.trim() !== "" ? (
+              <CourseCover
+                coverUrl={program.coverUrl}
+                coverKind={program.coverKind}
+                radius={18}
+                aspectRatio="16/9"
+                style={{ boxShadow: "0 18px 50px rgba(15,17,21,0.12)" }}
+              />
+            ) : (
+              <div
+                className="ph"
+                style={{ aspectRatio: "16/9", borderRadius: 18, boxShadow: "0 18px 50px rgba(15,17,21,0.12)" }}
+              >
+                PORTADA · {program.title.toUpperCase()}
+              </div>
+            )}
+
+            {programStats.length > 0 && (
+              <div
+                className="sales-stats-row"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${programStats.length}, 1fr)`,
+                  gap: 16,
+                  marginTop: 28,
+                  paddingTop: 24,
+                  borderTop: "1px solid var(--line)",
+                }}
+              >
+                {programStats.map(([n, l]) => (
+                  <div key={l}>
+                    <div className="serif" style={{ fontSize: 40, lineHeight: 1.05 }}>
+                      {n}
+                    </div>
+                    <div
+                      className="mono"
+                      style={{
+                        fontSize: 10,
+                        color: "var(--muted)",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        marginTop: 4,
+                      }}
+                    >
+                      {l}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -265,7 +305,10 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
             <div>
               <Eyebrow>Currículo</Eyebrow>
               <h2 style={{ fontSize: 56, marginTop: 16 }}>
-                {mods.length} módulos · 32 horas en vivo
+                {mods.length} {mods.length === 1 ? "módulo" : "módulos"}
+                {program.durationLabel && program.durationLabel.trim() !== ""
+                  ? ` · ${program.durationLabel}`
+                  : ""}
               </h2>
             </div>
           </div>
@@ -277,37 +320,42 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
       <section className="sec bdr-t" style={{ background: "var(--bg-2)" }}>
         <div className="instructor-grid" style={{ display: "grid", gridTemplateColumns: "0.7fr 1fr", gap: 56 }}>
           <div>
-            <div className="ph" style={{ aspectRatio: "4/5", borderRadius: 18 }}>
-              RETRATO · CRISTIAN
-            </div>
+            {hero.heroPortraitUrl ? (
+              <img
+                src={hero.heroPortraitUrl}
+                alt={hero.heroTitle}
+                style={{ width: "100%", aspectRatio: "4/5", borderRadius: 18, objectFit: "cover", display: "block" }}
+              />
+            ) : (
+              <div className="ph" style={{ aspectRatio: "4/5", borderRadius: 18 }}>
+                RETRATO · CRISTIAN
+              </div>
+            )}
           </div>
           <div>
             <Eyebrow>Tu instructor</Eyebrow>
-            <h2 style={{ fontSize: 64, marginTop: 16 }}>Cristian Hernández.</h2>
+            <h2 style={{ fontSize: 64, marginTop: 16 }}>{hero.heroTitle}</h2>
             <p className="serif" style={{ fontSize: 26, marginTop: 16, color: "var(--ink-2)", lineHeight: 1.3 }}>
               Autor, fundador de agencia, programador profesional con IA. Más de una década enseñando negocios sin dinero a
               empresarios reales.
             </p>
-            <div className="rule" style={{ margin: "32px 0" }} />
-            <div className="grid-3" style={{ gap: 24 }}>
-              {[
-                ["12+", "AÑOS ENSEÑANDO"],
-                ["2", "LIBROS PUBLICADOS"],
-                ["$4.2M", "FACTURADOS POR EGRESADOS"],
-                ["86+", "PRODUCTOS ENVIADOS CON IA"],
-                ["14", "PAÍSES ATENDIDOS"],
-                ["7", "AGENTES EN PRODUCCIÓN"],
-              ].map(([n, l]) => (
-                <div key={l}>
-                  <div className="serif" style={{ fontSize: 36 }}>
-                    {n}
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--muted)" }} className="mono">
-                    {l}
-                  </div>
+            {hero.heroStats && hero.heroStats.length > 0 && (
+              <>
+                <div className="rule" style={{ margin: "32px 0" }} />
+                <div className="grid-3" style={{ gap: 24 }}>
+                  {hero.heroStats.map((s) => (
+                    <div key={s.label}>
+                      <div className="serif" style={{ fontSize: 36 }}>
+                        {s.value}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--muted)" }} className="mono">
+                        {s.label}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         </div>
       </section>

@@ -9,6 +9,7 @@ import {
   useBulkDelete,
   useBulkSelection,
 } from "@/components/admin/BulkActions";
+import { MediaUploadField } from "@/components/admin/MediaUploadField";
 
 export type BookRow = {
   id: string;
@@ -492,9 +493,15 @@ function BookDialog({
               placeholder="Audio narrado por Cristian&#10;Plantillas + ejercicios&#10;Casos reales"
             />
           </Field>
-          <Field label="Imagen de portada (URL o /uploads/…)">
-            <input value={form.coverUrl} onChange={(e) => setForm({ ...form, coverUrl: e.target.value })} style={inputStyle()} />
-          </Field>
+          <MediaUploadField
+            label="Imagen de portada del libro"
+            url={form.coverUrl}
+            kind={form.coverUrl ? "image" : null}
+            onChange={(url) => setForm({ ...form, coverUrl: url })}
+            mode="image"
+            aspectRatio="3 / 4"
+            hint="Aspect ratio 3:4 (vertical, formato libro)."
+          />
 
           {/* Pricing */}
           {isBundle ? (

@@ -19,7 +19,13 @@ export type TallerBannerRow = {
   evergreenScheduleHint: string | null;
   tagline: string | null;
   recordingUrl: string | null;
+  badge1Text?: string | null;
+  badge1Color?: string | null;
+  badge2Text?: string | null;
+  badge2Color?: string | null;
 };
+
+type BadgeColor = "red" | "navy" | "warm" | "green" | "gold" | "muted" | "accent";
 
 /**
  * Banner horizontal COMPACTO para listado vertical de talleres.
@@ -65,64 +71,37 @@ export function TallerBanner({
         background: "white",
         border: "1px solid var(--line)",
         overflow: "hidden",
-        minHeight: 200,
       }}
     >
-      {/* IMAGEN — mitad izquierda
-          Patrón YouTube/Spotify: imagen completa (object-fit: contain)
-          + halo blureado del mismo color detrás para llenar bordes vacíos.
-          Así una imagen 1:1 o 16:9 se ve íntegra sin recortes. */}
+      {/* IMAGEN — mitad izquierda con aspect-ratio fijo 3:1.
+          La imagen sube al admin con dimensiones obligatorias 1500×500 (3:1)
+          y aquí se renderiza full-bleed (object-fit: cover, sin halo, sin
+          padding). Si por algún motivo el aspect difiere, cover recorta;
+          nunca hay bordes vacíos. */}
       <div
+        className="taller-banner-img"
         style={{
           position: "relative",
           background: "var(--bg-2)",
-          minHeight: 200,
+          aspectRatio: "3 / 1",
           overflow: "hidden",
         }}
       >
         {taller.coverUrl ? (
-          <>
-            {/* Capa 1: halo blureado de la misma imagen */}
-            <div
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                inset: 0,
-                backgroundImage: `url(${cssQuoteUrl(taller.coverUrl)})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                filter: "blur(24px) saturate(1.3) brightness(0.92)",
-                transform: "scale(1.15)",
-                opacity: 0.85,
-              }}
-            />
-            {/* Capa 2: imagen completa centrada */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={taller.coverUrl}
-                alt=""
-                loading="lazy"
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  width: "auto",
-                  height: "auto",
-                  objectFit: "contain",
-                  display: "block",
-                  boxShadow: "0 6px 20px rgba(15,17,21,0.15)",
-                }}
-              />
-            </div>
-          </>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={taller.coverUrl}
+            alt=""
+            loading="lazy"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
         ) : (
           <div
             style={{
@@ -140,33 +119,17 @@ export function TallerBanner({
             </span>
           </div>
         )}
-        {/* Badges sobrepuestos */}
-        <div
-          style={{
-            position: "absolute",
-            top: 10,
-            left: 10,
-            display: "flex",
-            gap: 6,
-            flexWrap: "wrap",
-            zIndex: 2,
-          }}
-        >
-          {taller.isEvergreen ? (
-            <Badge variant="evergreen">✦ EVERGREEN</Badge>
-          ) : taller.isLive ? (
-            <Badge variant="live">● EN VIVO</Badge>
-          ) : (
-            <Badge variant="warm">EN VIVO PRÓXIMAMENTE</Badge>
-          )}
-          {taller.hot && <Badge variant="hot">🔥 HOT</Badge>}
-        </div>
       </div>
 
-      {/* TEXTO — mitad derecha */}
+      {/* TEXTO — mitad derecha
+          Compactado: padding moderado, gaps mínimos, fila única para
+          badges + numeración + tagline. El alto del bloque debe quedar
+          alineado al alto natural de la imagen (aspect-ratio 3:1 del lado
+          izquierdo), sin estirar hacia abajo. */}
       <div
+        className="taller-banner-text"
         style={{
-          padding: "18px 22px",
+          padding: "clamp(14px, 1.6vw, 22px) clamp(18px, 2vw, 28px)",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -174,15 +137,34 @@ export function TallerBanner({
           minWidth: 0,
         }}
       >
+        {/* Línea única: badges + TALLER 0X + tagline */}
         <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {/* Badge 1 — custom o default según estado del taller */}
+          {(() => {
+            const text = taller.badge1Text?.trim();
+            const color = (taller.badge1Color as BadgeColor) ?? null;
+            if (text) return <Badge color={color ?? "navy"}>{text}</Badge>;
+            if (taller.isEvergreen) return <Badge color="navy">✦ EVERGREEN</Badge>;
+            if (taller.isLive) return <Badge color="red">● EN VIVO</Badge>;
+            return <Badge color="warm">EN VIVO PRÓXIMAMENTE</Badge>;
+          })()}
+          {/* Badge 2 — custom o "HOT" default si hot=true */}
+          {(() => {
+            const text = taller.badge2Text?.trim();
+            const color = (taller.badge2Color as BadgeColor) ?? null;
+            if (text) return <Badge color={color ?? "warm"}>{text}</Badge>;
+            if (taller.hot) return <Badge color="warm">🔥 HOT</Badge>;
+            return null;
+          })()}
           {index != null && (
             <span
               className="mono"
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 color: "var(--accent)",
                 letterSpacing: "0.1em",
-                fontWeight: 700,
+                fontWeight: 800,
+                paddingLeft: 4,
               }}
             >
               TALLER {String(index).padStart(2, "0")}
@@ -192,22 +174,21 @@ export function TallerBanner({
             <span
               className="mono"
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 color: "var(--muted)",
                 letterSpacing: "0.08em",
-                paddingLeft: index != null ? 10 : 0,
-                borderLeft: index != null ? "1px solid var(--line)" : "none",
               }}
             >
-              {taller.tagline.toUpperCase()}
+              · {taller.tagline.toUpperCase()}
             </span>
           )}
         </div>
+
         <h3
           className="serif"
           style={{
-            fontSize: "clamp(18px, 2vw, 24px)",
-            lineHeight: 1.15,
+            fontSize: "clamp(22px, 2.4vw, 32px)",
+            lineHeight: 1.1,
             margin: 0,
             color: "var(--ink)",
             display: "-webkit-box",
@@ -221,9 +202,9 @@ export function TallerBanner({
         {taller.description && (
           <p
             style={{
-              fontSize: 13,
+              fontSize: "clamp(13px, 0.95vw, 15px)",
               color: "var(--ink-2)",
-              lineHeight: 1.45,
+              lineHeight: 1.4,
               margin: 0,
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -237,11 +218,10 @@ export function TallerBanner({
         <div
           className="row"
           style={{
-            gap: 12,
+            gap: 14,
             flexWrap: "wrap",
-            fontSize: 11,
+            fontSize: 12,
             color: "var(--muted)",
-            marginTop: 2,
           }}
         >
           <span className="mono">📅 {dateLabel}</span>
@@ -251,22 +231,23 @@ export function TallerBanner({
         <div
           className="row"
           style={{
-            gap: 8,
+            gap: 10,
             alignItems: "center",
-            marginTop: 10,
+            marginTop: 4,
             flexWrap: "wrap",
           }}
         >
           <Link
             href={taller.link || `/programas`}
             style={{
-              padding: "8px 14px",
+              padding: "10px 20px",
               background: "var(--ink)",
               color: "white",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 700,
+              borderRadius: 9,
+              fontSize: 14,
+              fontWeight: 800,
               textDecoration: "none",
+              letterSpacing: "0.01em",
             }}
           >
             {isFree ? "Apartar gratis" : taller.isEvergreen ? "Verlo ahora" : "Reservar"} →
@@ -274,9 +255,9 @@ export function TallerBanner({
           <span
             className="mono"
             style={{
-              fontSize: 10,
-              fontWeight: 700,
-              padding: "5px 9px",
+              fontSize: 11,
+              fontWeight: 800,
+              padding: "8px 14px",
               borderRadius: 999,
               background: isFree
                 ? "color-mix(in srgb, var(--green-soft) 60%, white)"
@@ -289,7 +270,7 @@ export function TallerBanner({
                   ? "var(--accent)"
                   : "var(--ink)",
               border: "1px solid var(--line)",
-              letterSpacing: "0.04em",
+              letterSpacing: "0.05em",
             }}
           >
             {priceLabel}
@@ -301,30 +282,56 @@ export function TallerBanner({
 }
 
 function Badge({
-  variant,
+  color,
   children,
 }: {
-  variant: "evergreen" | "live" | "warm" | "hot";
+  color: BadgeColor;
   children: React.ReactNode;
 }) {
-  const map = {
-    evergreen: { bg: "rgba(11, 37, 72, 0.9)", color: "#F2C65A" },
-    live: { bg: "#DC4949", color: "white" },
-    warm: { bg: "rgba(255,255,255,0.92)", color: "#A85A2B" },
-    hot: { bg: "rgba(255,255,255,0.92)", color: "#A85A2B" },
+  // Paleta de badges para fondo blanco. Cualquier color del enum aquí debe
+  // verse legible en card blanco.
+  const map: Record<BadgeColor, { bg: string; color: string; border: string }> = {
+    red: { bg: "#DC4949", color: "white", border: "transparent" },
+    navy: { bg: "rgba(11, 37, 72, 0.95)", color: "#F2C65A", border: "transparent" },
+    warm: {
+      bg: "color-mix(in srgb, #A85A2B 12%, white)",
+      color: "#A85A2B",
+      border: "color-mix(in srgb, #A85A2B 28%, white)",
+    },
+    green: {
+      bg: "color-mix(in srgb, var(--green-strong, #2da064) 14%, white)",
+      color: "var(--green-strong, #2da064)",
+      border: "color-mix(in srgb, var(--green-strong, #2da064) 32%, white)",
+    },
+    gold: {
+      bg: "color-mix(in srgb, var(--accent, #D8A83F) 18%, white)",
+      color: "var(--accent, #D8A83F)",
+      border: "color-mix(in srgb, var(--accent, #D8A83F) 38%, white)",
+    },
+    muted: {
+      bg: "var(--bg-2)",
+      color: "var(--ink-2)",
+      border: "var(--line)",
+    },
+    accent: {
+      bg: "var(--accent, #D8A83F)",
+      color: "white",
+      border: "transparent",
+    },
   };
-  const m = map[variant];
+  const m = map[color] ?? map.muted;
   return (
     <span
       className="mono"
       style={{
-        padding: "3px 7px",
+        padding: "5px 10px",
         borderRadius: 999,
         background: m.bg,
         color: m.color,
-        fontSize: 9,
+        border: `1px solid ${m.border}`,
+        fontSize: 11,
         fontWeight: 800,
-        letterSpacing: "0.06em",
+        letterSpacing: "0.08em",
         textTransform: "uppercase",
       }}
     >
@@ -342,7 +349,3 @@ function formatDateShort(d: Date): string {
   });
 }
 
-/** Escapa la URL para CSS `url(...)`. */
-function cssQuoteUrl(url: string): string {
-  return url.replace(/"/g, '\\"').replace(/\)/g, "\\)");
-}

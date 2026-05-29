@@ -413,20 +413,33 @@ export default async function AdminDashboard() {
           <Card style={{ padding: 20 }}>
             <Eyebrow style={{ marginBottom: 14 }}>Acciones rápidas</Eyebrow>
             <div className="grid-4" style={{ gap: 12 }}>
-              {[
-                ["✍️", "Nuevo post de blog"],
-                ["📚", "Nuevo módulo curso"],
-                ["🎙️", "Crear taller en vivo"],
-                ["💸", "Enviar oferta generación"],
-                ["📩", "Email a alumnos"],
-                ["🏷️", "Cupón de descuento"],
-                ["🎯", "Lanzar campaña"],
-                ["🔁", "Reembolso manual"],
-              ].map(([i, l]) => (
-                <div key={l} className="row" style={{ padding: 12, background: "var(--bg-2)", borderRadius: 10, gap: 10, cursor: "pointer" }}>
+              {([
+                ["✍️", "Nuevo post de blog", "/admin/blog"],
+                ["📚", "Nuevo módulo curso", "/admin/cursos"],
+                ["🎙️", "Crear taller en vivo", "/admin/talleres"],
+                ["💸", "Marketing y ofertas", "/admin/marketing"],
+                ["📩", "Ver alumnos", "/admin/alumnos"],
+                ["🏷️", "Pagos y cobros", "/admin/pagos"],
+                ["🚀", "Servicios / Empresas", "/admin/servicios"],
+                ["💳", "Suscripciones", "/admin/suscripciones"],
+              ] as const).map(([i, l, href]) => (
+                <a
+                  key={l}
+                  href={href}
+                  className="row"
+                  style={{
+                    padding: 12,
+                    background: "var(--bg-2)",
+                    borderRadius: 10,
+                    gap: 10,
+                    cursor: "pointer",
+                    textDecoration: "none",
+                    color: "var(--ink)",
+                  }}
+                >
                   <span style={{ fontSize: 16 }}>{i}</span>
                   <span style={{ fontSize: 13, fontWeight: 500 }}>{l}</span>
-                </div>
+                </a>
               ))}
             </div>
           </Card>

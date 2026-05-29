@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db, schema } from "@/db";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Card } from "@/components/ui/Card";
@@ -12,11 +12,33 @@ import { formatMoney } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProgramsPage() {
+// Maps the ?filtro= search-param value to the program `type` stored in the DB
+// and the visible button label. `null` type = "Todos" (no type filter).
+const FILTERS: { key: string; label: string; type: string | null }[] = [
+  { key: "todos", label: "Todos", type: null },
+  { key: "taller", label: "Talleres", type: "taller" },
+  { key: "curso", label: "Cursos", type: "curso" },
+  { key: "cert", label: "Certificación", type: "certificacion" },
+  { key: "consultoria", label: "Consultoría", type: "consultoria" },
+  { key: "agencia", label: "Agencia", type: "agencia" },
+];
+
+export default async function ProgramsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filtro?: string }>;
+}) {
+  const { filtro } = await searchParams;
+  const active = FILTERS.find((f) => f.key === filtro) ?? FILTERS[0];
+
   const programs = await db
     .select()
     .from(schema.programs)
-    .where(eq(schema.programs.isActive, true))
+    .where(
+      active.type
+        ? and(eq(schema.programs.isActive, true), eq(schema.programs.type, active.type))
+        : eq(schema.programs.isActive, true),
+    )
     .orderBy(asc(schema.programs.sortOrder));
 
   return (
@@ -49,17 +71,13 @@ export default async function ProgramsPage() {
           }}
         >
           <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-            {["Todos", "Talleres", "Cursos", "Certificación", "Consultoría", "Agencia"].map((f, i) => (
-              <Button key={f} variant={i === 0 ? "primary" : "ghost"} size="sm">
-                {f}
-              </Button>
+            {FILTERS.map((f) => (
+              <Link key={f.key} href={f.key === "todos" ? "/programas" : `/programas?filtro=${f.key}`}>
+                <Button variant={f.key === active.key ? "primary" : "ghost"} size="sm">
+                  {f.label}
+                </Button>
+              </Link>
             ))}
-          </div>
-          <div className="row" style={{ gap: 16 }}>
-            <span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
-              Ordenar por
-            </span>
-            <span style={{ fontSize: 13, fontWeight: 500 }}>Recomendados ↓</span>
           </div>
         </div>
       </section>

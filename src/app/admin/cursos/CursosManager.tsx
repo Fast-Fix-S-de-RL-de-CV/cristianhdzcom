@@ -19,6 +19,8 @@ import {
   useBulkDelete,
   useBulkSelection,
 } from "@/components/admin/BulkActions";
+import { ActiveToggle } from "@/components/admin/ActiveToggle";
+import { MediaUploadField } from "@/components/admin/MediaUploadField";
 
 type Accent = "accent" | "warm" | "green" | "navy" | "gold";
 
@@ -128,6 +130,19 @@ export function CursosManager({ rows }: { rows: Row[] }) {
     }
   }
 
+  async function toggleActive(id: string, next: boolean) {
+    const res = await fetch(`/api/admin/programs/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: next }),
+    });
+    if (!res.ok) {
+      toast.error("No se pudo cambiar el estado");
+      throw new Error("toggle_failed");
+    }
+    router.refresh();
+  }
+
   async function deleteProgram(id: string) {
     const ok = await confirm({
       title: "¿Eliminar este programa?",
@@ -201,7 +216,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
         <span style={{ width: 90, textAlign: "right" }}>Precio</span>
         <span style={{ width: 70, textAlign: "right" }}>Módulos</span>
         <span style={{ width: 70, textAlign: "right" }}>Alumnos</span>
-        <span style={{ width: 80 }}>Status</span>
+        <span style={{ width: 80, textAlign: "center" }}>Activo</span>
         <span style={{ width: 260, textAlign: "right" }}>Acciones</span>
       </div>
 
@@ -252,20 +267,12 @@ export function CursosManager({ rows }: { rows: Row[] }) {
               <span className="mono" style={{ width: 70, textAlign: "right", fontSize: 12 }}>
                 {p.enrollmentsCount}
               </span>
-              <span style={{ width: 80 }}>
-                <span
-                  className="mono"
-                  style={{
-                    fontSize: 10,
-                    padding: "3px 8px",
-                    borderRadius: 4,
-                    background: p.isActive ? "var(--green-soft)" : "var(--bg-3)",
-                    color: p.isActive ? "var(--green-strong)" : "var(--muted)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {p.isActive ? "ACTIVE" : "DRAFT"}
-                </span>
+              <span style={{ width: 80, display: "flex", justifyContent: "center" }}>
+                <ActiveToggle
+                  value={p.isActive}
+                  onToggle={(next) => toggleActive(p.id, next)}
+                  ariaLabel={`Activar/desactivar ${p.title}`}
+                />
               </span>
               <span className="row" style={{ width: 260, justifyContent: "flex-end", gap: 6 }}>
                 <a
@@ -515,10 +522,13 @@ function ProgramDialog({
                 : "Solo a-z, 0-9 y guiones simples. Ej: aprende-a-programar-con-ia"}
             </div>
           </Field>
-          <CoverField
+          <MediaUploadField
+            label="Portada del curso (imagen o video)"
             url={form.coverUrl}
             kind={form.coverKind}
             onChange={(url, kind) => setForm((p) => ({ ...p, coverUrl: url, coverKind: kind }))}
+            mode="image-or-video"
+            aspectRatio="16 / 9"
           />
           <Field label="Subtítulo (max 240)">
             <textarea
@@ -1394,223 +1404,3 @@ function AmountInput({
   );
 }
 
-/**
- * CoverField — Imagen o video de portada del curso.
- *
- * Dos formas de cargarla:
- *   1. "Subir archivo": file picker → POST /api/admin/upload → URL local
- *      (imágenes hasta 8MB, videos cortos hasta 50MB).
- *   2. "Pegar URL": para Vimeo/YouTube o assets ya hosteados en CDN.
- *
- * El preview se muestra arriba (mantiene aspect 16:9). Para video que
- * sea archivo subido o URL .mp4/.webm, usa <video>. Para Vimeo/YouTube
- * usa iframe embebido.
- */
-function CoverField({
-  url,
-  kind,
-  onChange,
-}: {
-  url: string;
-  kind: "image" | "video" | null;
-  onChange: (url: string, kind: "image" | "video" | null) => void;
-}) {
-  const fileRef = useRef<HTMLInputElement | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [urlInput, setUrlInput] = useState("");
-
-  function detectKindFromUrl(u: string): "image" | "video" | null {
-    if (!u) return null;
-    if (/\.(mp4|webm|mov)(\?|$)/i.test(u)) return "video";
-    if (/vimeo\.com|youtube\.com|youtu\.be/i.test(u)) return "video";
-    if (/\.(jpe?g|png|gif|webp|avif)(\?|$)/i.test(u)) return "image";
-    return null;
-  }
-
-  async function handleFile(file: File) {
-    setUploading(true);
-    setErr(null);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/admin/upload?type=cover", { method: "POST", body: fd });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setErr(j.error || "Error al subir");
-        return;
-      }
-      onChange(j.url, j.kind as "image" | "video");
-    } catch {
-      setErr("Error de red al subir");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  function applyUrl() {
-    if (!urlInput.trim()) return;
-    const k = detectKindFromUrl(urlInput.trim()) ?? "image";
-    onChange(urlInput.trim(), k);
-    setUrlInput("");
-  }
-
-  const isVimeo = /vimeo\.com\/(\d+)/i.exec(url || "");
-  const isYouTube = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]+)/i.exec(url || "");
-
-  return (
-    <Field label="Portada del curso (imagen o video)">
-      <div
-        style={{
-          border: "1px dashed rgba(10,30,58,0.18)",
-          borderRadius: 12,
-          padding: 14,
-          background: "color-mix(in srgb, var(--gold) 4%, white)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-        }}
-      >
-        {/* Preview */}
-        {url && (
-          <div
-            style={{
-              position: "relative",
-              borderRadius: 10,
-              overflow: "hidden",
-              aspectRatio: "16 / 9",
-              background: "#0a0a0a",
-              boxShadow: "0 4px 14px rgba(10,30,58,0.18)",
-            }}
-          >
-            {kind === "video" || isVimeo || isYouTube ? (
-              isVimeo ? (
-                <iframe
-                  src={`https://player.vimeo.com/video/${isVimeo[1]}?title=0&byline=0&portrait=0`}
-                  allow="autoplay; fullscreen"
-                  allowFullScreen
-                  style={{ width: "100%", height: "100%", border: 0 }}
-                  title="Preview"
-                />
-              ) : isYouTube ? (
-                <iframe
-                  src={`https://www.youtube-nocookie.com/embed/${isYouTube[1]}`}
-                  allow="autoplay; fullscreen"
-                  allowFullScreen
-                  style={{ width: "100%", height: "100%", border: 0 }}
-                  title="Preview"
-                />
-              ) : (
-                <video src={url} controls style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              )
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={url}
-                alt="Portada"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            )}
-            <button
-              type="button"
-              onClick={() => onChange("", null)}
-              style={{
-                position: "absolute",
-                top: 8,
-                right: 8,
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: "rgba(0,0,0,0.65)",
-                color: "white",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 14,
-                lineHeight: 1,
-              }}
-              aria-label="Quitar portada"
-              title="Quitar portada"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* Actions */}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) handleFile(f);
-            e.target.value = ""; // allow re-uploading same file
-          }}
-          style={{ display: "none" }}
-        />
-        <div className="row" style={{ gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            style={{
-              padding: "9px 14px",
-              borderRadius: 8,
-              background: "var(--navy)",
-              color: "white",
-              border: "none",
-              fontWeight: 700,
-              fontSize: 12,
-              cursor: uploading ? "wait" : "pointer",
-              boxShadow: "0 2px 0 #061b36",
-            }}
-          >
-            {uploading ? "Subiendo…" : url ? "Reemplazar archivo" : "📤 Subir imagen / video"}
-          </button>
-          <span className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>
-            o pega una URL
-          </span>
-          <input
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                applyUrl();
-              }
-            }}
-            placeholder="https://vimeo.com/123  ó  https://cdn.../cover.jpg"
-            style={{ ...input(), flex: 1, minWidth: 200, fontSize: 12 }}
-          />
-          {urlInput && (
-            <button
-              type="button"
-              onClick={applyUrl}
-              style={{
-                padding: "9px 14px",
-                borderRadius: 8,
-                background: "var(--gold)",
-                color: "var(--navy)",
-                border: "none",
-                fontWeight: 700,
-                fontSize: 12,
-                cursor: "pointer",
-              }}
-            >
-              Usar
-            </button>
-          )}
-        </div>
-        <div className="mono" style={{ fontSize: 10, color: "var(--muted)", lineHeight: 1.5 }}>
-          Imagen: JPG, PNG, WebP, GIF, AVIF · max 8 MB. Video: MP4, WebM, MOV · max 50 MB.
-          Para videos largos preferimos Vimeo (pega el link).
-        </div>
-        {err && (
-          <div className="mono" style={{ fontSize: 11, color: "var(--red)" }}>
-            {err}
-          </div>
-        )}
-      </div>
-    </Field>
-  );
-}

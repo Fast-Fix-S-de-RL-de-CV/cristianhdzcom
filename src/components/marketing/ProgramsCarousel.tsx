@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CourseCover } from "./CourseCover";
 
@@ -21,130 +21,156 @@ export type ProgramCard = {
 };
 
 /**
- * Carrusel horizontal de programas + certificaciones, con scroll-snap, flechas
- * de navegación con loop, y toggle expandible inline ("▾ Más info") por card.
+ * Carrusel horizontal con auto-scroll continuo (efecto marquee), loop
+ * infinito sin saltos y arrastre manual con mouse/touch (cursor "manita").
  *
- * Cuando el usuario hace click en "Más info" se despliega un panel con
- * bullets + duración + precio detallado SIN salir de la home. Si quiere ir
- * a la ficha completa del programa, el botón "Ver detalles →" sigue
- * apuntando a /programas/[slug].
- *
- * Diseñado para mostrar de 3 cards visibles en desktop y 1.2 en mobile
- * con scroll-snap horizontal.
+ * Implementación:
+ *  - Renderizamos la lista DUPLICADA (programs + programs). Cuando el scroll
+ *    pasa la mitad del track, "saltamos" al inicio sin animar — el usuario
+ *    no nota el corte porque ve la misma card.
+ *  - Auto-scroll por requestAnimationFrame a ~30 px/s. Se pausa al hover
+ *    y mientras se arrastra.
+ *  - Drag: si arrastra >5px se cancela el click siguiente para no abrir
+ *    "Más info" sin querer.
  */
 export function ProgramsCarousel({ programs }: { programs: ProgramCard[] }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [canScrollPrev, setCanScrollPrev] = useState(false);
-  const [canScrollNext, setCanScrollNext] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
-  // Recompute scroll boundaries on scroll/resize.
-  const updateBoundaries = useCallback(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    setCanScrollPrev(el.scrollLeft > 8);
-    setCanScrollNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
-  }, []);
+  // Estado mutable para drag (no necesita re-render).
+  const dragState = useRef({ startX: 0, startScroll: 0, moved: 0 });
+  // Flag para suprimir clicks post-drag.
+  const suppressClickRef = useRef(false);
 
+  // Auto-scroll loop con efecto infinito.
   useEffect(() => {
-    updateBoundaries();
+    const el = trackRef.current;
+    if (!el || programs.length === 0) return;
+    let rafId = 0;
+    let last = performance.now();
+    let acc = 0; // acumulador sub-pixel para movimiento fluido
+    const SPEED = 75; // px / segundo
+
+    function tick(now: number) {
+      const dt = Math.min((now - last) / 1000, 0.1);
+      last = now;
+      const tEl = trackRef.current;
+      if (tEl && !isHovering && !isDragging) {
+        acc += SPEED * dt;
+        // Aplicamos solo la parte entera y guardamos la fracción para el siguiente
+        // frame — evita micro-paradas cuando el navegador redondea scrollLeft.
+        const step = Math.floor(acc);
+        if (step > 0) {
+          tEl.scrollLeft += step;
+          acc -= step;
+        }
+        // Loop sin saltos visibles: al pasar la mitad (donde empieza el clon)
+        // restamos esa mitad para volver a la "primera vuelta".
+        const half = tEl.scrollWidth / 2;
+        if (tEl.scrollLeft >= half) {
+          tEl.scrollLeft -= half;
+        }
+      } else {
+        acc = 0;
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [isHovering, isDragging, programs.length]);
+
+  function startDrag(clientX: number) {
     const el = trackRef.current;
     if (!el) return;
-    el.addEventListener("scroll", updateBoundaries, { passive: true });
-    window.addEventListener("resize", updateBoundaries);
-    return () => {
-      el.removeEventListener("scroll", updateBoundaries);
-      window.removeEventListener("resize", updateBoundaries);
-    };
-  }, [updateBoundaries]);
-
-  // Loop semantics: si estoy al final y doy next, vuelve al inicio. Idem para prev.
-  function scrollByPage(direction: "prev" | "next") {
+    setIsDragging(true);
+    dragState.current.startX = clientX;
+    dragState.current.startScroll = el.scrollLeft;
+    dragState.current.moved = 0;
+  }
+  function moveDrag(clientX: number) {
+    if (!isDragging) return;
     const el = trackRef.current;
     if (!el) return;
-    const cardWidth = el.firstElementChild
-      ? (el.firstElementChild as HTMLElement).offsetWidth
-      : el.clientWidth / 3;
-    const gap = 24;
-    const step = cardWidth + gap;
-
-    if (direction === "next") {
-      // Si estamos cerca del final, regresa al inicio (loop infinito).
-      if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 8) {
-        el.scrollTo({ left: 0, behavior: "smooth" });
-      } else {
-        el.scrollBy({ left: step, behavior: "smooth" });
-      }
-    } else {
-      // Si estamos al inicio, ve al final.
-      if (el.scrollLeft <= 8) {
-        el.scrollTo({ left: el.scrollWidth, behavior: "smooth" });
-      } else {
-        el.scrollBy({ left: -step, behavior: "smooth" });
-      }
+    const delta = clientX - dragState.current.startX;
+    el.scrollLeft = dragState.current.startScroll - delta;
+    dragState.current.moved = Math.max(dragState.current.moved, Math.abs(delta));
+  }
+  function endDrag() {
+    if (!isDragging) return;
+    setIsDragging(false);
+    if (dragState.current.moved > 5) {
+      // Hubo arrastre real: suprimir el próximo click bubbling.
+      suppressClickRef.current = true;
+      setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 50);
     }
   }
 
   if (programs.length === 0) return null;
 
+  // Lista duplicada para el efecto infinito.
+  const loopItems = [...programs, ...programs];
+
   return (
     <div style={{ position: "relative" }}>
-      {/* Flechas de navegación */}
-      {programs.length > 1 && (
-        <div
-          style={{
-            position: "absolute",
-            top: -64,
-            right: 0,
-            display: "flex",
-            gap: 8,
-            zIndex: 2,
-          }}
-        >
-          <ArrowButton
-            direction="prev"
-            onClick={() => scrollByPage("prev")}
-            highlighted={canScrollPrev}
-          />
-          <ArrowButton
-            direction="next"
-            onClick={() => scrollByPage("next")}
-            highlighted={canScrollNext}
-          />
-        </div>
-      )}
-
-      {/* Track scrollable */}
       <div
         ref={trackRef}
         className="programs-carousel-track hide-scrollbar"
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => {
+          setIsHovering(false);
+          endDrag();
+        }}
+        onMouseDown={(e) => startDrag(e.pageX)}
+        onMouseMove={(e) => {
+          if (isDragging) {
+            e.preventDefault();
+            moveDrag(e.pageX);
+          }
+        }}
+        onMouseUp={endDrag}
+        onTouchStart={(e) => startDrag(e.touches[0].pageX)}
+        onTouchMove={(e) => moveDrag(e.touches[0].pageX)}
+        onTouchEnd={endDrag}
+        onClickCapture={(e) => {
+          if (suppressClickRef.current) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         style={{
           display: "flex",
           gap: 24,
           overflowX: "auto",
-          scrollSnapType: "x mandatory",
           paddingBottom: 8,
-          // padding lateral para que la última card no quede pegada al borde
           paddingRight: 8,
-          scrollPaddingLeft: 0,
+          cursor: isDragging ? "grabbing" : "grab",
+          userSelect: isDragging ? "none" : "auto",
+          // Sin scroll-snap: rompería la animación continua.
+          scrollSnapType: "none",
+          // Sin scroll-behavior smooth: necesitamos respuesta instantánea
+          // del scrollLeft incremental que aplicamos por frame.
+          scrollBehavior: "auto",
         }}
       >
-        {programs.map((p, i) => {
+        {loopItems.map((p, i) => {
           const expanded = openId === p.id;
           const accentColor =
             p.accent === "warm" ? "var(--warm)" : p.accent === "ink" ? "var(--ink)" : "var(--accent)";
           return (
             <div
-              key={p.id}
+              key={`${p.id}-${i}`}
               style={{
                 flex: "0 0 calc((100% - 48px) / 3)",
                 minWidth: 280,
-                scrollSnapAlign: "start",
               }}
             >
               <ProgramCardItem
                 program={p}
-                index={i}
+                index={i % programs.length}
                 accentColor={accentColor}
                 expanded={expanded}
                 onToggle={() => setOpenId(expanded ? null : p.id)}
@@ -155,10 +181,11 @@ export function ProgramsCarousel({ programs }: { programs: ProgramCard[] }) {
       </div>
 
       <style>{`
-        .hide-scrollbar { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
-        .hide-scrollbar::-webkit-scrollbar { height: 6px; }
-        .hide-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .hide-scrollbar::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
+        .hide-scrollbar { scrollbar-width: none; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        /* No queremos que las imágenes sean "arrastrables" como assets — interfiere
+           con el drag del carrusel. */
+        .programs-carousel-track img { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
         @media (max-width: 768px) {
           .programs-carousel-track > div {
             flex: 0 0 calc(85% - 12px) !important;
@@ -340,38 +367,3 @@ function ProgramCardItem({
   );
 }
 
-/* ─────────── Botón de flecha de navegación ─────────── */
-
-function ArrowButton({
-  direction,
-  onClick,
-  highlighted,
-}: {
-  direction: "prev" | "next";
-  onClick: () => void;
-  highlighted: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={direction === "prev" ? "Anterior" : "Siguiente"}
-      style={{
-        width: 44,
-        height: 44,
-        borderRadius: 999,
-        background: highlighted ? "var(--ink)" : "var(--bg-2)",
-        color: highlighted ? "white" : "var(--ink-2)",
-        border: "1px solid " + (highlighted ? "var(--ink)" : "var(--line)"),
-        fontSize: 16,
-        fontWeight: 700,
-        cursor: "pointer",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "all 150ms",
-      }}
-    >
-      {direction === "prev" ? "←" : "→"}
-    </button>
-  );
-}

@@ -197,9 +197,13 @@ export function CommunitySidebar({
           <h4 className="serif" style={{ fontSize: 18 }}>
             Ranking
           </h4>
-          <span className="mono" style={{ fontSize: 10, color: "var(--accent)" }}>
+          <Link
+            href="/comunidad/ranking"
+            className="mono"
+            style={{ fontSize: 10, color: "var(--accent)", textDecoration: "none" }}
+          >
             VER TODO →
-          </span>
+          </Link>
         </div>
         <div className="row" style={{ gap: 4, marginBottom: 14, padding: 3, background: "var(--bg-2)", borderRadius: 999 }}>
           {(

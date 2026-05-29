@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getStripe, isStripeConfigured } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,9 +10,11 @@ export const runtime = "nodejs";
 /**
  * POST /api/membership/resume
  *
- * Revierte la cancelación pending (cancel_at_period_end=false). La
- * suscripción continúa al siguiente periodo. Solo aplica si la membresía
- * todavía está activa (no expiró aún).
+ * Revierte la cancelación programada:
+ *   1. En Stripe: subscription.update(cancel_at_period_end=false) — vuelve a
+ *      cobrar al siguiente ciclo.
+ *   2. En DB: cancelAtPeriodEnd=false.
+ * Solo aplica si la membresía sigue activa (no expiró aún).
  */
 export async function POST() {
   const me = await getCurrentUser();
@@ -32,6 +35,16 @@ export async function POST() {
     return NextResponse.json({ error: "no_pending_cancellation" }, { status: 404 });
   }
 
+  // Resolver subscription id de Stripe y reactivar el cobro recurrente.
+  const subId = await findStripeSubscriptionId(me.id);
+  if (subId && isStripeConfigured()) {
+    try {
+      await getStripe().subscriptions.update(subId, { cancel_at_period_end: false });
+    } catch (e) {
+      console.error("[membership/resume] stripe update failed:", (e as Error).message);
+    }
+  }
+
   await db
     .update(schema.memberships)
     .set({
@@ -48,4 +61,19 @@ export async function POST() {
     .where(eq(schema.membershipCredits.userId, me.id));
 
   return NextResponse.json({ ok: true });
+}
+
+async function findStripeSubscriptionId(userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ subId: sql<string | null>`${schema.orders.metadata}->>'stripeSubscriptionId'` })
+    .from(schema.orders)
+    .where(
+      and(
+        eq(schema.orders.userId, userId),
+        sql`${schema.orders.metadata}->>'stripeSubscriptionId' IS NOT NULL`,
+      ),
+    )
+    .orderBy(sql`${schema.orders.createdAt} DESC`)
+    .limit(1);
+  return row?.subId ?? null;
 }

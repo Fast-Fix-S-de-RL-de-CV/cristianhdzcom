@@ -110,7 +110,7 @@ const Icon = {
 
 const APRENDER: NavLink[] = [
   { key: "sendero", href: "/plataforma", label: "Mi sendero", icon: Icon.Compass },
-  { key: "talleres", href: "/plataforma/talleres", label: "Talleres en vivo", icon: Icon.Live, notify: true },
+  { key: "talleres", href: "/plataforma/talleres", label: "Talleres en vivo", icon: Icon.Live },
   { key: "biblioteca", href: "/plataforma/biblioteca", label: "Biblioteca", icon: Icon.Library },
   { key: "proyectos", href: "/plataforma/proyectos", label: "Mis proyectos", icon: Icon.Code },
   { key: "libros", href: "/libros", label: "Libros", icon: Icon.Book },

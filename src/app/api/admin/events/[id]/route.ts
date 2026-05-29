@@ -10,11 +10,9 @@ const body = z.object({
   title: z.string().min(2).max(200).optional(),
   description: z.string().max(5000).optional().nullable(),
   host: z.string().max(200).optional().nullable(),
-  startsAt: z
-    .string()
-    .datetime()
-    .refine((s) => new Date(s).getTime() > Date.now() - 60000, "startsAt_must_be_future")
-    .optional(),
+  // Sin check de "futuro" en edición: admin puede ajustar eventos pasados
+  // (catalogar talleres ya realizados, fixear typos en fechas históricas, etc.).
+  startsAt: z.string().datetime().optional(),
   durationMinutes: z.number().int().min(5).max(1440).optional(),
   capacity: z.number().int().min(1).optional(),
   attending: z.number().int().min(0).optional(),
@@ -28,6 +26,11 @@ const body = z.object({
   isEvergreen: z.boolean().optional(),
   evergreenScheduleHint: z.string().max(120).nullable().optional(),
   tagline: z.string().max(120).nullable().optional(),
+  isActive: z.boolean().optional(),
+  badge1Text: z.string().max(80).nullable().optional(),
+  badge1Color: z.enum(["red", "navy", "warm", "green", "gold", "muted", "accent"]).nullable().optional(),
+  badge2Text: z.string().max(80).nullable().optional(),
+  badge2Color: z.enum(["red", "navy", "warm", "green", "gold", "muted", "accent"]).nullable().optional(),
 });
 
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {

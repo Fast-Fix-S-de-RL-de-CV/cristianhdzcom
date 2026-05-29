@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { asc, gte } from "drizzle-orm";
+import { asc, gte, and, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
@@ -50,6 +50,21 @@ export default async function TalleresPage() {
   const featured = events[0];
   const rest = events.slice(1);
   const now = new Date();
+
+  // Which of these events the current user has already RSVP'd to.
+  const eventIds = events.map((e) => e.id);
+  const rsvps = eventIds.length
+    ? await db
+        .select({ eventId: schema.eventRsvps.eventId })
+        .from(schema.eventRsvps)
+        .where(
+          and(
+            eq(schema.eventRsvps.userId, user.id),
+            inArray(schema.eventRsvps.eventId, eventIds),
+          ),
+        )
+    : [];
+  const rsvpSet = new Set(rsvps.map((r) => r.eventId));
 
   return (
     <AlumnoShell user={user} active="talleres">
@@ -194,7 +209,7 @@ export default async function TalleresPage() {
                           Apuntarme →
                         </a>
                       ) : (
-                        <RsvpButton eventId={featured.id} />
+                        <RsvpButton eventId={featured.id} initialAttending={rsvpSet.has(featured.id)} />
                       )}
                     </div>
                   </div>
@@ -270,7 +285,7 @@ export default async function TalleresPage() {
                             {e.host && <span className="mono">· {e.host}</span>}
                           </div>
                         </div>
-                        <RsvpButton eventId={e.id} />
+                        <RsvpButton eventId={e.id} initialAttending={rsvpSet.has(e.id)} />
                       </div>
                     </Card>
                   );

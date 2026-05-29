@@ -10,6 +10,20 @@ import {
   useBulkDelete,
   useBulkSelection,
 } from "@/components/admin/BulkActions";
+import { ActiveToggle } from "@/components/admin/ActiveToggle";
+import { MediaUploadField } from "@/components/admin/MediaUploadField";
+
+type BadgeColorOpt = "" | "red" | "navy" | "warm" | "green" | "gold" | "muted" | "accent";
+const BADGE_COLORS: { value: BadgeColorOpt; label: string }[] = [
+  { value: "", label: "Auto (según estado)" },
+  { value: "red", label: "🔴 Rojo · LIVE" },
+  { value: "navy", label: "🟦 Navy + Dorado · EVERGREEN" },
+  { value: "warm", label: "🟧 Naranja suave" },
+  { value: "green", label: "🟢 Verde · OK / Free" },
+  { value: "gold", label: "🟡 Dorado claro" },
+  { value: "muted", label: "⚪ Gris neutro" },
+  { value: "accent", label: "🟨 Dorado sólido" },
+];
 
 type Row = {
   id: string;
@@ -30,6 +44,11 @@ type Row = {
   isEvergreen: boolean;
   evergreenScheduleHint: string | null;
   tagline: string | null;
+  isActive: boolean;
+  badge1Text: string | null;
+  badge1Color: string | null;
+  badge2Text: string | null;
+  badge2Color: string | null;
 };
 
 export function TalleresManager({ rows }: { rows: Row[] }) {
@@ -74,6 +93,19 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function toggleActive(id: string, next: boolean) {
+    const res = await fetch(`/api/admin/events/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: next }),
+    });
+    if (!res.ok) {
+      toast.error("No se pudo cambiar el estado");
+      throw new Error("toggle_failed");
+    }
+    router.refresh();
   }
 
   async function remove(id: string) {
@@ -142,7 +174,8 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
         <span style={{ width: 160 }}>Fecha</span>
         <span style={{ width: 80, textAlign: "right" }}>Duración</span>
         <span style={{ width: 100, textAlign: "right" }}>Asistencia</span>
-        <span style={{ width: 80 }}>Live</span>
+        <span style={{ width: 60 }}>Live</span>
+        <span style={{ width: 70, textAlign: "center" }}>Activo</span>
         <span style={{ width: 160, textAlign: "right" }}>Acciones</span>
       </div>
 
@@ -202,7 +235,7 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
               <span className="mono" style={{ width: 100, textAlign: "right", fontSize: 12 }}>
                 {e.attending}/{e.capacity}
               </span>
-              <span style={{ width: 80 }}>
+              <span style={{ width: 60 }}>
                 <span
                   className="mono"
                   style={{
@@ -216,6 +249,13 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
                 >
                   {e.isLive ? "● LIVE" : "—"}
                 </span>
+              </span>
+              <span style={{ width: 70, display: "flex", justifyContent: "center" }}>
+                <ActiveToggle
+                  value={e.isActive}
+                  onToggle={(next) => toggleActive(e.id, next)}
+                  ariaLabel={`Activar/desactivar ${e.title}`}
+                />
               </span>
               <span className="row" style={{ width: 160, justifyContent: "flex-end", gap: 6 }}>
                 <button
@@ -309,6 +349,10 @@ function EventDialog({
     tagline: event?.tagline || "",
     isEvergreen: event?.isEvergreen ?? false,
     evergreenScheduleHint: event?.evergreenScheduleHint || "",
+    badge1Text: event?.badge1Text || "",
+    badge1Color: (event?.badge1Color as BadgeColorOpt) || "",
+    badge2Text: event?.badge2Text || "",
+    badge2Color: (event?.badge2Color as BadgeColorOpt) || "",
   });
 
   return (
@@ -431,25 +475,106 @@ function EventDialog({
               style={inputStyle()}
             />
           </Field>
-          <Field label="Imagen banner (URL o /uploads/…)">
-            <input
-              value={form.coverUrl}
-              onChange={(e) => setForm({ ...form, coverUrl: e.target.value })}
-              placeholder="/uploads/2026-05/xxxx.png"
-              style={inputStyle()}
-            />
+          <MediaUploadField
+            label="Imagen banner del taller"
+            url={form.coverUrl}
+            kind={form.coverUrl ? "image" : null}
+            onChange={(url) => setForm({ ...form, coverUrl: url })}
+            mode="image"
+            aspectRatio="3 / 1"
+            hint="OBLIGATORIO: 1500 × 500 px (relación 3:1). La imagen llena el banner exacto, sin paddings ni recortes."
+          />
+
+          {/* Badges custom del banner público */}
+          <div
+            style={{
+              border: "1px solid var(--line)",
+              borderRadius: 10,
+              padding: 14,
+              background: "var(--bg-2)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
             <div
               className="mono"
               style={{
                 fontSize: 10,
                 color: "var(--muted)",
-                marginTop: 4,
-                lineHeight: 1.5,
+                letterSpacing: "0.08em",
+                fontWeight: 700,
+                textTransform: "uppercase",
               }}
             >
-              Aspect ratio 4:3 recomendado. Aparece grande en la home en el taller-banner.
+              Badges del banner público
             </div>
-          </Field>
+            <div className="row" style={{ gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <Field label="Badge 1 · texto">
+                  <input
+                    value={form.badge1Text}
+                    onChange={(e) => setForm({ ...form, badge1Text: e.target.value })}
+                    placeholder='Ej: "● EN VIVO" — vacío = auto'
+                    maxLength={80}
+                    style={inputStyle()}
+                  />
+                </Field>
+              </div>
+              <div style={{ width: 220 }}>
+                <Field label="Badge 1 · color">
+                  <select
+                    value={form.badge1Color}
+                    onChange={(e) =>
+                      setForm({ ...form, badge1Color: e.target.value as BadgeColorOpt })
+                    }
+                    style={inputStyle()}
+                  >
+                    {BADGE_COLORS.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            </div>
+            <div className="row" style={{ gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <Field label="Badge 2 · texto">
+                  <input
+                    value={form.badge2Text}
+                    onChange={(e) => setForm({ ...form, badge2Text: e.target.value })}
+                    placeholder='Ej: "157 suscritos" — vacío = auto'
+                    maxLength={80}
+                    style={inputStyle()}
+                  />
+                </Field>
+              </div>
+              <div style={{ width: 220 }}>
+                <Field label="Badge 2 · color">
+                  <select
+                    value={form.badge2Color}
+                    onChange={(e) =>
+                      setForm({ ...form, badge2Color: e.target.value as BadgeColorOpt })
+                    }
+                    style={inputStyle()}
+                  >
+                    {BADGE_COLORS.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            </div>
+            <div className="mono" style={{ fontSize: 10, color: "var(--muted)", lineHeight: 1.55 }}>
+              Vacíos = el banner pinta los defaults según los toggles (EN VIVO / EVERGREEN / HOT).
+              Si pones texto custom, ese texto aparece. Emojis bienvenidos (🔴 ● ✦ 🔥 💎).
+            </div>
+          </div>
+
           <Field label="Tagline corto">
             <input
               value={form.tagline}
@@ -578,7 +703,11 @@ function EventDialog({
                 evergreenScheduleHint: form.evergreenScheduleHint
                   ? form.evergreenScheduleHint
                   : null,
-              })
+                badge1Text: form.badge1Text ? form.badge1Text : null,
+                badge1Color: form.badge1Color ? form.badge1Color : null,
+                badge2Text: form.badge2Text ? form.badge2Text : null,
+                badge2Color: form.badge2Color ? form.badge2Color : null,
+              } as Partial<Row>)
             }
             disabled={busy || !form.title}
             className="btn btn-primary"

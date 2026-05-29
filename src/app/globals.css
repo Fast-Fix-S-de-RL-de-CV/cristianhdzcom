@@ -522,6 +522,12 @@ button {
   font-size: 13px;
 }
 
+.footer-social:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  transform: translateY(-1px);
+}
+
 .sec {
   padding: 96px 56px;
   position: relative;
@@ -1011,8 +1017,11 @@ html { scroll-behavior: smooth; }
   /* Allow hero columns to wrap and use full width */
   .hero-floats-container { position: static !important; }
 
-  /* Make sales-page hero stats not horizontal scroll */
-  .sales-stats-row { flex-wrap: wrap !important; gap: 16px !important; }
+  /* Make sales-page hero stats: 2x2 grid on small screens */
+  .sales-stats-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+  }
 
   /* Books book block content padding less */
   .book-cover-padding { padding: 24px !important; }
@@ -1079,14 +1088,15 @@ html { scroll-behavior: smooth; }
 
 /* ─────────── MOBILE (≤640px) ─────────── */
 @media (max-width: 640px) {
-  /* Taller banner compact: stack imagen arriba, texto abajo */
+  /* Taller banner compact: en mobile texto arriba, imagen 3:1 abajo
+     de lado a lado (sin paddings, sin deformación). */
   .taller-banner-compact {
     grid-template-columns: 1fr !important;
-    min-height: auto !important;
   }
-  .taller-banner-compact > div:first-child {
-    min-height: 180px !important;
-    aspect-ratio: 16 / 9;
+  .taller-banner-compact .taller-banner-text { order: 1; }
+  .taller-banner-compact .taller-banner-img {
+    order: 2;
+    aspect-ratio: 3 / 1 !important;
   }
 
   /* Carrusel de programas: 1 card visible + peek de la siguiente */

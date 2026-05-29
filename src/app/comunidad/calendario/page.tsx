@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { asc, gte } from "drizzle-orm";
+import { asc, gte, and, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
@@ -36,6 +36,21 @@ export default async function CalendarioPage() {
     .where(gte(schema.events.startsAt, new Date()))
     .orderBy(asc(schema.events.startsAt))
     .limit(50);
+
+  // Which of these events the current user has already RSVP'd to.
+  const eventIds = events.map((e) => e.id);
+  const rsvps = eventIds.length
+    ? await db
+        .select({ eventId: schema.eventRsvps.eventId })
+        .from(schema.eventRsvps)
+        .where(
+          and(
+            eq(schema.eventRsvps.userId, user.id),
+            inArray(schema.eventRsvps.eventId, eventIds),
+          ),
+        )
+    : [];
+  const rsvpSet = new Set(rsvps.map((r) => r.eventId));
 
   // Group events by year-month
   const groups = new Map<
@@ -219,7 +234,7 @@ export default async function CalendarioPage() {
                                 Unirme ahora →
                               </a>
                             ) : (
-                              <RsvpButton eventId={e.id} />
+                              <RsvpButton eventId={e.id} initialAttending={rsvpSet.has(e.id)} />
                             )}
                           </div>
                         </div>

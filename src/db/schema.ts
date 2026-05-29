@@ -371,7 +371,34 @@ export const events = pgTable("events", {
   evergreenScheduleHint: varchar("evergreen_schedule_hint", { length: 120 }),
   /** Eyebrow / tagline corto que aparece sobre el título del banner. */
   tagline: varchar("tagline", { length: 120 }),
+  /** Toggle de visibilidad rápida (admin). false = oculto en listados públicos. */
+  isActive: boolean("is_active").notNull().default(true),
+  /**
+   * Badges custom del banner. Si quedan null, el banner usa los defaults
+   * derivados de isLive/isEvergreen (badge1) y hot (badge2).
+   * Si se setean, sobreescriben texto y color.
+   *
+   * Colores válidos: red | navy | warm | green | gold | muted | accent
+   */
+  badge1Text: varchar("badge1_text", { length: 80 }),
+  badge1Color: varchar("badge1_color", { length: 20 }),
+  badge2Text: varchar("badge2_text", { length: 80 }),
+  badge2Color: varchar("badge2_color", { length: 20 }),
 });
+
+/* ─────────── EVENT RSVPS (apuntados a eventos) ─────────── */
+export const eventRsvps = pgTable(
+  "event_rsvps",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    eventUserIdx: uniqueIndex("event_rsvps_event_user_idx").on(t.eventId, t.userId),
+  }),
+);
 
 /* ─────────── MEMBERSHIP PLANS (catálogo) ─────────── */
 /**

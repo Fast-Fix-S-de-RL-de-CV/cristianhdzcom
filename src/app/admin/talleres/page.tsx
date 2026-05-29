@@ -30,6 +30,11 @@ export default async function TalleresPage() {
       isEvergreen: schema.events.isEvergreen,
       evergreenScheduleHint: schema.events.evergreenScheduleHint,
       tagline: schema.events.tagline,
+      isActive: schema.events.isActive,
+      badge1Text: schema.events.badge1Text,
+      badge1Color: schema.events.badge1Color,
+      badge2Text: schema.events.badge2Text,
+      badge2Color: schema.events.badge2Color,
     })
     .from(schema.events)
     .orderBy(desc(schema.events.startsAt));
@@ -57,6 +62,11 @@ export default async function TalleresPage() {
     isEvergreen: r.isEvergreen ?? false,
     evergreenScheduleHint: r.evergreenScheduleHint ?? null,
     tagline: r.tagline ?? null,
+    isActive: r.isActive,
+    badge1Text: r.badge1Text ?? null,
+    badge1Color: r.badge1Color ?? null,
+    badge2Text: r.badge2Text ?? null,
+    badge2Color: r.badge2Color ?? null,
   }));
 
   return (

@@ -10,6 +10,8 @@ import { cn } from "@/lib/cn";
 // derecha, no como item del menú (de lo contrario quedaba duplicada).
 const NAV_ITEMS: [string, string][] = [
   ["Inicio", "/"],
+  ["Acerca de", "/acerca"],
+  ["Empresas", "/empresas"],
   ["Programas", "/programas"],
   ["Libros", "/libros"],
   ["Membresía", "/membresia"],

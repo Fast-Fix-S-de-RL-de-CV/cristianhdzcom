@@ -8,10 +8,9 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
-import { CourseCover } from "@/components/marketing/CourseCover";
 import { TallerBanner } from "@/components/marketing/TallerBanner";
 import { ProgramsCarousel } from "@/components/marketing/ProgramsCarousel";
-import { ServicesGrid } from "@/components/marketing/ServicesGrid";
+import { ServicesCarousel } from "@/components/marketing/ServicesCarousel";
 import { HeroPortraitImg } from "@/components/marketing/HeroPortraitImg";
 import { getSiteSettings, renderMarkdownLight } from "@/lib/site-settings";
 
@@ -48,37 +47,6 @@ const PATHS = [
     color: "ink" as const,
     href: "/programas/programacion-con-ia",
   },
-];
-
-const TESTIMONIALS = [
-  {
-    name: "María R.",
-    role: "CFO · PyME industrial",
-    q: "Pasé de no programar a tener 3 sistemas internos que ahorran $18k al mes. La certificación me abrió la conversación con dirección.",
-  },
-  {
-    name: "Luis F.",
-    role: "Fundador · Agencia LATAM",
-    q: "Cerré un cliente de $24.000 en la segunda semana usando el método de oferta de Cristian. Ahora opero con dos agentes IA.",
-  },
-  {
-    name: "Diana P.",
-    role: "Gerente de Producto",
-    q: "El sendero estilo Duolingo me mantuvo enganchada. En 3 meses entregué un MVP que era propuesta de mi área hace 2 años.",
-  },
-];
-
-const BRANDS = [
-  "SANTANDER",
-  "BBVA",
-  "BIMBO",
-  "CEMEX",
-  "FALABELLA",
-  "RAPPI",
-  "MERCADOLIBRE",
-  "CORONA",
-  "TELMEX",
-  "GRUPO·MODELO",
 ];
 
 export default async function HomePage() {
@@ -123,6 +91,20 @@ export default async function HomePage() {
     // Site settings singleton — controla todo el hero (título, bio, foto, etc).
     getSiteSettings(),
   ]);
+
+  // Próximo taller en vivo con fecha real (no evergreen). Si no hay, el CTA
+  // final muestra un texto genérico en vez de una fecha inventada.
+  const nextLiveTaller = talleres.find(
+    (t) => !t.isEvergreen && t.startsAt && new Date(t.startsAt) > now,
+  );
+  const nextLiveLabel = nextLiveTaller
+    ? `PRÓXIMO · ${new Date(nextLiveTaller.startsAt).toLocaleString("es-MX", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).toUpperCase()}`
+    : null;
 
   return (
     <div>
@@ -307,30 +289,6 @@ export default async function HomePage() {
             )}
           </div>
         </div>
-
-        {/* Marquee */}
-        <div style={{ marginTop: 72, paddingTop: 32, borderTop: "1px solid var(--line)" }}>
-          <Eyebrow style={{ textAlign: "center", marginBottom: 20 }}>
-            Han confiado en mi equipo o asistido a mis programas
-          </Eyebrow>
-          <div
-            style={{
-              overflow: "hidden",
-              maskImage: "linear-gradient(90deg, transparent, black 10%, black 90%, transparent)",
-              WebkitMaskImage: "linear-gradient(90deg, transparent, black 10%, black 90%, transparent)",
-            }}
-          >
-            <div className="marquee">
-              {[0, 1].flatMap((rep) =>
-                BRANDS.map((b) => (
-                  <span key={`${b}-${rep}`} className="serif" style={{ fontSize: 22, color: "var(--muted)", opacity: 0.7 }}>
-                    {b}
-                  </span>
-                )),
-              )}
-            </div>
-          </div>
-        </div>
       </section>
 
       <div className="rule" />
@@ -505,9 +463,9 @@ export default async function HomePage() {
           <div>
             <Eyebrow>Estudio · Empresas y Servicios</Eyebrow>
             <h2 style={{ fontSize: "clamp(48px, 6vw, 72px)", marginTop: 16 }}>
-              {services.filter((s) => !s.isCtaCard).length} empresas en operación,
+              Así es como te puedo ayudar
               <br />
-              construidas con <span style={{ color: "var(--accent)" }}>IA</span>.
+              con mis <span style={{ color: "var(--accent)" }}>empresas</span>.
             </h2>
           </div>
           <p style={{ maxWidth: 360, color: "var(--muted)", lineHeight: 1.55, fontSize: 16 }}>
@@ -516,7 +474,8 @@ export default async function HomePage() {
           </p>
         </div>
 
-        <ServicesGrid
+        {/* Carrusel en dirección inversa (a juego con el de programas) */}
+        <ServicesCarousel
           services={services.map((s) => ({
             id: s.id,
             slug: s.slug,
@@ -537,27 +496,11 @@ export default async function HomePage() {
           }))}
         />
 
-        {/* SaaS stats */}
-        <Card style={{ marginTop: 40, padding: 40, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 32 }}>
-          {[
-            ["12.4k", "NEGOCIOS USANDO NUESTROS SAAS"],
-            ["$4M+", "PROCESADOS POR MES"],
-            ["14", "PAÍSES"],
-            ["99.9%", "UPTIME"],
-          ].map(([n, l], i) => (
-            <div
-              key={l}
-              style={{ borderLeft: i > 0 ? "1px solid var(--line)" : "none", paddingLeft: i > 0 ? 24 : 0 }}
-            >
-              <div className="serif" style={{ fontSize: 56, color: "var(--ink)", lineHeight: 1 }}>
-                {n}
-              </div>
-              <div className="mono" style={{ fontSize: 11, color: "var(--muted)", marginTop: 8, letterSpacing: "0.08em" }}>
-                {l}
-              </div>
-            </div>
-          ))}
-        </Card>
+        <div style={{ marginTop: 32, textAlign: "center" }}>
+          <Link href="/empresas">
+            <Button variant="ghost">Ver todas mis empresas →</Button>
+          </Link>
+        </div>
       </section>
 
       <div className="rule" />
@@ -606,55 +549,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* PROOF / STATS */}
-      <section className="sec">
-        <div className="grid-4" style={{ alignItems: "end" }}>
-          {[
-            ["2.847", "profesionales certificados"],
-            ["$ 4.2M", "facturados por egresados (12m)"],
-            ["98%", "completan su primer proyecto"],
-            ["14", "países representados"],
-          ].map(([n, l]) => (
-            <div key={l} style={{ borderTop: "1px solid var(--line)", paddingTop: 24 }}>
-              <div className="num">{n}</div>
-              <div style={{ fontSize: 14, color: "var(--muted)", marginTop: 8 }}>{l}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="rule" />
-
-      {/* TESTIMONIALS */}
-      <section className="sec">
-        <Eyebrow>03 · Testimonios</Eyebrow>
-        <h2 style={{ fontSize: "clamp(40px, 5vw, 64px)", marginTop: 16, marginBottom: 56, maxWidth: 900 }}>
-          Profesionales y empresarios que ya operan con IA.
-        </h2>
-        <div className="grid-3">
-          {TESTIMONIALS.map((t, i) => (
-            <Card key={i} style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}>
-              <div className="serif" style={{ fontSize: 56, lineHeight: 0.5, color: "var(--accent)" }}>
-                &ldquo;
-              </div>
-              <p style={{ fontSize: 17, lineHeight: 1.5 }}>{t.q}</p>
-              <div className="row" style={{ marginTop: "auto" }}>
-                <div className="av">
-                  {t.name
-                    .split(" ")
-                    .map((w) => w[0])
-                    .join("")}
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{t.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted)" }}>{t.role}</div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
-
       {/* FINAL CTA */}
       <section className="sec" style={{ paddingTop: 32 }}>
         <Card style={{ padding: 64, position: "relative", overflow: "hidden", background: "var(--bg-2)" }}>
@@ -690,9 +584,11 @@ export default async function HomePage() {
                   Ver programas pagos
                 </Button>
               </Link>
-              <div style={{ fontSize: 12, color: "var(--muted)" }} className="mono">
-                PRÓXIMO · MAR 04 · 19:00 GMT-5
-              </div>
+              {nextLiveLabel && (
+                <div style={{ fontSize: 12, color: "var(--muted)" }} className="mono">
+                  {nextLiveLabel}
+                </div>
+              )}
             </div>
           </div>
         </Card>

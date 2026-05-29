@@ -94,7 +94,6 @@ export function CommunityPreview({
               <Stat label="MIEMBROS" value={stats.members.toLocaleString("es-MX")} />
               <Stat label="EN LÍNEA" value={String(stats.online)} accent="green" />
               <Stat label="PAÍSES" value={String(stats.countries)} />
-              <Stat label="RATING" value="★ 4.9" />
             </div>
           )}
 
