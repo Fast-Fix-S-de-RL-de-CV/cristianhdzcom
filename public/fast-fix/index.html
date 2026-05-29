@@ -25,6 +25,28 @@
         #features .feature h3 { font-size: 3.6em; }
         #features .feature p { font-size: 2.6em; width: 80%; max-width: 22ch; }
       }
+      /* ── Fix + animación de scroll de los features ──
+         El zip usaba timeline-trigger/animation-trigger (experimental) y dejaba
+         el PRIMER feature ("Software a la medida") con su texto tapado por un
+         overlay que no se desplegaba. Lo reemplazamos por un reveal con
+         animation-timeline: view(), soportado de forma estable y que anima
+         tanto al BAJAR como al SUBIR (reversible) para todos los features. */
+      @supports (animation-timeline: view()) {
+        @keyframes ff-feature-in {
+          from { opacity: 0; transform: translateY(48px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        /* Anular el overlay/animaciones frágiles del CSS original */
+        #features .feature p::after { content: none !important; animation: none !important; }
+        #features .feature h3 { animation: none !important; opacity: 1 !important; }
+        #features .feature img:not(:first-child) { animation: none !important; opacity: 1 !important; }
+        /* Reveal reversible por scroll, también en el primero */
+        #features .feature .content {
+          animation: ff-feature-in linear both;
+          animation-timeline: view();
+          animation-range: entry 8% cover 42%;
+        }
+      }
     </style>
   </head>
 
