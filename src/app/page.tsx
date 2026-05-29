@@ -12,6 +12,7 @@ import { TallerBanner } from "@/components/marketing/TallerBanner";
 import { ProgramsCarousel } from "@/components/marketing/ProgramsCarousel";
 import { ServicesCarousel } from "@/components/marketing/ServicesCarousel";
 import { HeroPortraitImg } from "@/components/marketing/HeroPortraitImg";
+import { HeroRifts } from "@/components/marketing/HeroRifts";
 import { getSiteSettings, renderMarkdownLight } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
@@ -113,6 +114,8 @@ export default async function HomePage() {
       {/* HERO */}
       <section className="sec" style={{ paddingTop: 64, paddingBottom: 56, position: "relative", overflow: "hidden" }}>
         <div className="mesh" />
+        {/* Fondo WebGL "Blazing Rifts" — detrás de todo el contenido del hero */}
+        <HeroRifts />
         <div className="hero-orbit">
           <div className="orbit-ring" style={{ width: 900, height: 900, top: -200, right: -300 }} />
           <div
@@ -123,7 +126,7 @@ export default async function HomePage() {
 
         <div
           className="hero-grid"
-          style={{ display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: 56, alignItems: "center", position: "relative" }}
+          style={{ display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: 56, alignItems: "center", position: "relative", zIndex: 1 }}
         >
           <div>
             <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
