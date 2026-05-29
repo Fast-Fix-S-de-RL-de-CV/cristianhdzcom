@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Fast Fix — Soluciones en IT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <script src="https://unpkg.com/extra.css/confetti.js"></script>
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+      /* Wordmark Fast Fix para el hero (reemplaza el SVG del zip) */
+      #welcome h1.ff-word {
+        display: flex; gap: 0.15em; justify-content: center; align-items: baseline;
+        font-weight: 800; letter-spacing: -0.02em; line-height: 1;
+        font-size: clamp(3.5rem, 12vw, 8rem); margin: 0 0 0.1em;
+      }
+      #welcome h1.ff-word .a { color: #1d4ed8; }
+      #welcome h1.ff-word .b { color: var(--theme-surface-on-surface, #202124); }
+      #welcome .eyebrow {
+        font-size: 1rem; letter-spacing: 0.4em; font-weight: 700;
+        text-transform: uppercase; color: #1d4ed8; text-align: center; margin: 0 0 1.2em;
+      }
+      /* Imagen de feature: que se vea completa dentro del wrapper sticky */
+      #features .img-wrapper img { box-shadow: 0 30px 70px rgba(15,23,42,0.18); }
+    </style>
+  </head>
+
+  <body>
+    <!-- Hero -->
+    <section id="welcome" class="center">
+      <p class="eyebrow">Soluciones en IT</p>
+      <h1 class="ff-word"><span class="sr-only">Fast Fix</span><span class="a" aria-hidden="true">Fast</span><span class="b" aria-hidden="true">Fix</span></h1>
+      <p>Construimos tu software <span>Apps, sitios web, e-commerce y sistemas a la medida — con IA.</span></p>
+      <div class="cta">
+        <button onclick="window.open('https://wa.me/526241234567','_blank')"><span class="material-symbols-outlined">chat</span> <span>Cotizar mi proyecto</span></button>
+        <button class="secondary" onclick="document.querySelector('#product').scrollIntoView({behavior:'smooth'})">Ver lo que hacemos</button>
+      </div>
+    </section>
+
+    <!-- Product / capacidades -->
+    <section id="product">
+      <h2><span class="typewriter">Fast Fix convierte tu idea en software real: lo diseñamos, lo construimos y lo mantenemos.</span></h2>
+
+      <div class="icons">
+        <div class="icon"><span class="material-symbols-outlined">code</span></div>
+        <div class="icon"><span class="material-symbols-outlined">smartphone</span></div>
+        <div class="icon"><span class="material-symbols-outlined">language</span></div>
+        <div class="icon"><span class="material-symbols-outlined">shopping_cart</span></div>
+        <div class="icon"><span class="material-symbols-outlined">smart_toy</span></div>
+        <div class="icon"><span class="material-symbols-outlined">design_services</span></div>
+        <div class="icon"><span class="material-symbols-outlined">cloud</span></div>
+        <div class="icon"><span class="material-symbols-outlined">database</span></div>
+        <div class="icon"><span class="material-symbols-outlined">terminal</span></div>
+        <div class="icon"><span class="material-symbols-outlined">dashboard_customize</span></div>
+        <div class="icon"><span class="material-symbols-outlined">api</span></div>
+        <div class="icon"><span class="material-symbols-outlined">devices</span></div>
+        <div class="icon"><span class="material-symbols-outlined">brush</span></div>
+        <div class="icon"><span class="material-symbols-outlined">analytics</span></div>
+        <div class="icon"><span class="material-symbols-outlined">lock</span></div>
+        <div class="icon"><span class="material-symbols-outlined">bolt</span></div>
+        <div class="icon"><span class="material-symbols-outlined">hub</span></div>
+        <div class="icon"><span class="material-symbols-outlined">widgets</span></div>
+        <div class="icon"><span class="material-symbols-outlined">rocket_launch</span></div>
+        <div class="icon"><span class="material-symbols-outlined">support_agent</span></div>
+        <div class="icon"><span class="material-symbols-outlined">storefront</span></div>
+        <div class="icon"><span class="material-symbols-outlined">payments</span></div>
+        <div class="icon"><span class="material-symbols-outlined">verified</span></div>
+        <div class="icon"><span class="material-symbols-outlined">deployed_code</span></div>
+      </div>
+
+      <div id="features">
+        <div class="feature">
+          <div class="img-wrapper"><img src="./img/software.svg" alt="Software a la medida" /></div>
+          <div class="content">
+            <h3>Software a la medida</h3>
+            <p>Sistemas internos, ERPs, CRMs y plataformas hechas para cómo opera TU empresa — no plantillas genéricas. Arquitectura escalable y código mantenible.</p>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="img-wrapper"><img src="./img/apps.svg" alt="Apps móviles" /></div>
+          <div class="content">
+            <h3>Aplicaciones móviles</h3>
+            <p>Apps nativas y multiplataforma para iOS y Android: de la idea al App Store y Google Play, con backend, notificaciones y analítica incluidos.</p>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="img-wrapper"><img src="./img/web.svg" alt="Sitios y sistemas web" /></div>
+          <div class="content">
+            <h3>Sitios y sistemas web</h3>
+            <p>Desde landing pages que convierten hasta paneles y portales web complejos. Rápidos, responsivos y listos para posicionar en Google.</p>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="img-wrapper"><img src="./img/ecommerce.svg" alt="E-commerce" /></div>
+          <div class="content">
+            <h3>E-commerce y tiendas en línea</h3>
+            <p>Tiendas que venden 24/7: catálogo, carrito, pagos (Stripe, PayPal, OXXO, SPEI), envíos e integración con tus proveedores y facturación.</p>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="img-wrapper"><img src="./img/ia.svg" alt="IA y automatización" /></div>
+          <div class="content">
+            <h3>IA y automatización</h3>
+            <p>Chatbots, agentes y automatizaciones que ahorran horas: integramos modelos de IA a tus procesos, WhatsApp, correo y sistemas existentes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lo que desarrollamos -->
+    <section id="developers">
+      <div>
+        <h2>Hecho para empresas que quieren crecer con tecnología</h2>
+        <p class="intro">
+          Ya seas una PyME que necesita ordenar su operación, un emprendedor lanzando su primer
+          producto, o una empresa lista para escalar — en Fast Fix construimos contigo.
+        </p>
+      </div>
+
+      <div class="carousel">
+        <div class="developer">
+          <figure>
+            <img src="./img/diseno.svg" alt="Diseño y UX/UI" />
+            <figcaption class="typewriter">Diseño & UX/UI</figcaption>
+          </figure>
+          <h3>Diseño & UX/UI</h3>
+          <p>Interfaces claras y bonitas que la gente sí entiende y usa. Diseñamos la experiencia antes de escribir una línea de código.</p>
+          <a href="https://wa.me/526241234567" target="_blank" rel="noopener">Cotizar diseño</a>
+        </div>
+        <div class="developer">
+          <figure>
+            <img src="./img/saas.svg" alt="Plataformas SaaS" />
+            <figcaption class="typewriter">Plataformas SaaS</figcaption>
+          </figure>
+          <h3>Plataformas SaaS</h3>
+          <p>Convertimos tu idea en un producto de software con suscripciones, multi-usuario y panel de administración — listo para facturar.</p>
+          <a href="https://wa.me/526241234567" target="_blank" rel="noopener">Construir mi SaaS</a>
+        </div>
+        <div class="developer">
+          <figure>
+            <img src="./img/branding.svg" alt="Branding e identidad" />
+            <figcaption class="typewriter">Branding & marca</figcaption>
+          </figure>
+          <h3>Branding e identidad</h3>
+          <p>Logo, identidad visual y presencia digital coherente. Tu marca lista para verse profesional en web, redes y producto.</p>
+          <a href="https://wa.me/526241234567" target="_blank" rel="noopener">Crear mi marca</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Para quién -->
+    <section id="who" class="center">
+      <div>
+        <h3>Para empresas<br /><span>Ordena y escala tu operación</span></h3>
+        <button onclick="window.open('https://wa.me/526241234567','_blank')">Agendar diagnóstico</button>
+      </div>
+      <div>
+        <h3>Para emprendedores<br /><span>Lanza tu producto al mercado</span></h3>
+        <button class="secondary" onclick="window.open('https://wa.me/526241234567','_blank')">Cuéntanos tu idea</button>
+      </div>
+    </section>
+
+    <!-- CTA final -->
+    <section id="beforeyougo">
+      <div class="card dark">
+        <p><span class="typewriter">¿List@ para construir tu software? Cotiza con Fast Fix sin compromiso.</span></p>
+        <div class="buttons">
+          <button onclick="window.open('https://wa.me/526241234567','_blank')">Escríbenos por WhatsApp</button>
+          <button class="secondary" onclick="window.location.href='mailto:info@fast-fix.com.mx'">info@fast-fix.com.mx</button>
+        </div>
+      </div>
+    </section>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
