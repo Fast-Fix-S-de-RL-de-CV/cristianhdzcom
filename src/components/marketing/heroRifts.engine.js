@@ -573,14 +573,19 @@ export function startRifts(container, opts = {}) {
   const h = Math.max(container.clientHeight, 1);
   gu.aspect.value = w / h;
 
+  // Zoom: arranca ALEJADO (FAR) y se acerca (NEAR) conforme se hace scroll.
+  const FAR = 13;
+  const NEAR = 4.2;
+  let camLen = FAR;
+  let camTargetLen = FAR;
+
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(45, w / h, 1, 1000);
-  camera.position.set(0, 0, 1).setLength(7);
+  camera.position.set(0, 0, 1).setLength(camLen);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.setSize(w, h);
-  renderer.setClearColor(0x000000, 0); // transparente: flota sobre el hero claro
   renderer.domElement.style.width = "100%";
   renderer.domElement.style.height = "100%";
   renderer.domElement.style.display = "block";
@@ -600,7 +605,9 @@ export function startRifts(container, opts = {}) {
       child.material.emissiveIntensity = 0.5;
     }
   });
-  // NOTA: NO seteamos scene.background → canvas transparente sobre el hero.
+  // Fondo original del zip (ambiente naranja).
+  const bakTex = pmremGenerator.fromScene(room, 0.04).texture;
+  scene.background = bakTex;
 
   // Sketch
   const sketch = new THREE.Group();
@@ -624,6 +631,9 @@ export function startRifts(container, opts = {}) {
     t += dt;
     gu.timeDelta.value = dt;
     gu.time.value = t;
+    // Suavizado del zoom hacia el objetivo dictado por el scroll.
+    camLen += (camTargetLen - camLen) * Math.min(1, dt * 5);
+    camera.position.setLength(camLen);
     updatables.forEach((u) => u.update());
     postprocessing.render();
   }
@@ -669,8 +679,14 @@ export function startRifts(container, opts = {}) {
   };
   document.addEventListener("visibilitychange", onVis);
 
-  // ── Cleanup ──
-  return function cleanup() {
+  // ── API pública ──
+  // setZoomProgress(0..1): 0 = alejado (default), 1 = acercado (scroll abajo).
+  function setZoomProgress(p) {
+    const cp = Math.max(0, Math.min(1, p));
+    camTargetLen = FAR + (NEAR - FAR) * cp;
+  }
+
+  function cleanup() {
     running = false;
     renderer.setAnimationLoop(null);
     document.removeEventListener("visibilitychange", onVis);
@@ -685,6 +701,7 @@ export function startRifts(container, opts = {}) {
         }
       });
       envTex.dispose();
+      bakTex.dispose();
       pmremGenerator.dispose();
       renderer.dispose();
     } catch (e) {
@@ -693,5 +710,7 @@ export function startRifts(container, opts = {}) {
     if (renderer.domElement.parentNode === container) {
       container.removeChild(renderer.domElement);
     }
-  };
+  }
+
+  return { setZoomProgress, cleanup };
 }

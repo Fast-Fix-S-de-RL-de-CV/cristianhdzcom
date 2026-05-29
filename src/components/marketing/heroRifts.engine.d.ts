@@ -1,4 +1,4 @@
 export function startRifts(
   container: HTMLElement,
   opts?: { particleCount?: number; backCount?: number },
-): () => void;
+): { setZoomProgress: (p: number) => void; cleanup: () => void };

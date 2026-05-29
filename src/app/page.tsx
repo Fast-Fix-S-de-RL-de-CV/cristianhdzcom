@@ -113,16 +113,8 @@ export default async function HomePage() {
 
       {/* HERO */}
       <section className="sec" style={{ paddingTop: 64, paddingBottom: 56, position: "relative", overflow: "hidden" }}>
-        <div className="mesh" />
-        {/* Fondo WebGL "Blazing Rifts" — detrás de todo el contenido del hero */}
+        {/* Único fondo del hero: animación WebGL "Blazing Rifts" (tal cual el zip). */}
         <HeroRifts />
-        <div className="hero-orbit">
-          <div className="orbit-ring" style={{ width: 900, height: 900, top: -200, right: -300 }} />
-          <div
-            className="orbit-ring"
-            style={{ width: 1300, height: 1300, top: -400, right: -500, animationDuration: "120s", animationDirection: "reverse" }}
-          />
-        </div>
 
         <div
           className="hero-grid"
@@ -246,50 +238,6 @@ export default async function HomePage() {
                 </Chip>
               </div>
             </div>
-
-            {/* Floating credibility card */}
-            <Card
-              className="hero-credibility-float"
-              style={{
-                position: "absolute",
-                bottom: -28,
-                left: -36,
-                padding: 16,
-                width: 250,
-                boxShadow: "0 16px 40px rgba(15,17,21,0.12)",
-              }}
-            >
-              <Eyebrow style={{ marginBottom: 8 }}>Trayectoria</Eyebrow>
-              <div className="grid-2" style={{ gap: 12 }}>
-                {hero.heroStats.slice(0, 4).map((s, i) => (
-                  <div key={i}>
-                    <div className="serif" style={{ fontSize: 30, lineHeight: 1 }}>
-                      {s.value}
-                    </div>
-                    <div className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.06em" }}>
-                      {s.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* Floating quote */}
-            {hero.heroQuoteText && (
-              <Card
-                className="hero-quote-float"
-                style={{ position: "absolute", top: 32, right: -28, padding: 16, width: 230, borderLeft: "3px solid var(--accent)" }}
-              >
-                <span className="serif" style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: "var(--ink)" }}>
-                  &ldquo;{hero.heroQuoteText}&rdquo;
-                </span>
-                {hero.heroQuoteAttrib && (
-                  <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 8, letterSpacing: "0.08em" }}>
-                    {hero.heroQuoteAttrib}
-                  </div>
-                )}
-              </Card>
-            )}
           </div>
         </div>
       </section>
