@@ -526,7 +526,21 @@ export const coupons = pgTable("coupons", {
   kind: varchar("kind", { length: 20 }).notNull().default("amount"), // amount | percent
   value: integer("value").notNull(), // cents or percent
   active: boolean("active").notNull().default(true),
+  // null = usos ilimitados; un entero = cuántos canjes quedan (se decrementa
+  // atómicamente al finalizar cada compra que lo usa, ver lib/stripe.ts).
   usesLeft: integer("uses_left"),
+});
+
+/**
+ * Idempotencia de webhooks Stripe. Stripe reentrega eventos ante cualquier
+ * respuesta no-2xx y ocasionalmente duplica. Antes de procesar un evento
+ * insertamos su id aquí; si ya existe, lo ignoramos (evita doble crédito de
+ * membresía y órdenes de auditoría duplicadas).
+ */
+export const stripeEvents = pgTable("stripe_events", {
+  id: varchar("id", { length: 80 }).primaryKey(), // event.id de Stripe (evt_...)
+  type: varchar("type", { length: 80 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const orders = pgTable(

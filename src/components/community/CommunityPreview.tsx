@@ -216,9 +216,9 @@ export function CommunityPreview({
               <Eyebrow style={{ marginBottom: 12 }}>Qué incluye</Eyebrow>
               <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
                 {[
-                  ["🎓", "4 talleres en vivo al mes"],
-                  ["💬", "Discord privado con 7 canales"],
-                  ["🚀", "Demo days mensuales"],
+                  ["🎓", "Talleres en vivo y on-demand"],
+                  ["💬", "Comunidad privada de fundadores"],
+                  ["🚀", "Demo days y casos reales"],
                   ["📚", "Biblioteca de PDFs, plantillas y notebooks"],
                   ["🏆", "Sistema de niveles, XP y rachas"],
                   ["🤝", "Networking real con otros operadores"],

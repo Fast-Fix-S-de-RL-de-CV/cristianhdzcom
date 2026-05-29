@@ -52,6 +52,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_signature" }, { status: 400 });
   }
 
+  // ── Idempotencia ── Insertamos el id del evento; si ya existe (reentrega
+  // o duplicado de Stripe), salimos con 200 sin reprocesar. La PK hace el
+  // trabajo atómico: onConflictDoNothing devuelve 0 filas si ya estaba.
+  try {
+    const inserted = await db
+      .insert(schema.stripeEvents)
+      .values({ id: event.id, type: event.type })
+      .onConflictDoNothing()
+      .returning({ id: schema.stripeEvents.id });
+    if (inserted.length === 0) {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+  } catch (e) {
+    // Si la tabla de idempotencia falla, preferimos procesar (no perder el
+    // evento) a bloquear ingresos — pero lo logueamos.
+    console.error("[stripe.webhook] idempotency insert failed:", (e as Error).message);
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {

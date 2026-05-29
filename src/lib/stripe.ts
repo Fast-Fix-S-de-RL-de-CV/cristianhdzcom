@@ -230,16 +230,32 @@ async function finalizeProgramOrder(session: Stripe.Checkout.Session) {
 
   let discountCents = 0;
   if (couponCode) {
+    const code = couponCode.toUpperCase();
     const [coupon] = await db
       .select()
       .from(schema.coupons)
-      .where(eq(schema.coupons.code, couponCode.toUpperCase()))
+      .where(eq(schema.coupons.code, code))
       .limit(1);
     if (coupon?.active) {
-      discountCents =
-        coupon.kind === "amount"
-          ? coupon.value
-          : Math.round((subtotalCents * coupon.value) / 100);
+      // Consumir un uso de forma atómica. Si usesLeft es null → ilimitado
+      // (no se decrementa). Si es un entero, el WHERE uses_left > 0 evita
+      // canjes de más en condiciones de carrera; solo aplicamos el descuento
+      // si el consumo tuvo éxito (o si es ilimitado).
+      let canApply = coupon.usesLeft == null;
+      if (coupon.usesLeft != null) {
+        const consumed = await db
+          .update(schema.coupons)
+          .set({ usesLeft: sql`${schema.coupons.usesLeft} - 1` })
+          .where(and(eq(schema.coupons.code, code), sql`${schema.coupons.usesLeft} > 0`))
+          .returning({ id: schema.coupons.id });
+        canApply = consumed.length > 0;
+      }
+      if (canApply) {
+        discountCents =
+          coupon.kind === "amount"
+            ? coupon.value
+            : Math.round((subtotalCents * coupon.value) / 100);
+      }
     }
   }
   const totalCents = Math.max(0, subtotalCents - discountCents);

@@ -174,13 +174,13 @@ export function CommunitySidebar({
           <div className="rule" style={{ margin: "16px 0" }} />
           <div className="col" style={{ gap: 8, fontSize: 13 }}>
             <div className="row">
-              <span style={{ color: "var(--muted)" }}>✦</span> Acceso a 4 talleres gratis al mes
+              <span style={{ color: "var(--muted)" }}>✦</span> Talleres en vivo y on-demand
             </div>
             <div className="row">
-              <span style={{ color: "var(--muted)" }}>✦</span> Discord privado · 7 canales
+              <span style={{ color: "var(--muted)" }}>✦</span> Comunidad privada de fundadores
             </div>
             <div className="row">
-              <span style={{ color: "var(--muted)" }}>✦</span> Demo days mensuales
+              <span style={{ color: "var(--muted)" }}>✦</span> Feed, ranking y mensajería directa
             </div>
           </div>
           {!currentUserId && (

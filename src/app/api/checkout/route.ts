@@ -60,7 +60,9 @@ export async function POST(req: Request) {
         .from(schema.coupons)
         .where(eq(schema.coupons.code, data.couponCode.toUpperCase()))
         .limit(1);
-      if (coupon?.active) {
+      // Solo aplica si está activo Y todavía tiene canjes (null = ilimitado).
+      const hasUsesLeft = coupon?.usesLeft == null || coupon.usesLeft > 0;
+      if (coupon?.active && hasUsesLeft) {
         const subtotalUsdCents = program.priceUsd * 100 + data.bumps.reduce((s, b) => s + b.priceCents, 0);
         couponDiscountUsdCents =
           coupon.kind === "amount" ? coupon.value : Math.round((subtotalUsdCents * coupon.value) / 100);
