@@ -11,17 +11,10 @@
     <script src="https://unpkg.com/extra.css/confetti.js"></script>
     <link rel="stylesheet" href="./style.css" />
     <style>
-      /* Wordmark Fast Fix para el hero (reemplaza el SVG del zip) */
-      #welcome h1.ff-word {
-        display: flex; gap: 0.15em; justify-content: center; align-items: baseline;
-        font-weight: 800; letter-spacing: -0.02em; line-height: 1;
-        font-size: clamp(3.5rem, 12vw, 8rem); margin: 0 0 0.1em;
-      }
-      #welcome h1.ff-word .a { color: #1d4ed8; }
-      #welcome h1.ff-word .b { color: var(--theme-surface-on-surface, #202124); }
-      #welcome .eyebrow {
-        font-size: 1rem; letter-spacing: 0.4em; font-weight: 700;
-        text-transform: uppercase; color: #1d4ed8; text-align: center; margin: 0 0 1.2em;
+      /* Logo oficial de Fast Fix en el hero */
+      #welcome h1.ff-logo { margin: 0 0 0.6em; }
+      #welcome h1.ff-logo img {
+        width: clamp(300px, 62vw, 640px); height: auto; display: block; margin: 0 auto;
       }
       /* Imagen de feature: que se vea completa dentro del wrapper sticky */
       #features .img-wrapper img { box-shadow: 0 30px 70px rgba(15,23,42,0.18); }
@@ -38,8 +31,7 @@
   <body>
     <!-- Hero -->
     <section id="welcome" class="center">
-      <p class="eyebrow">Soluciones en IT</p>
-      <h1 class="ff-word"><span class="sr-only">Fast Fix</span><span class="a" aria-hidden="true">Fast</span><span class="b" aria-hidden="true">Fix</span></h1>
+      <h1 class="ff-logo"><img src="./logo.png" alt="Fast Fix — International programming agency" /></h1>
       <p>Construimos tu software <span>Apps, sitios web, e-commerce y sistemas a la medida — con IA.</span></p>
       <div class="cta">
         <button onclick="window.open('https://wa.me/526241234567','_blank')"><span class="material-symbols-outlined">chat</span> <span>Cotizar mi proyecto</span></button>
