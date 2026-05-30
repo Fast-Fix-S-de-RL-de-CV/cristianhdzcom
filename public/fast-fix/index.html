@@ -25,52 +25,27 @@
         #features .feature h3 { font-size: 3.6em; }
         #features .feature p { font-size: 2.6em; width: 80%; max-width: 22ch; }
       }
-      /* ── Animación de scroll de los features ──
-         El zip usaba timeline-trigger/animation-trigger (experimental) y dejaba
-         el PRIMER feature ("Software a la medida") con el texto tapado. Lo
-         reemplazamos por animaciones con animation-timeline: view() (estables y
-         REVERSIBLES al bajar/subir):
-           · Título → fade + subida.
-           · Descripción → efecto de ESCRITURA (typewriter) con cursor de colores,
-             igual que el h2 de "Fast Fix convierte tu idea…". */
-      @supports (animation-timeline: view()) {
-        @keyframes ff-feature-in {
-          from { opacity: 0; transform: translateY(48px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes ff-type   { from { background-size: 0% 100%; } to { background-size: 100% 100%; } }
-        @keyframes ff-caret  { 50% { opacity: 0; } }
+      /* ── Escritura de las descripciones de los features ──
+         Usa el MISMO .typewriter del zip que en "¿List@ para construir…":
+         animación por TIEMPO disparada al entrar en viewport (no atada a la
+         posición de scroll), por eso se escribe suave en vez de salir parejo.
+         Las imágenes vuelven a su intercambio original (sin overrides). */
+      @supports (timeline-trigger-name: --t) {
+        /* El overlay blanco original del <p> tapaba el 1er feature: lo quitamos.
+           El cursor vive en .typewriter::after (otro elemento), no se afecta. */
+        #features .feature .content p::after { content: none !important; }
 
-        /* Anular animaciones experimentales frágiles del zip en features */
-        #features .feature h3 { animation: none !important; opacity: 1 !important; }
-        #features .feature img:not(:first-child) { animation: none !important; opacity: 1 !important; }
-
-        /* Título: reveal con fade + subida */
-        #features .feature .content h3 {
-          animation: ff-feature-in linear both;
-          animation-timeline: view();
-          animation-range: entry 6% cover 34%;
+        /* Disparar la escritura cuando el párrafo entra en viewport */
+        #features .feature .content p:has(> .typewriter) {
+          timeline-trigger: --tw view() cover 30% cover 1000%;
+          trigger-scope: --tw;
         }
-
-        /* Descripción: efecto de escritura por scroll (reversible) */
-        #features .feature .content p {
-          color: transparent;
-          background: linear-gradient(90deg, var(--theme-surface-on-surface-variant) 0 0) left center / 0% 100% no-repeat;
-          -webkit-background-clip: text;
-          background-clip: text;
-          animation: ff-type linear both;
-          animation-timeline: view();
-          animation-range: entry 12% cover 48%;
+        #features .feature .content p > .typewriter {
+          animation-trigger: --tw play-forwards reset;
         }
-        /* Cursor de colores al final de la descripción */
-        #features .feature .content p::after {
-          content: "|";
-          margin-left: 0.06em;
-          background: linear-gradient(in oklch, oklch(80% .3 34), oklch(90% .3 200));
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          animation: ff-caret 0.85s steps(1) infinite;
+        #features .feature .content p > .typewriter::after {
+          animation-trigger: --tw play-forwards reset;
+          animation-delay: 1s;
         }
       }
     </style>
@@ -123,35 +98,35 @@
           <div class="img-wrapper"><img src="https://antigravity.google/assets/image/landing/editor_suggestions.png" alt="Software a la medida" /></div>
           <div class="content">
             <h3>Software a la medida</h3>
-            <p>Sistemas internos, ERPs, CRMs y plataformas hechas para cómo opera TU empresa — no plantillas genéricas. Arquitectura escalable y código mantenible.</p>
+            <p><span class="typewriter">Sistemas internos, ERPs, CRMs y plataformas hechas para cómo opera TU empresa — no plantillas genéricas. Arquitectura escalable y código mantenible.</span></p>
           </div>
         </div>
         <div class="feature">
           <div class="img-wrapper"><img src="https://antigravity.google/assets/image/landing/task_based.png" alt="Apps móviles" /></div>
           <div class="content">
             <h3>Aplicaciones móviles</h3>
-            <p>Apps nativas y multiplataforma para iOS y Android: de la idea al App Store y Google Play, con backend, notificaciones y analítica incluidos.</p>
+            <p><span class="typewriter">Apps nativas y multiplataforma para iOS y Android: de la idea al App Store y Google Play, con backend, notificaciones y analítica incluidos.</span></p>
           </div>
         </div>
         <div class="feature">
           <div class="img-wrapper"><img src="https://antigravity.google/assets/image/landing/browser_use.png" alt="Sitios y sistemas web" /></div>
           <div class="content">
             <h3>Sitios y sistemas web</h3>
-            <p>Desde landing pages que convierten hasta paneles y portales web complejos. Rápidos, responsivos y listos para posicionar en Google.</p>
+            <p><span class="typewriter">Desde landing pages que convierten hasta paneles y portales web complejos. Rápidos, responsivos y listos para posicionar en Google.</span></p>
           </div>
         </div>
         <div class="feature">
           <div class="img-wrapper"><img src="https://antigravity.google/assets/image/landing/implementation_comment.png" alt="E-commerce" /></div>
           <div class="content">
             <h3>E-commerce y tiendas en línea</h3>
-            <p>Tiendas que venden 24/7: catálogo, carrito, pagos (Stripe, PayPal, OXXO, SPEI), envíos e integración con tus proveedores y facturación.</p>
+            <p><span class="typewriter">Tiendas que venden 24/7: catálogo, carrito, pagos (Stripe, PayPal, OXXO, SPEI), envíos e integración con tus proveedores y facturación.</span></p>
           </div>
         </div>
         <div class="feature">
           <div class="img-wrapper"><img src="https://antigravity.google/assets/image/landing/inbox.png" alt="IA y automatización" /></div>
           <div class="content">
             <h3>IA y automatización</h3>
-            <p>Chatbots, agentes y automatizaciones que ahorran horas: integramos modelos de IA a tus procesos, WhatsApp, correo y sistemas existentes.</p>
+            <p><span class="typewriter">Chatbots, agentes y automatizaciones que ahorran horas: integramos modelos de IA a tus procesos, WhatsApp, correo y sistemas existentes.</span></p>
           </div>
         </div>
       </div>
