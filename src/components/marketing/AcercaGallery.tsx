@@ -32,37 +32,23 @@ export function AcercaGallery({
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // Snap "uno por uno" acotado a /acerca: lo encendemos en <html> al montar y
-  // lo restauramos al desmontar. Solo los .ag-panel tienen scroll-snap-align,
-  // así que las demás secciones de la página no se ven afectadas.
+  // Parallax del fondo de cada panel (rAF). La galería es su PROPIO contenedor
+  // de scroll (snap mandatory), así que medimos respecto a ese contenedor.
   useEffect(() => {
-    const html = document.documentElement;
-    const prevType = html.style.scrollSnapType;
-    const prevBehavior = html.style.scrollBehavior;
-    html.style.scrollSnapType = "y proximity";
-    html.style.scrollBehavior = "smooth";
-    return () => {
-      html.style.scrollSnapType = prevType;
-      html.style.scrollBehavior = prevBehavior;
-    };
-  }, []);
-
-  // Parallax del fondo de cada panel (rAF, basado en scroll de la ventana).
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const panels = Array.from(root.querySelectorAll<HTMLElement>(".ag-panel"));
+    const scroller = rootRef.current;
+    if (!scroller) return;
+    const panels = Array.from(scroller.querySelectorAll<HTMLElement>(".ag-panel"));
     let raf = 0;
     const update = () => {
       raf = 0;
-      const vh = window.innerHeight || 1;
+      const sRect = scroller.getBoundingClientRect();
+      const sh = sRect.height || 1;
       for (const panel of panels) {
         const bg = panel.querySelector<HTMLElement>(".ag-bg");
         if (!bg) continue;
-        const rect = panel.getBoundingClientRect();
-        if (rect.bottom < -vh || rect.top > vh * 2) continue; // fuera de rango
-        const center = rect.top + rect.height / 2 - vh / 2;
-        const p = Math.max(-1.2, Math.min(1.2, center / vh));
+        const pRect = panel.getBoundingClientRect();
+        const center = pRect.top - sRect.top + pRect.height / 2 - sh / 2;
+        const p = Math.max(-1.2, Math.min(1.2, center / sh));
         bg.style.transform = `translate3d(0, ${(p * 9).toFixed(2)}%, 0) scale(1.16)`;
       }
     };
@@ -70,10 +56,10 @@ export function AcercaGallery({
       if (!raf) raf = requestAnimationFrame(update);
     };
     update();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    scroller.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      scroller.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       if (raf) cancelAnimationFrame(raf);
     };
@@ -119,10 +105,26 @@ export function AcercaGallery({
       })}
 
       <style>{`
-        .acerca-gallery { position: relative; background: #05080f; }
-        .ag-panel {
+        /* La galería es su PROPIO contenedor de scroll: snap mandatory =
+           efecto "anclado", una foto a la vez. Al llegar al final, el
+           overscroll encadena hacia la página (sigue la siguiente sección). */
+        .acerca-gallery {
           position: relative;
           height: 100svh;
+          min-height: 520px;
+          overflow-y: auto;
+          overflow-x: hidden;
+          scroll-snap-type: y mandatory;
+          overscroll-behavior-y: auto;
+          scroll-behavior: smooth;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          background: #05080f;
+        }
+        .acerca-gallery::-webkit-scrollbar { display: none; }
+        .ag-panel {
+          position: relative;
+          height: 100%;
           min-height: 520px;
           overflow: hidden;
           display: flex;
