@@ -25,26 +25,52 @@
         #features .feature h3 { font-size: 3.6em; }
         #features .feature p { font-size: 2.6em; width: 80%; max-width: 22ch; }
       }
-      /* ── Fix + animación de scroll de los features ──
+      /* ── Animación de scroll de los features ──
          El zip usaba timeline-trigger/animation-trigger (experimental) y dejaba
-         el PRIMER feature ("Software a la medida") con su texto tapado por un
-         overlay que no se desplegaba. Lo reemplazamos por un reveal con
-         animation-timeline: view(), soportado de forma estable y que anima
-         tanto al BAJAR como al SUBIR (reversible) para todos los features. */
+         el PRIMER feature ("Software a la medida") con el texto tapado. Lo
+         reemplazamos por animaciones con animation-timeline: view() (estables y
+         REVERSIBLES al bajar/subir):
+           · Título → fade + subida.
+           · Descripción → efecto de ESCRITURA (typewriter) con cursor de colores,
+             igual que el h2 de "Fast Fix convierte tu idea…". */
       @supports (animation-timeline: view()) {
         @keyframes ff-feature-in {
           from { opacity: 0; transform: translateY(48px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        /* Anular el overlay/animaciones frágiles del CSS original */
-        #features .feature p::after { content: none !important; animation: none !important; }
+        @keyframes ff-type   { from { background-size: 0% 100%; } to { background-size: 100% 100%; } }
+        @keyframes ff-caret  { 50% { opacity: 0; } }
+
+        /* Anular animaciones experimentales frágiles del zip en features */
         #features .feature h3 { animation: none !important; opacity: 1 !important; }
         #features .feature img:not(:first-child) { animation: none !important; opacity: 1 !important; }
-        /* Reveal reversible por scroll, también en el primero */
-        #features .feature .content {
+
+        /* Título: reveal con fade + subida */
+        #features .feature .content h3 {
           animation: ff-feature-in linear both;
           animation-timeline: view();
-          animation-range: entry 8% cover 42%;
+          animation-range: entry 6% cover 34%;
+        }
+
+        /* Descripción: efecto de escritura por scroll (reversible) */
+        #features .feature .content p {
+          color: transparent;
+          background: linear-gradient(90deg, var(--theme-surface-on-surface-variant) 0 0) left center / 0% 100% no-repeat;
+          -webkit-background-clip: text;
+          background-clip: text;
+          animation: ff-type linear both;
+          animation-timeline: view();
+          animation-range: entry 12% cover 48%;
+        }
+        /* Cursor de colores al final de la descripción */
+        #features .feature .content p::after {
+          content: "|";
+          margin-left: 0.06em;
+          background: linear-gradient(in oklch, oklch(80% .3 34), oklch(90% .3 200));
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          animation: ff-caret 0.85s steps(1) infinite;
         }
       }
     </style>
