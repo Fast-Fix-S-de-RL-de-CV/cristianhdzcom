@@ -119,7 +119,7 @@ export default async function MembresiaPage() {
 
       {/* Cómo funciona el crédito */}
       <section
-        className="sec"
+        className="sec side-gutter"
         style={{ background: "var(--bg-2)", borderRadius: 32, margin: "0 56px 96px", padding: "56px 48px" }}
       >
         <Eyebrow>Cómo funciona el crédito</Eyebrow>

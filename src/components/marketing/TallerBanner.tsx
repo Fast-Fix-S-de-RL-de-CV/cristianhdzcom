@@ -91,7 +91,9 @@ export function TallerBanner({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={taller.coverUrl}
-            alt=""
+            alt={taller.title}
+            className="zoomable"
+            data-gallery="talleres"
             loading="lazy"
             style={{
               position: "absolute",

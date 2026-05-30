@@ -124,7 +124,7 @@ export function MembershipCheckout({
       </div>
 
       {/* Grid de planes */}
-      <div className="grid-3" style={{ gap: 24 }}>
+      <div className="grid-3 membresia-plans-grid" style={{ gap: 24 }}>
         {plans.map((p) => {
           const price = billing === "yearly" && p.priceYearly ? p.priceYearly : p.priceMonthly;
           const periodLabel = billing === "yearly" ? "año" : "mes";

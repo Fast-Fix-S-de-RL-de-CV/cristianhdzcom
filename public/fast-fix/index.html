@@ -423,5 +423,91 @@
       })();
     </script>
     <script src="./script.js"></script>
+
+    <!-- Galería / lightbox fullsize para la multimedia del micrositio.
+         Vive dentro del iframe → lightbox propio, independiente del de React.
+         Hace clicables las 5 imágenes de servicios (#features) y las 3 del
+         portafolio (.carousel), agrupadas para navegar con ‹ ›, teclado y swipe. -->
+    <script>
+      (function () {
+        var BTN = 'position:fixed;width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;font-size:24px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);z-index:100000;';
+        var groups = {
+          servicios: [].slice.call(document.querySelectorAll('#features .feature .img-wrapper img')),
+          trabajos: [].slice.call(document.querySelectorAll('.carousel .developer figure img'))
+        };
+        var all = [];
+        Object.keys(groups).forEach(function (g) {
+          groups[g].forEach(function (img) {
+            img.style.cursor = 'zoom-in';
+            img.setAttribute('data-ffg', g);
+          });
+          all = all.concat(groups[g]);
+        });
+        if (!all.length) return;
+
+        var overlay = null, list = [], idx = 0;
+
+        function build() {
+          overlay = document.createElement('div');
+          overlay.setAttribute('role', 'dialog');
+          overlay.setAttribute('aria-modal', 'true');
+          overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(6,10,20,.9);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);padding:clamp(12px,4vw,48px)';
+          overlay.innerHTML =
+            '<button data-act="close" aria-label="Cerrar" style="' + BTN + 'top:16px;right:16px;">&times;</button>' +
+            '<button data-act="prev" aria-label="Anterior" style="' + BTN + 'left:clamp(8px,2vw,28px);top:50%;transform:translateY(-50%);">&#8249;</button>' +
+            '<img alt="" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:14px;box-shadow:0 30px 90px rgba(0,0,0,.55)" />' +
+            '<button data-act="next" aria-label="Siguiente" style="' + BTN + 'right:clamp(8px,2vw,28px);top:50%;transform:translateY(-50%);">&#8250;</button>' +
+            '<div data-el="cap" style="position:fixed;bottom:18px;left:0;right:0;text-align:center;color:rgba(255,255,255,.85);font-size:13px;letter-spacing:.04em;pointer-events:none"></div>';
+          document.body.appendChild(overlay);
+          overlay.addEventListener('click', function (e) {
+            var act = e.target.getAttribute && e.target.getAttribute('data-act');
+            if (act === 'close' || e.target === overlay) close();
+            else if (act === 'prev') go(-1);
+            else if (act === 'next') go(1);
+          });
+          var sx = 0;
+          overlay.addEventListener('touchstart', function (e) { sx = e.touches[0].clientX; }, { passive: true });
+          overlay.addEventListener('touchend', function (e) {
+            var dx = e.changedTouches[0].clientX - sx;
+            if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+          });
+        }
+
+        function render() {
+          var cur = list[idx];
+          var img = overlay.querySelector('img');
+          img.src = cur.currentSrc || cur.src;
+          img.alt = cur.alt || '';
+          var many = list.length > 1;
+          overlay.querySelector('[data-act="prev"]').style.display = many ? 'flex' : 'none';
+          overlay.querySelector('[data-act="next"]').style.display = many ? 'flex' : 'none';
+          overlay.querySelector('[data-el="cap"]').textContent =
+            (cur.alt ? cur.alt + (many ? ' ' : '') : '') + (many ? (idx + 1) + ' / ' + list.length : '');
+        }
+        function go(d) { idx = (idx + d + list.length) % list.length; render(); }
+        function open(img) {
+          if (!overlay) build();
+          var g = img.getAttribute('data-ffg');
+          list = (groups[g] && groups[g].length) ? groups[g] : [img];
+          idx = Math.max(0, list.indexOf(img));
+          overlay.style.display = 'flex';
+          document.documentElement.style.overflow = 'hidden';
+          render();
+        }
+        function close() {
+          if (overlay) { overlay.style.display = 'none'; document.documentElement.style.overflow = ''; }
+        }
+
+        all.forEach(function (img) {
+          img.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); open(img); });
+        });
+        document.addEventListener('keydown', function (e) {
+          if (!overlay || overlay.style.display === 'none') return;
+          if (e.key === 'Escape') close();
+          else if (e.key === 'ArrowLeft') go(-1);
+          else if (e.key === 'ArrowRight') go(1);
+        });
+      })();
+    </script>
   </body>
 </html>

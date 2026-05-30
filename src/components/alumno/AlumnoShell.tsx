@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AlumnoSidebar } from "./AlumnoSidebar";
+import { AlumnoMobileNav } from "./AlumnoMobileNav";
 
 export type AlumnoActiveKey =
   | "sendero"
@@ -59,8 +60,8 @@ export function AlumnoShell({
   wideMain?: boolean;
 }) {
   return (
-    <div className="plat">
-      <AlumnoSidebar
+    <>
+      <AlumnoMobileNav
         user={{
           id: user.id,
           name: user.name,
@@ -75,16 +76,33 @@ export function AlumnoShell({
         }}
         active={active}
       />
+      <div className="plat">
+        <AlumnoSidebar
+          user={{
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            level: user.level,
+            xp: user.xp,
+            streakDays: user.streakDays,
+            hearts: user.hearts,
+            tier: user.tier,
+            tierScore: user.tierScore,
+          }}
+          active={active}
+        />
 
-      <main
-        className="plat-main"
-        style={rightAside ? undefined : wideMain ? { gridColumn: "span 2" } : undefined}
-      >
-        {children}
-      </main>
+        <main
+          className="plat-main"
+          style={rightAside ? undefined : wideMain ? { gridColumn: "span 2" } : undefined}
+        >
+          {children}
+        </main>
 
-      {rightAside ? <aside className="plat-aside">{rightAside}</aside> : null}
-    </div>
+        {rightAside ? <aside className="plat-aside">{rightAside}</aside> : null}
+      </div>
+    </>
   );
 }
 

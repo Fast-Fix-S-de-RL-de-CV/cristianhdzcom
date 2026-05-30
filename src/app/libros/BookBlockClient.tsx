@@ -152,6 +152,8 @@ export function BookBlockClient(props: {
           <img
             src={coverUrl!}
             alt={title}
+            className="zoomable"
+            data-gallery={`libro-${slug}`}
             style={{
               display: "block",
               width: "100%",

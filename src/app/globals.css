@@ -1159,5 +1159,278 @@ html { scroll-behavior: smooth; }
   }
 }
 
+/* ════════════════════════════════════════════════════════════════
+   GALERÍA / LIGHTBOX  —  fotos clicables + movimiento en hover
+   ════════════════════════════════════════════════════════════════ */
+/* Cualquier <img class="zoomable"> abre la galería fullsize elegante
+   (ver components/ui/Lightbox.tsx, montado en el root layout).
+   Cursor "zoom-in" + micro-zoom suave al pasar el puntero. */
+.zoomable {
+  cursor: zoom-in;
+  transition: transform .55s cubic-bezier(.2, .8, .2, 1), filter .35s ease;
+  will-change: transform;
+}
+.zoomable:hover {
+  transform: scale(1.045);
+  filter: saturate(1.06) brightness(1.03);
+}
+
+/* Movimiento en hover para portadas (aunque la card sea un link y NO
+   abra el lightbox). El wrapper .cc-cover ya recorta con overflow:hidden,
+   así que el zoom se ve elegante (estilo Netflix/Spotify). El fondo
+   blureado es un <div>, no se ve afectado: solo zoom-ea la imagen real. */
+.cc-cover img,
+.photo-zoom img {
+  transition: transform .6s cubic-bezier(.2, .8, .2, 1), filter .4s ease;
+  will-change: transform;
+}
+.cc-cover:hover img,
+.photo-zoom:hover img {
+  transform: scale(1.07);
+}
+
+/* En pantallas táctiles no hay hover real → sin micro-movimiento (evita
+   estados "pegados" tras un tap). El click/lightbox sigue funcionando. */
+@media (hover: none) {
+  .zoomable:hover { transform: none; filter: none; }
+  .cc-cover:hover img, .photo-zoom:hover img { transform: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   NAV MÓVIL  —  hamburguesa + menú fullscreen (≤720px)
+   ════════════════════════════════════════════════════════════════ */
+/* En desktop los .ch-nav-links se ven y la hamburguesa se oculta.
+   En ≤720px los links se ocultan (regla existente) y aparece la
+   hamburguesa, que abre un menú a pantalla completa con todos los
+   destinos + acciones de sesión. Antes: los 8 links desaparecían sin
+   reemplazo y la navegación quedaba inalcanzable en celular. */
+.ch-nav-burger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0;
+  transition: background .15s ease, border-color .15s ease;
+}
+.ch-nav-burger:hover { background: var(--bg); border-color: var(--line-2); }
+.ch-nav-burger svg { display: block; }
+
+.ch-mobile-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding: 78px 24px 32px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  animation: ch-menu-in .22s cubic-bezier(.2, .8, .2, 1);
+}
+.ch-mobile-menu-head {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+.ch-mobile-menu-head img { height: 32px; width: auto; display: block; }
+.ch-mobile-close {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ch-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+}
+.ch-mobile-list a {
+  padding: 15px 10px;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+  transition: color .15s ease, padding-left .2s ease;
+}
+.ch-mobile-list a:hover { padding-left: 16px; color: var(--accent); }
+.ch-mobile-list a.is-active { color: var(--accent); }
+.ch-mobile-actions {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ch-mobile-actions .btn { width: 100%; justify-content: center; }
+@keyframes ch-menu-in { from { opacity: 0; transform: translateY(-8px); } }
+
+@media (max-width: 720px) {
+  .ch-nav-burger { display: inline-flex; }
+  /* Mantener el botón primario ("Empezar gratis" / "Mi escritorio") y el
+     avatar; ocultar el resto ya lo hace .ch-nav-cta .btn-ghost. */
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ENDURECIDO RESPONSIVE  —  hallazgos de auditoría móvil
+   ════════════════════════════════════════════════════════════════ */
+/* Tablas/grids anchos que no colapsaban → scroll horizontal o stack. */
+@media (max-width: 720px) {
+  /* Tabla comparativa de programas (5 columnas) → scroll horizontal */
+  .compare-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .compare-scroll > * { min-width: 640px; }
+
+  /* Cualquier tabla nativa dentro del admin → scroll en vez de squeeze */
+  .admin-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .admin-scroll-x table { min-width: 680px; }
+
+  /* Grids de planes/membresía de 3 columnas → 1 columna */
+  .membresia-plans-grid,
+  .plans-3col { grid-template-columns: 1fr !important; }
+
+  /* Secciones con márgenes laterales inline grandes (margin: 0 56px) →
+     reducidos en móvil para que no se desborden ni recorten contenido. */
+  .side-gutter { margin-left: 20px !important; margin-right: 20px !important; }
+}
+
+@media (max-width: 640px) {
+  /* Mapa del sendero: las cards no deben recortarse en pantallas chicas */
+  .sendero-map-row { flex-wrap: wrap !important; }
+}
+
+/* Composer de chat / mensajes: usar dvh para no quedar tapado por la
+   barra del navegador móvil (100vh incluye la barra, 100dvh no). */
+.chat-fill { height: 100dvh; }
+
+/* ════════════════════════════════════════════════════════════════
+   NAV MÓVIL — ÁREA DE ALUMNO (≤1024px)
+   ════════════════════════════════════════════════════════════════ */
+/* El rail lateral .plat-side se ocultaba ≤720px (y se aplastaba a 80px en
+   tablet) SIN reemplazo → la zona de miembros quedaba sin navegación en
+   celular. Estas reglas activan una barra superior con hamburguesa + un
+   drawer que reutiliza el mismo <AlumnoSidebar>. Ver AlumnoMobileNav.tsx. */
+.alumno-topbar { display: none; }
+.alumno-burger {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.alumno-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  background: rgba(6, 10, 20, 0.55);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  animation: ch-menu-in 0.18s ease;
+}
+.alumno-drawer {
+  position: relative;
+  width: min(86vw, 290px);
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 24px 0 70px rgba(0, 0, 0, 0.45);
+  animation: alumno-drawer-in 0.24s cubic-bezier(.2, .8, .2, 1);
+}
+/* Forzar visible el sidebar DENTRO del drawer (vence la regla que lo
+   oculta ≤720px). No es hijo de .plat, así que las reglas de grid no le
+   aplican: lo dejamos en flujo normal, ancho completo del drawer. */
+.alumno-drawer .plat-side {
+  display: flex !important;
+  width: 100%;
+  height: auto;
+  min-height: 100dvh;
+  position: static;
+  top: auto;
+  border-right: 0;
+}
+.alumno-drawer-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.10);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+@keyframes alumno-drawer-in { from { transform: translateX(-100%); } }
+
+@media (max-width: 1024px) {
+  .alumno-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: linear-gradient(180deg, #061B36 0%, #0B2548 100%);
+    border-bottom: 1px solid rgba(216, 168, 63, 0.14);
+  }
+  .alumno-topbar .ch-logo img { height: 30px; width: auto; filter: brightness(1.05); }
+  .alumno-topbar .av {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  /* La zona alumno deja de ser un grid de 100vh: pasa a documento normal
+     scrolleable con la topbar pegajosa arriba. El rail in-grid se oculta
+     (lo reemplaza el drawer). */
+  .plat {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .plat > .plat-side { display: none !important; }
+  .plat-main {
+    height: auto !important;
+    overflow: visible !important;
+    padding: 20px 18px !important;
+  }
+}
+
 /* Prevent body horizontal scroll always */
 html, body { overflow-x: hidden; }

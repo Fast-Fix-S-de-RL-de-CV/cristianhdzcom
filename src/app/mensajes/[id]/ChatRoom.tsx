@@ -84,7 +84,7 @@ export function ChatRoom({
   const isStaff = peer.role === "admin" || peer.role === "superadmin";
 
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", height: "calc(100vh - 120px)" }}>
+    <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", height: "calc(100dvh - 120px)" }}>
       {/* Header */}
       <div className="row" style={{ gap: 8, marginBottom: 12, alignItems: "center" }}>
         <Link href="/mensajes" style={{ textDecoration: "none", color: "var(--muted)" }} className="mono">

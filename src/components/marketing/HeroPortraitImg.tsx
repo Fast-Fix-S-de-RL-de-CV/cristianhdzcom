@@ -19,6 +19,7 @@ export function HeroPortraitImg({ src, alt }: { src: string; alt: string }) {
     <img
       src={src}
       alt={alt}
+      className="zoomable"
       loading="eager"
       decoding="async"
       onError={() => setFailed(true)}

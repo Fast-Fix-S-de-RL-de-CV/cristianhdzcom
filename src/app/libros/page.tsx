@@ -118,7 +118,7 @@ export default async function BooksPage() {
       {/* Bundles section */}
       {bundles.length > 0 && (
         <section
-          className="sec"
+          className="sec side-gutter"
           style={{ background: "var(--bg-2)", borderRadius: 32, margin: "0 56px 96px" }}
         >
           <div

@@ -74,7 +74,7 @@ export default async function MembresiasAdminPage() {
             PLANES DEL CATÁLOGO
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 0 }}>
+        <div className="membresia-plans-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 0 }}>
           {plans.map((p, i) => (
             <div
               key={p.id}
@@ -104,6 +104,8 @@ export default async function MembresiasAdminPage() {
 
       {/* Lista de suscripciones */}
       <Card style={{ padding: 0, overflow: "hidden" }}>
+        <div className="admin-table-wrap">
+        <div>
         <div
           className="row"
           style={{
@@ -174,6 +176,8 @@ export default async function MembresiasAdminPage() {
             );
           })
         )}
+        </div>
+        </div>
       </Card>
     </AdminPageShell>
   );

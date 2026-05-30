@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ConfirmProvider } from "@/components/ui/ConfirmProvider";
+import { Lightbox } from "@/components/ui/Lightbox";
 
 export const metadata: Metadata = {
   title: "Cristian Hernández — Negocios y programación con IA",
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ConfirmProvider>{children}</ConfirmProvider>
+        <Lightbox />
       </body>
     </html>
   );

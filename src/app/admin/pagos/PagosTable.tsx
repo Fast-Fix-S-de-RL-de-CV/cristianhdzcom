@@ -68,6 +68,8 @@ export function PagosTable({ rows }: { rows: Row[] }) {
         })}
       </div>
 
+      <div className="admin-table-wrap">
+      <div>
       <div
         className="row"
         style={{
@@ -134,6 +136,8 @@ export function PagosTable({ rows }: { rows: Row[] }) {
             Sin pagos en esta categoría.
           </div>
         )}
+      </div>
+      </div>
       </div>
     </>
   );

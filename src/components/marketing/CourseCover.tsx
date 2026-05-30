@@ -20,6 +20,15 @@ type Props = {
   /** Optional className passthrough. */
   className?: string;
   /**
+   * Si true, la imagen real (no el fondo blureado) se vuelve clicable y abre
+   * la galería/lightbox fullsize. Úsalo SOLO en contextos donde la portada NO
+   * está dentro de un <Link> de navegación (ej. hero de detalle de
+   * programa/libro). En cards-link déjalo en false para no robar el click.
+   */
+  zoomable?: boolean;
+  /** Agrupa varias imágenes en una misma galería (prev/next). */
+  galleryId?: string;
+  /**
    * Cómo encajar la imagen en el contenedor:
    *   - 'contain' (default): muestra la imagen COMPLETA sin cortarla. Para
    *     evitar bordes vacíos, renderea la misma imagen como fondo blureado
@@ -57,7 +66,11 @@ export function CourseCover({
   style,
   className,
   fit = "contain",
+  zoomable = false,
+  galleryId,
 }: Props) {
+  // .cc-cover habilita el micro-zoom en hover (recortado por overflow:hidden).
+  const wrapCls = `cc-cover ${className ?? ""}`.trim();
   const wrapperStyle: CSSProperties = {
     position: "relative",
     overflow: "hidden",
@@ -97,11 +110,13 @@ export function CourseCover({
     // Imagen: contain (default) o cover.
     if (fit === "cover") {
       return (
-        <div style={wrapperStyle} className={className}>
+        <div style={wrapperStyle} className={wrapCls}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={coverUrl}
             alt=""
+            className={zoomable ? "zoomable" : undefined}
+            data-gallery={galleryId}
             loading="lazy"
             decoding="async"
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
@@ -114,7 +129,7 @@ export function CourseCover({
     // Detrás de ella va la misma imagen pero blureada y escalada, para que
     // los lados vacíos no se vean como un cuadro gris feo.
     return (
-      <div style={wrapperStyle} className={className}>
+      <div style={wrapperStyle} className={wrapCls}>
         {/* Capa 1: imagen blureada de fondo (mismo URL, scaled + blurred). */}
         <div
           aria-hidden="true"
@@ -143,6 +158,8 @@ export function CourseCover({
           <img
             src={coverUrl}
             alt=""
+            className={zoomable ? "zoomable" : undefined}
+            data-gallery={galleryId}
             loading="lazy"
             decoding="async"
             style={{

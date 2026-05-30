@@ -162,6 +162,7 @@ export default async function ProgramsPage({
         <Eyebrow>Comparador rápido</Eyebrow>
         <h2 style={{ fontSize: 56, marginTop: 16, marginBottom: 40 }}>¿Cuál es para ti?</h2>
         <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div className="compare-scroll">
           <div style={{ display: "grid", gridTemplateColumns: "1.3fr repeat(4, 1fr)", borderBottom: "1px solid var(--line)" }}>
             {["Si tu objetivo es...", "Taller", "Curso", "Certificación", "Agencia"].map((h, i) => (
               <div
@@ -212,6 +213,7 @@ export default async function ProgramsPage({
               ))}
             </div>
           ))}
+          </div>
         </Card>
       </section>
 

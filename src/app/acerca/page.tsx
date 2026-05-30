@@ -63,6 +63,7 @@ export default async function AcercaPage() {
                 <img
                   src={hero.heroPortraitUrl}
                   alt={fullName}
+                  className="zoomable"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               ) : (

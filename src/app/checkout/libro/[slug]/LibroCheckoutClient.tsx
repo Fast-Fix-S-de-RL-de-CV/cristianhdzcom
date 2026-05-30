@@ -151,7 +151,7 @@ export function LibroCheckoutClient({
 
   return (
     <section
-      className="sec"
+      className="sec checkout-grid"
       style={{
         paddingTop: 48,
         paddingBottom: 64,

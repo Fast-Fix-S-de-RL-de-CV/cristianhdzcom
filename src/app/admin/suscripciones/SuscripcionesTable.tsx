@@ -85,6 +85,8 @@ export function SuscripcionesTable({ rows }: { rows: Row[] }) {
         </div>
       </div>
 
+      <div className="admin-table-wrap">
+      <div>
       <div
         className="row"
         style={{
@@ -151,6 +153,8 @@ export function SuscripcionesTable({ rows }: { rows: Row[] }) {
             Sin órdenes en este periodo.
           </div>
         )}
+      </div>
+      </div>
       </div>
     </>
   );

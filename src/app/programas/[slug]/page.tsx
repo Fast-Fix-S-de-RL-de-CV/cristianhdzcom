@@ -231,6 +231,8 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
                 coverKind={program.coverKind}
                 radius={18}
                 aspectRatio="16/9"
+                zoomable
+                galleryId={`programa-${program.slug}`}
                 style={{ boxShadow: "0 18px 50px rgba(15,17,21,0.12)" }}
               />
             ) : (
