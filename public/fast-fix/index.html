@@ -49,6 +49,28 @@
         }
       }
 
+      /* ── Cambio de imagen por sección (scroll-driven, reversible) ──
+         Cada imagen se muestra mientras SU feature está activo y cambia a la
+         siguiente conforme bajas (y en reversa al subir). Determinista: anula
+         el mecanismo experimental original (el "bug smooth" que no cambiaba).
+         Cada .feature define su propia view-timeline (--feat) y su imagen se
+         enciende/apaga según el avance de scroll de esa sección. */
+      @supports (animation-timeline: view()) {
+        @keyframes ff-img-swap {
+          0%   { opacity: 0; }
+          28%  { opacity: 1; }
+          72%  { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        #features .feature { view-timeline-name: --feat; }
+        #features .feature .img-wrapper img {
+          animation: ff-img-swap linear both !important;
+          animation-timeline: --feat !important;
+          animation-range: cover 0% cover 100% !important;
+          animation-trigger: unset !important; /* quita el gating experimental del zip */
+        }
+      }
+
       /* ── CTA final: 2 columnas DENTRO del bloque oscuro (texto + formulario) ── */
       #beforeyougo .card {
         aspect-ratio: auto !important; max-height: none !important;
