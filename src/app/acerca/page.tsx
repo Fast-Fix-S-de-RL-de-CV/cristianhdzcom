@@ -4,7 +4,6 @@ import { Footer } from "@/components/marketing/Footer";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Chip } from "@/components/ui/Chip";
 import { getSiteSettings, renderMarkdownLight } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
@@ -33,103 +32,111 @@ export default async function AcercaPage() {
     <div>
       <Nav />
 
-      {/* ───────── HERO PERSONAL ───────── */}
-      <section className="sec" style={{ paddingTop: 56, paddingBottom: 56, position: "relative", overflow: "hidden" }}>
-        <div className="mesh" />
-        <div
-          className="acerca-hero-grid"
+      {/* ───────── HERO — Galería infinita ───────── */}
+      <section
+        className="acerca-hero-gallery"
+        aria-label={`Acerca de ${fullName}`}
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "88svh",
+          minHeight: 520,
+          overflow: "hidden",
+          background: "#000",
+        }}
+      >
+        {/* Widget self-contained (Lenis + GSAP, scroll infinito con snap +
+            parallax) embebido en iframe para que su scroll NO secuestre el de
+            la página. Vive en /public/galeria-infinita. */}
+        <iframe
+          src="/galeria-infinita/index.html"
+          title="Galería infinita"
+          loading="eager"
           style={{
-            display: "grid",
-            gridTemplateColumns: "0.85fr 1fr",
-            gap: 56,
-            alignItems: "center",
-            position: "relative",
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            border: 0,
+            display: "block",
+          }}
+        />
+
+        {/* Overlay de identidad + CTA. pointer-events:none deja pasar el scroll
+            a la galería; solo el botón "Conóceme" recibe clics. */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            padding: "clamp(24px, 5vw, 64px)",
+            background:
+              "linear-gradient(to top, rgba(6,10,20,0.74) 0%, rgba(6,10,20,0.18) 40%, rgba(6,10,20,0) 62%)",
           }}
         >
-          {/* Retrato */}
-          <div style={{ position: "relative" }}>
+          <div style={{ maxWidth: 920 }}>
             <div
+              className="mono"
               style={{
-                aspectRatio: "4/5",
-                borderRadius: 24,
-                overflow: "hidden",
-                boxShadow: "0 30px 70px rgba(15,17,21,0.22)",
-                background: "linear-gradient(135deg, oklch(78% 0.04 245), oklch(68% 0.05 252))",
-                position: "relative",
+                color: "rgba(255,255,255,0.82)",
+                letterSpacing: "0.16em",
+                fontSize: 12,
+                textTransform: "uppercase",
+                marginBottom: 12,
               }}
             >
-              {hero.heroPortraitUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={hero.heroPortraitUrl}
-                  alt={fullName}
-                  className="zoomable"
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                />
-              ) : (
-                <div
-                  className="center"
-                  style={{ position: "absolute", inset: 0, color: "rgba(255,255,255,0.7)" }}
-                >
-                  <span className="serif" style={{ fontSize: 40 }}>
-                    {fullName}
-                  </span>
-                </div>
-              )}
+              Acerca de mí
             </div>
-            {/* Chip flotante */}
-            <Card
-              className="acerca-portrait-chip"
+            <h1
               style={{
-                position: "absolute",
-                bottom: -22,
-                right: -20,
-                padding: "12px 18px",
-                boxShadow: "0 16px 40px rgba(15,17,21,0.14)",
+                color: "#fff",
+                fontSize: "clamp(40px, 6.5vw, 84px)",
+                lineHeight: 0.98,
+                margin: 0,
+                textShadow: "0 2px 36px rgba(0,0,0,0.45)",
               }}
             >
-              <div className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.1em" }}>
-                {hero.heroPortraitFooterLine}
-              </div>
-            </Card>
-          </div>
-
-          {/* Texto */}
-          <div>
-            <Eyebrow style={{ marginBottom: 16 }}>Acerca de mí</Eyebrow>
-            <h1 style={{ fontSize: "clamp(48px, 6.5vw, 84px)", lineHeight: 0.98, marginBottom: 16 }}>
               {fullName}.
             </h1>
             {role && (
-              <h2
+              <p
                 className="serif"
-                style={{ fontSize: "clamp(22px, 3vw, 34px)", color: "var(--ink-2)", fontWeight: 500, marginBottom: 28 }}
+                style={{
+                  color: "rgba(255,255,255,0.86)",
+                  fontSize: "clamp(18px, 2.4vw, 28px)",
+                  marginTop: 14,
+                  maxWidth: 680,
+                  textShadow: "0 2px 24px rgba(0,0,0,0.4)",
+                }}
               >
-                {hero.heroSubtitleAccent && (
-                  <span style={{ color: "var(--accent)" }}>{hero.heroSubtitleAccent}</span>
-                )}
-                {hero.heroSubtitleAccent && hero.heroSubtitleRest && " "}
-                {hero.heroSubtitleRest}
-              </h2>
+                {role}
+              </p>
             )}
-            <div className="row" style={{ gap: 8, flexWrap: "wrap", marginBottom: 28 }}>
-              {hero.heroChip1Label && (
-                <Chip variant="accent" dot style={{ color: "var(--accent)" }}>
-                  {hero.heroChip1Label}
-                </Chip>
-              )}
-              {hero.heroChip2Label && <Chip>{hero.heroChip2Label}</Chip>}
-            </div>
-            <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-              <Link href="/empresas">
-                <Button size="lg">Ver mis empresas →</Button>
-              </Link>
-              <Link href="/programas">
-                <Button size="lg" variant="ghost">
-                  Aprender conmigo
-                </Button>
-              </Link>
-            </div>
+            <a
+              href="#acerca-historia"
+              style={{
+                pointerEvents: "auto",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                marginTop: 28,
+                padding: "12px 22px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.14)",
+                border: "1px solid rgba(255,255,255,0.34)",
+                color: "#fff",
+                textDecoration: "none",
+                fontWeight: 600,
+                backdropFilter: "blur(6px)",
+                WebkitBackdropFilter: "blur(6px)",
+              }}
+            >
+              Conóceme
+              <span aria-hidden="true">↓</span>
+            </a>
           </div>
         </div>
       </section>
@@ -137,7 +144,7 @@ export default async function AcercaPage() {
       <div className="rule" />
 
       {/* ───────── NARRATIVA / BIO ───────── */}
-      <section className="sec">
+      <section id="acerca-historia" className="sec" style={{ scrollMarginTop: 80 }}>
         <div className="acerca-bio-grid" style={{ display: "grid", gridTemplateColumns: "0.5fr 1fr", gap: 56 }}>
           <div>
             <Eyebrow>Mi historia</Eyebrow>

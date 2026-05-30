@@ -1,0 +1,72 @@
+:root {
+  --black: #000;
+  --white: #fff;
+  --red: #ee2625;
+
+  --bezzy: cubic-bezier(0.8, 0, 0, 1);
+  --bezzy2: cubic-bezier(0.43, 0.195, 0.02, 1);
+  --bezzy3: cubic-bezier(0.5, 0, 0, 1);
+}
+
+/* Hide scrollbars for all elements */
+* {
+  margin: 0;
+  padding: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  box-sizing: border-box;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+html,
+body {
+  /* Easy rems, 1rem = 10px */
+  font-size: 62.5%;
+  background: var(--black);
+  color: var(--white);
+}
+
+.wrapper {
+  position: relative;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.content {
+  position: relative;
+}
+
+.hero {
+  position: relative;
+  z-index: 1;
+
+  display: grid;
+  place-items: center;
+
+  width: 100%;
+  height: 100svh;
+  overflow: clip;
+
+  & picture,
+  & img {
+    display: block;
+  }
+
+  & picture {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--black);
+
+    & img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+}

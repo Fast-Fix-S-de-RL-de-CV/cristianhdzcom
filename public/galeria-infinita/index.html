@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galería infinita — Cristian Hernández</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrapper">
+    <div class="content">
+      <section class="hero">
+        <picture class="hero-image">
+          <img src="./img/01.jpg" alt="Imagen 1" />
+        </picture>
+      </section>
+
+      <section class="hero">
+        <picture class="hero-image">
+          <img src="./img/02.jpg" alt="Imagen 2" />
+        </picture>
+      </section>
+
+      <section class="hero">
+        <picture class="hero-image">
+          <img src="./img/03.jpg" alt="Imagen 3" />
+        </picture>
+      </section>
+
+      <!-- Repetición de la primera sección para el loop infinito -->
+      <section class="hero" aria-hidden="true">
+        <picture class="hero-image" aria-hidden="true">
+          <img src="./img/01.jpg" alt="" aria-hidden="true" />
+        </picture>
+      </section>
+    </div>
+  </div>
+
+  <!-- GSAP + ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <!-- Lenis smooth scroll + Snap, loaded as ES modules from a single source so core
+       and snap share one Lenis instance. The separate UMD bundles (lenis.min.js +
+       lenis-snap.min.js) collide on the global `Lenis` and break construction. -->
+  <script type="module">
+    import Lenis from 'https://esm.sh/lenis@1.1.20';
+    import Snap from 'https://esm.sh/lenis@1.1.20/snap';
+    window.Lenis = Lenis;
+    window.Snap = Snap;
+  </script>
+
+  <script src="script.js"></script>
+</body>
+</html>
