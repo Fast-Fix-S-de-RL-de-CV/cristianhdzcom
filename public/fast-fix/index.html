@@ -49,51 +49,55 @@
         }
       }
 
-      /* ── CTA final: card + formulario de prospectos al lado ── */
-      #beforeyougo > .byg-grid {
-        grid-column: main;
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
+      /* ── CTA final: 2 columnas DENTRO del bloque oscuro (texto + formulario) ── */
+      #beforeyougo .card {
+        aspect-ratio: auto !important; max-height: none !important;
+        padding: clamp(1.8em, 4vw, 3.5em) !important;
+      }
+      #beforeyougo .byg-inner {
+        display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: center; width: 100%;
       }
       @media (width >= 930px) {
-        #beforeyougo > .byg-grid { grid-template-columns: 1.05fr 0.95fr; align-items: stretch; }
-        #beforeyougo .card { aspect-ratio: auto !important; max-height: none !important; height: 100%; }
+        #beforeyougo .byg-inner { grid-template-columns: 1fr 1fr; gap: 2.6rem; }
+        #beforeyougo .byg-left p { font-size: clamp(1.6em, 2.6vw, 2.4em) !important; }
       }
-      .ff-quote {
-        background: var(--theme-surface-surface, #fff);
-        border: 1px solid var(--theme-outline-variant, #e2e8f0);
-        border-radius: 2em;
-        padding: clamp(1.4em, 3vw, 2.4em);
-        display: flex; flex-direction: column; gap: 0.7rem;
-        box-shadow: 0 20px 50px rgba(15,23,42,0.10);
-      }
-      .ff-quote h3 { margin: 0; font-size: 1.5em; font-weight: 600; line-height: 1.1; color: #0f172a; }
-      .ff-quote .ff-sub { margin: 0 0 .4em; font-size: .92em; color: #64748b; }
-      .ff-quote label { font-size: .8em; font-weight: 700; color: #475569; margin-bottom: -0.35rem; }
+      /* Formulario en tono oscuro, a juego con el bloque .card.dark */
+      .ff-quote { display: flex; flex-direction: column; gap: 0.7rem; }
+      .ff-quote h3 { margin: 0; font-size: 1.4em; font-weight: 600; line-height: 1.15; color: #fff; }
+      .ff-quote .ff-sub { margin: 0 0 .3em; font-size: .9em; color: rgba(255,255,255,.7); }
+      .ff-quote label { font-size: .78em; font-weight: 700; color: rgba(255,255,255,.82); margin-bottom: -.35rem; letter-spacing: .02em; }
       .ff-quote input, .ff-quote select, .ff-quote textarea {
-        width: 100%; padding: .72em .9em; border: 1px solid #cbd5e1; border-radius: .8em;
-        font: inherit; font-size: .95em; background: #fff; color: #0f172a; box-sizing: border-box;
+        width: 100%; box-sizing: border-box; padding: .7em .9em;
+        border: 1px solid rgba(255,255,255,.22); border-radius: .8em;
+        font: inherit; font-size: .92em; background: rgba(255,255,255,.08); color: #fff;
       }
+      .ff-quote input::placeholder, .ff-quote textarea::placeholder { color: rgba(255,255,255,.45); }
       .ff-quote input:focus, .ff-quote select:focus, .ff-quote textarea:focus {
-        outline: none; border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29,78,216,.15);
+        outline: none; border-color: rgba(255,255,255,.6); background: rgba(255,255,255,.13);
       }
-      .ff-quote textarea { min-height: 76px; resize: vertical; }
+      /* Select estilizado a la UI (flecha custom, popup oscuro) */
+      .ff-quote select {
+        -webkit-appearance: none; appearance: none; cursor: pointer; padding-right: 2.4em;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat; background-position: right .9em center;
+      }
+      .ff-quote select option, .ff-quote select optgroup { background: #0d1d36; color: #fff; }
+      .ff-quote textarea { min-height: 70px; resize: vertical; }
       .ff-quote .ff-budget {
-        background: #eff6ff; border: 1px solid #bfdbfe; border-radius: .8em;
-        padding: .7em .9em; font-size: .9em; color: #1d4ed8; font-weight: 700;
+        background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.28);
+        border-radius: .8em; padding: .7em .9em; font-size: .9em; color: #fff; font-weight: 700;
       }
-      .ff-quote .ff-budget small { display: block; color: #64748b; font-weight: 500; margin-top: 2px; }
+      .ff-quote .ff-budget small { display: block; color: rgba(255,255,255,.62); font-weight: 500; margin-top: 2px; }
       .ff-quote button.ff-submit {
-        margin-top: .3em; background: #1d4ed8; color: #fff; border: 0; border-radius: 999px;
+        margin-top: .3em; background: #fff; color: #0b1b34; border: 0; border-radius: 999px;
         padding: .85em 1.4em; font: inherit; font-weight: 800; cursor: pointer; font-size: 1em;
         transition: background .15s ease;
       }
-      .ff-quote button.ff-submit:hover { background: #1741b8; }
+      .ff-quote button.ff-submit:hover { background: #eef2f7; }
       .ff-quote button.ff-submit:disabled { opacity: .6; cursor: default; }
       .ff-quote .ff-status { margin: .2em 0 0; font-size: .9em; font-weight: 600; }
-      .ff-quote .ff-status.ok { color: #059669; }
-      .ff-quote .ff-status.err { color: #dc2626; }
+      .ff-quote .ff-status.ok { color: #6ee7b7; }
+      .ff-quote .ff-status.err { color: #fca5a5; }
     </style>
   </head>
 
@@ -233,17 +237,18 @@
 
     <!-- CTA final -->
     <section id="beforeyougo">
-      <div class="byg-grid">
-        <div class="card dark">
-          <p><span class="typewriter">¿List@ para construir tu software? Cotiza con Fast Fix sin compromiso.</span></p>
-          <div class="buttons">
-            <button onclick="window.open('https://wa.me/526241234567','_blank')">Escríbenos por WhatsApp</button>
-            <button class="secondary" onclick="window.location.href='mailto:info@fast-fix.com.mx'">info@fast-fix.com.mx</button>
+      <div class="card dark">
+        <div class="byg-inner">
+          <div class="byg-left">
+            <p><span class="typewriter">¿List@ para construir tu software? Cotiza con Fast Fix sin compromiso.</span></p>
+            <div class="buttons">
+              <button onclick="window.open('https://wa.me/526241234567','_blank')">Escríbenos por WhatsApp</button>
+              <button class="secondary" onclick="window.location.href='mailto:info@fast-fix.com.mx'">info@fast-fix.com.mx</button>
+            </div>
           </div>
-        </div>
 
-        <!-- Formulario de prospectos -->
-        <form class="ff-quote" id="ff-quote" novalidate>
+          <!-- Formulario de prospectos (dentro del bloque oscuro) -->
+          <form class="ff-quote" id="ff-quote" novalidate>
           <h3>Cuéntanos tu proyecto</h3>
           <p class="ff-sub">Te respondemos con una propuesta y presupuesto. Sin compromiso.</p>
 
@@ -301,6 +306,7 @@
           <button type="submit" class="ff-submit">Solicitar cotización →</button>
           <p class="ff-status" hidden></p>
         </form>
+        </div>
       </div>
     </section>
 
