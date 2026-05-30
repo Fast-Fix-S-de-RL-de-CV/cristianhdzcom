@@ -85,8 +85,8 @@
       }
       /* Formulario en tono oscuro, a juego con el bloque .card.dark */
       .ff-quote { display: flex; flex-direction: column; gap: 0.7rem; }
-      .ff-quote h3 { margin: 0; font-size: 1.4em; font-weight: 600; line-height: 1.15; color: #fff; }
-      .ff-quote .ff-sub { margin: 0 0 .3em; font-size: .9em; color: rgba(255,255,255,.7); }
+      .ff-quote h3 { margin: 0; font-size: clamp(1.9em, 3.2vw, 2.4em); font-weight: 700; line-height: 1.1; color: #fff; }
+      .ff-quote .ff-sub { margin: 0 0 .5em; font-size: clamp(1.05em, 1.6vw, 1.25em); color: rgba(255,255,255,.8); line-height: 1.3; }
       .ff-quote label { font-size: .78em; font-weight: 700; color: rgba(255,255,255,.82); margin-bottom: -.35rem; letter-spacing: .02em; }
       .ff-quote input, .ff-quote select, .ff-quote textarea {
         width: 100%; box-sizing: border-box; padding: .7em .9em;
@@ -263,15 +263,12 @@
         <div class="byg-inner">
           <div class="byg-left">
             <p><span class="typewriter">¿List@ para construir tu software? Cotiza con Fast Fix sin compromiso.</span></p>
-            <div class="buttons">
-              <button onclick="window.location.href='mailto:info@fast-fix.com.mx'"><span class="material-symbols-outlined">mail</span> <span>info@fast-fix.com.mx</span></button>
-            </div>
           </div>
 
           <!-- Formulario de prospectos (dentro del bloque oscuro) -->
           <form class="ff-quote" id="ff-quote" novalidate>
           <h3>Cuéntanos tu proyecto</h3>
-          <p class="ff-sub">Te respondemos con una propuesta y presupuesto. Sin compromiso.</p>
+          <p class="ff-sub">Un asesor se pondrá en contacto pronto.</p>
 
           <label for="ffq-name">Nombre</label>
           <input id="ffq-name" name="name" type="text" required maxlength="160" placeholder="Tu nombre" autocomplete="name" />
@@ -395,7 +392,7 @@
               statusEl.hidden = false;
             })
             .catch(function () {
-              statusEl.textContent = "Hubo un problema al enviar. Escríbenos a info@fast-fix.com.mx y con gusto te atendemos.";
+              statusEl.textContent = "Hubo un problema al enviar. Por favor inténtalo de nuevo en un momento.";
               statusEl.classList.add("err");
               statusEl.hidden = false;
             })
