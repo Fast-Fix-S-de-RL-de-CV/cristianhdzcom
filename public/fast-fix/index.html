@@ -71,6 +71,25 @@
         }
       }
 
+      /* ── Títulos de feature con NEÓN LÍQUIDO en movimiento ── */
+      @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+        @keyframes ff-neon-flow { to { background-position: 200% 50%; } }
+        @keyframes ff-neon-glow {
+          0%, 100% { filter: drop-shadow(0 0 10px rgba(37,99,235,.5)) drop-shadow(0 0 22px rgba(168,85,247,.30)); }
+          50%      { filter: drop-shadow(0 0 16px rgba(219,39,119,.55)) drop-shadow(0 0 34px rgba(6,182,212,.35)); }
+        }
+        #features .feature .content h3 {
+          background: linear-gradient(90deg, #2563eb, #7c3aed, #db2777, #06b6d4, #2563eb);
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          -webkit-text-fill-color: transparent;
+          animation: ff-neon-flow 5s linear infinite, ff-neon-glow 3.2s ease-in-out infinite !important;
+          animation-trigger: unset !important; /* quita el gating experimental del zip */
+        }
+      }
+
       /* ── CTA final: 2 columnas DENTRO del bloque oscuro (texto + formulario) ── */
       #beforeyougo .card {
         aspect-ratio: auto !important; max-height: none !important;
