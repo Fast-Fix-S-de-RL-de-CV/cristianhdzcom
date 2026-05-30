@@ -107,7 +107,7 @@
       <h1 class="ff-logo"><img src="./logo.png" alt="Fast Fix — International programming agency" /></h1>
       <p>Construímos tu idea en realidad <span>Apps, sitios web, e-commerce, Softwares, CRM's, ERP's, Facturación Electrónica.</span></p>
       <div class="cta">
-        <button onclick="window.open('https://wa.me/526241234567','_blank')"><span class="material-symbols-outlined">chat</span> <span>Cotizar mi proyecto</span></button>
+        <button onclick="document.getElementById('beforeyougo').scrollIntoView({behavior:'smooth'})"><span class="material-symbols-outlined">chat</span> <span>Cotizar mi proyecto</span></button>
         <button class="secondary" onclick="document.querySelector('#product').scrollIntoView({behavior:'smooth'})">Ver lo que hacemos</button>
       </div>
     </section>
@@ -200,7 +200,7 @@
           </figure>
           <h3>Diseño & UX/UI</h3>
           <p>Interfaces claras y bonitas que la gente sí entiende y usa. Diseñamos la experiencia antes de escribir una línea de código.</p>
-          <a href="https://wa.me/526241234567" target="_blank" rel="noopener">Cotizar diseño</a>
+          <a href="#beforeyougo">Cotizar diseño</a>
         </div>
         <div class="developer">
           <figure>
@@ -209,7 +209,7 @@
           </figure>
           <h3>Plataformas SaaS</h3>
           <p>Convertimos tu idea en un producto de software con suscripciones, multi-usuario y panel de administración — listo para facturar.</p>
-          <a href="https://wa.me/526241234567" target="_blank" rel="noopener">Construir mi SaaS</a>
+          <a href="#beforeyougo">Construir mi SaaS</a>
         </div>
         <div class="developer">
           <figure>
@@ -218,7 +218,7 @@
           </figure>
           <h3>Branding e identidad</h3>
           <p>Logo, identidad visual y presencia digital coherente. Tu marca lista para verse profesional en web, redes y producto.</p>
-          <a href="https://wa.me/526241234567" target="_blank" rel="noopener">Crear mi marca</a>
+          <a href="#beforeyougo">Crear mi marca</a>
         </div>
       </div>
     </section>
@@ -227,11 +227,11 @@
     <section id="who" class="center">
       <div>
         <h3>Para empresas<br /><span>Ordena y escala tu operación</span></h3>
-        <button onclick="window.open('https://wa.me/526241234567','_blank')">Agendar diagnóstico</button>
+        <button onclick="document.getElementById('beforeyougo').scrollIntoView({behavior:'smooth'})">Agendar diagnóstico</button>
       </div>
       <div>
         <h3>Para emprendedores<br /><span>Lanza tu producto al mercado</span></h3>
-        <button class="secondary" onclick="window.open('https://wa.me/526241234567','_blank')">Cuéntanos tu idea</button>
+        <button class="secondary" onclick="document.getElementById('beforeyougo').scrollIntoView({behavior:'smooth'})">Cuéntanos tu idea</button>
       </div>
     </section>
 
@@ -242,8 +242,7 @@
           <div class="byg-left">
             <p><span class="typewriter">¿List@ para construir tu software? Cotiza con Fast Fix sin compromiso.</span></p>
             <div class="buttons">
-              <button onclick="window.open('https://wa.me/526241234567','_blank')">Escríbenos por WhatsApp</button>
-              <button class="secondary" onclick="window.location.href='mailto:info@fast-fix.com.mx'">info@fast-fix.com.mx</button>
+              <button onclick="window.location.href='mailto:info@fast-fix.com.mx'"><span class="material-symbols-outlined">mail</span> <span>info@fast-fix.com.mx</span></button>
             </div>
           </div>
 
@@ -374,7 +373,7 @@
               statusEl.hidden = false;
             })
             .catch(function () {
-              statusEl.textContent = "Hubo un problema al enviar. Escríbenos por WhatsApp y con gusto te atendemos.";
+              statusEl.textContent = "Hubo un problema al enviar. Escríbenos a info@fast-fix.com.mx y con gusto te atendemos.";
               statusEl.classList.add("err");
               statusEl.hidden = false;
             })
