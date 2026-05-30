@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Nav } from "@/components/marketing/Nav";
+import { AcercaGallery, type GallerySlide } from "@/components/marketing/AcercaGallery";
 import { Footer } from "@/components/marketing/Footer";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
@@ -28,118 +29,40 @@ export default async function AcercaPage() {
   const fullName = hero.heroTitle.replace(/\.$/, "");
   const role = `${hero.heroSubtitleAccent ?? ""} ${hero.heroSubtitleRest ?? ""}`.trim();
 
+  // Slides del héroe (galería finita). Cada uno: título + subtítulo + descripción
+  // + botón que avanza al siguiente. El último entrega el scroll a la biografía.
+  // TODO: reemplazar imágenes/copys por los reales de Cristian cuando los mande.
+  const gallerySlides: GallerySlide[] = [
+    {
+      img: "/galeria-infinita/img/01.jpg",
+      title: `${fullName}.`,
+      subtitle: role || "Programación · IA · Negocio",
+      description:
+        "Programador profesional con IA, autor y fundador. Convierto ideas en software y negocios que de verdad funcionan.",
+    },
+    {
+      img: "/galeria-infinita/img/02.jpg",
+      title: "De código a empresa.",
+      subtitle: "Productos, apps y sistemas a la medida",
+      description:
+        "Empecé escribiendo código y terminé construyendo empresas. Hoy creo plataformas, apps y automatizaciones para que otros también crezcan.",
+    },
+    {
+      img: "/galeria-infinita/img/03.jpg",
+      title: "Aprende conmigo.",
+      subtitle: "Programas · Libros · Comunidad",
+      description:
+        "Comparto todo lo que sé para que construyas con inteligencia artificial: cursos, libros y una comunidad que avanza contigo.",
+      cta: "Seguir leyendo",
+    },
+  ];
+
   return (
     <div>
       <Nav />
 
-      {/* ───────── HERO — Galería infinita ───────── */}
-      <section
-        className="acerca-hero-gallery"
-        aria-label={`Acerca de ${fullName}`}
-        style={{
-          position: "relative",
-          width: "100%",
-          height: "88svh",
-          minHeight: 520,
-          overflow: "hidden",
-          background: "#000",
-        }}
-      >
-        {/* Widget self-contained (Lenis + GSAP, scroll infinito con snap +
-            parallax) embebido en iframe para que su scroll NO secuestre el de
-            la página. Vive en /public/galeria-infinita. */}
-        <iframe
-          src="/galeria-infinita/index.html"
-          title="Galería infinita"
-          loading="eager"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            border: 0,
-            display: "block",
-          }}
-        />
-
-        {/* Overlay de identidad + CTA. pointer-events:none deja pasar el scroll
-            a la galería; solo el botón "Conóceme" recibe clics. */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
-            padding: "clamp(24px, 5vw, 64px)",
-            background:
-              "linear-gradient(to top, rgba(6,10,20,0.74) 0%, rgba(6,10,20,0.18) 40%, rgba(6,10,20,0) 62%)",
-          }}
-        >
-          <div style={{ maxWidth: 920 }}>
-            <div
-              className="mono"
-              style={{
-                color: "rgba(255,255,255,0.82)",
-                letterSpacing: "0.16em",
-                fontSize: 12,
-                textTransform: "uppercase",
-                marginBottom: 12,
-              }}
-            >
-              Acerca de mí
-            </div>
-            <h1
-              style={{
-                color: "#fff",
-                fontSize: "clamp(40px, 6.5vw, 84px)",
-                lineHeight: 0.98,
-                margin: 0,
-                textShadow: "0 2px 36px rgba(0,0,0,0.45)",
-              }}
-            >
-              {fullName}.
-            </h1>
-            {role && (
-              <p
-                className="serif"
-                style={{
-                  color: "rgba(255,255,255,0.86)",
-                  fontSize: "clamp(18px, 2.4vw, 28px)",
-                  marginTop: 14,
-                  maxWidth: 680,
-                  textShadow: "0 2px 24px rgba(0,0,0,0.4)",
-                }}
-              >
-                {role}
-              </p>
-            )}
-            <a
-              href="#acerca-historia"
-              style={{
-                pointerEvents: "auto",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 10,
-                marginTop: 28,
-                padding: "12px 22px",
-                borderRadius: 999,
-                background: "rgba(255,255,255,0.14)",
-                border: "1px solid rgba(255,255,255,0.34)",
-                color: "#fff",
-                textDecoration: "none",
-                fontWeight: 600,
-                backdropFilter: "blur(6px)",
-                WebkitBackdropFilter: "blur(6px)",
-              }}
-            >
-              Conóceme
-              <span aria-hidden="true">↓</span>
-            </a>
-          </div>
-        </div>
-      </section>
+      {/* ───────── HERO — Galería (finita, una foto a la vez) ───────── */}
+      <AcercaGallery slides={gallerySlides} afterId="acerca-historia" />
 
       <div className="rule" />
 
