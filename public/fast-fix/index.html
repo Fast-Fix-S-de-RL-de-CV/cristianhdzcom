@@ -48,6 +48,52 @@
           animation-delay: 1s;
         }
       }
+
+      /* ── CTA final: card + formulario de prospectos al lado ── */
+      #beforeyougo > .byg-grid {
+        grid-column: main;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      @media (width >= 930px) {
+        #beforeyougo > .byg-grid { grid-template-columns: 1.05fr 0.95fr; align-items: stretch; }
+        #beforeyougo .card { aspect-ratio: auto !important; max-height: none !important; height: 100%; }
+      }
+      .ff-quote {
+        background: var(--theme-surface-surface, #fff);
+        border: 1px solid var(--theme-outline-variant, #e2e8f0);
+        border-radius: 2em;
+        padding: clamp(1.4em, 3vw, 2.4em);
+        display: flex; flex-direction: column; gap: 0.7rem;
+        box-shadow: 0 20px 50px rgba(15,23,42,0.10);
+      }
+      .ff-quote h3 { margin: 0; font-size: 1.5em; font-weight: 600; line-height: 1.1; color: #0f172a; }
+      .ff-quote .ff-sub { margin: 0 0 .4em; font-size: .92em; color: #64748b; }
+      .ff-quote label { font-size: .8em; font-weight: 700; color: #475569; margin-bottom: -0.35rem; }
+      .ff-quote input, .ff-quote select, .ff-quote textarea {
+        width: 100%; padding: .72em .9em; border: 1px solid #cbd5e1; border-radius: .8em;
+        font: inherit; font-size: .95em; background: #fff; color: #0f172a; box-sizing: border-box;
+      }
+      .ff-quote input:focus, .ff-quote select:focus, .ff-quote textarea:focus {
+        outline: none; border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29,78,216,.15);
+      }
+      .ff-quote textarea { min-height: 76px; resize: vertical; }
+      .ff-quote .ff-budget {
+        background: #eff6ff; border: 1px solid #bfdbfe; border-radius: .8em;
+        padding: .7em .9em; font-size: .9em; color: #1d4ed8; font-weight: 700;
+      }
+      .ff-quote .ff-budget small { display: block; color: #64748b; font-weight: 500; margin-top: 2px; }
+      .ff-quote button.ff-submit {
+        margin-top: .3em; background: #1d4ed8; color: #fff; border: 0; border-radius: 999px;
+        padding: .85em 1.4em; font: inherit; font-weight: 800; cursor: pointer; font-size: 1em;
+        transition: background .15s ease;
+      }
+      .ff-quote button.ff-submit:hover { background: #1741b8; }
+      .ff-quote button.ff-submit:disabled { opacity: .6; cursor: default; }
+      .ff-quote .ff-status { margin: .2em 0 0; font-size: .9em; font-weight: 600; }
+      .ff-quote .ff-status.ok { color: #059669; }
+      .ff-quote .ff-status.err { color: #dc2626; }
     </style>
   </head>
 
@@ -187,15 +233,152 @@
 
     <!-- CTA final -->
     <section id="beforeyougo">
-      <div class="card dark">
-        <p><span class="typewriter">¿List@ para construir tu software? Cotiza con Fast Fix sin compromiso.</span></p>
-        <div class="buttons">
-          <button onclick="window.open('https://wa.me/526241234567','_blank')">Escríbenos por WhatsApp</button>
-          <button class="secondary" onclick="window.location.href='mailto:info@fast-fix.com.mx'">info@fast-fix.com.mx</button>
+      <div class="byg-grid">
+        <div class="card dark">
+          <p><span class="typewriter">¿List@ para construir tu software? Cotiza con Fast Fix sin compromiso.</span></p>
+          <div class="buttons">
+            <button onclick="window.open('https://wa.me/526241234567','_blank')">Escríbenos por WhatsApp</button>
+            <button class="secondary" onclick="window.location.href='mailto:info@fast-fix.com.mx'">info@fast-fix.com.mx</button>
+          </div>
         </div>
+
+        <!-- Formulario de prospectos -->
+        <form class="ff-quote" id="ff-quote" novalidate>
+          <h3>Cuéntanos tu proyecto</h3>
+          <p class="ff-sub">Te respondemos con una propuesta y presupuesto. Sin compromiso.</p>
+
+          <label for="ffq-name">Nombre</label>
+          <input id="ffq-name" name="name" type="text" required maxlength="160" placeholder="Tu nombre" autocomplete="name" />
+
+          <label for="ffq-email">Correo</label>
+          <input id="ffq-email" name="email" type="email" required placeholder="tucorreo@empresa.com" autocomplete="email" />
+
+          <label for="ffq-phone">Teléfono / WhatsApp</label>
+          <input id="ffq-phone" name="phone" type="tel" placeholder="+52 ..." autocomplete="tel" />
+
+          <label for="ffq-type">¿Qué tipo de proyecto?</label>
+          <select id="ffq-type" name="projectType" required>
+            <option value="" data-budget="">Selecciona una opción…</option>
+            <optgroup label="🌐 Sitios y tiendas web · $750 – $3,500 USD">
+              <option data-budget="Presupuesto aprox. $750 – $3,500 USD">Sitio web / Landing page</option>
+              <option data-budget="Presupuesto aprox. $750 – $3,500 USD">Página corporativa / institucional</option>
+              <option data-budget="Presupuesto aprox. $1,200 – $3,500 USD">Tienda en línea (e-commerce)</option>
+              <option data-budget="Presupuesto aprox. $750 – $2,500 USD">Blog / portal de contenidos</option>
+            </optgroup>
+            <optgroup label="🗂️ Software de gestión · $3,500 – $20,000 USD">
+              <option data-budget="Presupuesto aprox. $3,500 – $15,000 USD">CRM (gestión de clientes)</option>
+              <option data-budget="Presupuesto aprox. $6,000 – $20,000 USD">ERP (gestión empresarial)</option>
+              <option data-budget="Presupuesto aprox. $3,500 – $18,000 USD">Sistema / plataforma a la medida</option>
+              <option data-budget="Presupuesto aprox. $2,500 – $8,000 USD">Facturación electrónica (CFDI)</option>
+              <option data-budget="Presupuesto aprox. $5,000 – $20,000 USD">Plataforma SaaS (suscripciones)</option>
+            </optgroup>
+            <optgroup label="📱 Apps móviles · $8,000 – $25,000 USD">
+              <option data-budget="Presupuesto aprox. $8,000 – $25,000 USD">App móvil iOS / Android</option>
+            </optgroup>
+            <optgroup label="🚗 Apps marketplace / delivery · $30,000 – $60,000 USD">
+              <option data-budget="Presupuesto aprox. $30,000 – $60,000 USD">App de delivery (tipo Uber / Rappi)</option>
+              <option data-budget="Presupuesto aprox. $25,000 – $55,000 USD">Marketplace multi-vendedor</option>
+            </optgroup>
+            <optgroup label="🤖 IA y automatización · $2,000 – $15,000 USD">
+              <option data-budget="Presupuesto aprox. $2,000 – $10,000 USD">Chatbot / agente de IA</option>
+              <option data-budget="Presupuesto aprox. $2,000 – $12,000 USD">Automatización de procesos</option>
+              <option data-budget="Presupuesto aprox. $2,500 – $15,000 USD">Integraciones (WhatsApp, APIs, sistemas)</option>
+            </optgroup>
+            <optgroup label="🎨 Diseño y marca · $500 – $4,000 USD">
+              <option data-budget="Presupuesto aprox. $500 – $4,000 USD">Branding / identidad visual</option>
+              <option data-budget="Presupuesto aprox. $800 – $4,000 USD">Diseño UX/UI</option>
+            </optgroup>
+            <optgroup label="💡 Otro">
+              <option data-budget="Lo definimos juntos en la llamada">Otro / no estoy seguro</option>
+            </optgroup>
+          </select>
+
+          <div class="ff-budget" id="ffq-budget" hidden></div>
+
+          <label for="ffq-notes">Cuéntanos tu idea (opcional)</label>
+          <textarea id="ffq-notes" name="notes" maxlength="3000" placeholder="Resume qué necesitas, para qué, y cualquier referencia o plazo que tengas en mente."></textarea>
+
+          <button type="submit" class="ff-submit">Solicitar cotización →</button>
+          <p class="ff-status" hidden></p>
+        </form>
       </div>
     </section>
 
+    <script>
+      (function () {
+        var form = document.getElementById("ff-quote");
+        if (!form) return;
+        var typeSel = document.getElementById("ffq-type");
+        var budgetBox = document.getElementById("ffq-budget");
+        var statusEl = form.querySelector(".ff-status");
+        var btn = form.querySelector(".ff-submit");
+
+        // Mostrar el presupuesto aproximado al elegir tipo de proyecto.
+        typeSel.addEventListener("change", function () {
+          var opt = typeSel.options[typeSel.selectedIndex];
+          var b = opt ? opt.getAttribute("data-budget") : "";
+          if (b) {
+            budgetBox.innerHTML =
+              "💰 " + b + "<small>El costo final depende del alcance; lo afinamos en la llamada.</small>";
+            budgetBox.hidden = false;
+          } else {
+            budgetBox.hidden = true;
+          }
+        });
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          statusEl.hidden = true;
+          statusEl.className = "ff-status";
+
+          var name = form.name.value.trim();
+          var email = form.email.value.trim();
+          var projectType = typeSel.value;
+          if (name.length < 2 || !email || !projectType) {
+            statusEl.textContent = "Completa nombre, correo y tipo de proyecto.";
+            statusEl.classList.add("err");
+            statusEl.hidden = false;
+            return;
+          }
+          var opt = typeSel.options[typeSel.selectedIndex];
+          var payload = {
+            name: name,
+            email: email,
+            phone: form.phone.value.trim() || null,
+            projectType: projectType,
+            budget: opt ? opt.getAttribute("data-budget") : null,
+            notes: form.notes.value.trim() || null,
+          };
+
+          btn.disabled = true;
+          btn.textContent = "Enviando…";
+          fetch("/api/leads/quote", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          })
+            .then(function (r) {
+              return r.ok ? r.json() : Promise.reject(r);
+            })
+            .then(function () {
+              form.reset();
+              budgetBox.hidden = true;
+              statusEl.textContent = "✓ ¡Gracias! Recibimos tu solicitud, te contactamos muy pronto.";
+              statusEl.classList.add("ok");
+              statusEl.hidden = false;
+            })
+            .catch(function () {
+              statusEl.textContent = "Hubo un problema al enviar. Escríbenos por WhatsApp y con gusto te atendemos.";
+              statusEl.classList.add("err");
+              statusEl.hidden = false;
+            })
+            .finally(function () {
+              btn.disabled = false;
+              btn.textContent = "Solicitar cotización →";
+            });
+        });
+      })();
+    </script>
     <script src="./script.js"></script>
   </body>
 </html>
