@@ -1468,5 +1468,26 @@ html { scroll-behavior: smooth; }
   transform: translateY(-2px);
 }
 
+/* ════════════════════════════════════════════════════════════════
+   FOOTER — 3 columnas de links horizontales en TODO tamaño
+   ════════════════════════════════════════════════════════════════ */
+/* Las secciones Aprende/Negocio/Recursos viven en su propio sub-grid de 3
+   columnas. Como el .footer-grid colapsa a 1 columna en móvil, esto evita que
+   se apilen verticalmente y alarguen el footer: se quedan horizontales. */
+.footer-links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+}
+@media (max-width: 720px) {
+  .footer-links { gap: 16px; }
+  .footer-links .eyebrow { font-size: 11px; letter-spacing: 0.08em; }
+  .footer-links a { font-size: 13px !important; }
+}
+@media (max-width: 380px) {
+  .footer-links { gap: 10px; }
+  .footer-links a { font-size: 12px !important; }
+}
+
 /* Prevent body horizontal scroll always */
 html, body { overflow-x: hidden; }

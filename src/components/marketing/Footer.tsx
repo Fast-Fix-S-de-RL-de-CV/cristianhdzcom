@@ -83,7 +83,7 @@ const COLS: [string, [string, string][]][] = [
 export function Footer() {
   return (
     <footer className="ch-foot">
-      <div className="footer-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
+      <div className="footer-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr 3fr", gap: 48, marginBottom: 48 }}>
         <div>
           <div className="ch-logo">
             <img src="/logo.png" alt="Cristian Hernández" />
@@ -120,20 +120,25 @@ export function Footer() {
             ))}
           </div>
         </div>
-        {COLS.map(([t, links]) => (
-          <div key={t}>
-            <div className="eyebrow" style={{ marginBottom: 16 }}>
-              {t}
+        {/* Las 3 columnas de links viven en su propio sub-grid: así se mantienen
+            HORIZONTALES (3 columnas) también en móvil, en vez de apilarse y
+            alargar el footer. */}
+        <div className="footer-links">
+          {COLS.map(([t, links]) => (
+            <div key={t}>
+              <div className="eyebrow" style={{ marginBottom: 16 }}>
+                {t}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {links.map(([label, href]) => (
+                  <Link key={label} href={href} style={{ color: "var(--ink-2)", fontSize: 14 }}>
+                    {label}
+                  </Link>
+                ))}
+              </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {links.map(([label, href]) => (
-                <Link key={label} href={href} style={{ color: "var(--ink-2)", fontSize: 14 }}>
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       <div
         style={{
