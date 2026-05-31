@@ -11,9 +11,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { TallerBanner } from "@/components/marketing/TallerBanner";
 import { ProgramsCarousel } from "@/components/marketing/ProgramsCarousel";
 import { ServicesCarousel } from "@/components/marketing/ServicesCarousel";
-import { HeroPortraitImg } from "@/components/marketing/HeroPortraitImg";
-import { HeroRifts } from "@/components/marketing/HeroRifts";
-import { getSiteSettings, renderMarkdownLight } from "@/lib/site-settings";
+import { getSiteSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -111,133 +109,103 @@ export default async function HomePage() {
     <div>
       <Nav />
 
-      {/* HERO */}
-      <section className="sec" style={{ paddingTop: 64, paddingBottom: 56, position: "relative", overflow: "hidden" }}>
-        {/* Único fondo del hero: animación WebGL "Blazing Rifts" (tal cual el zip). */}
-        <HeroRifts />
-
-        <div
-          className="hero-grid"
-          style={{ display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: 56, alignItems: "center", position: "relative", zIndex: 1 }}
+      {/* HERO — Visual 3D "Modern Visual" (auto-rota; nombre y titulo van en 3D) */}
+      <section
+        className="home-hero-3d"
+        aria-label="Cristian Hernandez — Inicio"
+        style={{
+          position: "relative",
+          height: "100svh",
+          minHeight: 560,
+          overflow: "hidden",
+          background: "#050B1A",
+        }}
+      >
+        {/* H1 real (oculto visualmente) para SEO/accesibilidad: el nombre y el
+            titulo se muestran renderizados en 3D dentro del canvas. */}
+        <h1
+          style={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            margin: -1,
+            padding: 0,
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+            whiteSpace: "nowrap",
+            border: 0,
+          }}
         >
-          <div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
-              {hero.heroChip1Label && (
-                <Chip variant="accent" dot pulse={hero.heroChip1Pulse} style={{ color: "var(--accent)" }}>
-                  {hero.heroChip1Label}
-                </Chip>
-              )}
-              {hero.heroChip2Label && <Chip>{hero.heroChip2Label}</Chip>}
-            </div>
-            <Eyebrow style={{ marginBottom: 18 }}>{hero.heroEyebrow}</Eyebrow>
-            <h1 style={{ fontSize: "clamp(56px, 7vw, 96px)", marginBottom: 22, lineHeight: 0.95 }}>
-              {hero.heroTitle}
-            </h1>
-            {(hero.heroSubtitleAccent || hero.heroSubtitleRest) && (
-              <h2
-                className="serif"
-                style={{
-                  fontSize: "clamp(24px, 3vw, 36px)",
-                  lineHeight: 1.15,
-                  color: "var(--ink-2)",
-                  marginBottom: 28,
-                  fontWeight: 500,
-                }}
-              >
-                {hero.heroSubtitleAccent && (
-                  <span style={{ color: "var(--accent)" }}>{hero.heroSubtitleAccent}</span>
-                )}
-                {hero.heroSubtitleAccent && hero.heroSubtitleRest && " "}
-                {hero.heroSubtitleRest}
-              </h2>
-            )}
-            {hero.heroBio1 && (
-              <p style={{ fontSize: 19, color: "var(--ink-2)", lineHeight: 1.5, maxWidth: 580, marginBottom: 20 }}>
-                {renderMarkdownLight(hero.heroBio1)}
-              </p>
-            )}
-            {hero.heroBio2 && (
-              <p style={{ fontSize: 15, color: "var(--muted)", lineHeight: 1.6, maxWidth: 560, marginBottom: 36 }}>
-                {renderMarkdownLight(hero.heroBio2)}
-              </p>
-            )}
-            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-              <Link href={user ? "/plataforma" : "/registro"}>
-                <Button size="lg" shine>
-                  {user ? "Ir a mi plataforma →" : hero.heroCtaPrimaryLabel}
-                </Button>
-              </Link>
-              <Link href="#saas">
-                <Button size="lg" variant="ghost">
-                  {hero.heroCtaSecondaryLabel}
-                </Button>
-              </Link>
-              <Link href="/programas">
-                <Button size="lg" variant="ghost">
-                  Programas
-                </Button>
-              </Link>
-            </div>
-          </div>
+          {hero.heroTitle} {hero.heroSubtitleAccent} {hero.heroSubtitleRest}
+        </h1>
 
-          {/* RIGHT: Portrait */}
-          <div style={{ position: "relative" }}>
-            <div
-              style={{
-                aspectRatio: "4/5",
-                borderRadius: 22,
-                position: "relative",
-                overflow: "hidden",
-                boxShadow: "0 30px 60px rgba(15,17,21,0.18)",
-                background: "linear-gradient(135deg, oklch(78% 0.04 245), oklch(68% 0.05 252))",
-              }}
+        {/* Fondo 3D vivo. pointer-events:none -> NO atrapa el scroll: la pagina
+            se desplaza normal por encima. Vive en /public/modern-visual. */}
+        <iframe
+          src="/modern-visual/index.html"
+          title="Visual 3D"
+          aria-hidden="true"
+          tabIndex={-1}
+          loading="eager"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            border: 0,
+            display: "block",
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Overlay de CTAs. pointer-events:none deja pasar el scroll; solo los
+            botones reciben clics. */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 1,
+            pointerEvents: "none",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            textAlign: "center",
+            padding: "clamp(28px, 7vw, 96px) clamp(20px, 5vw, 48px)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+              justifyContent: "center",
+              pointerEvents: "auto",
+            }}
+          >
+            <Link
+              href={user ? "/plataforma" : "/registro"}
+              className="hero3d-cta hero3d-cta--primary"
             >
-              {hero.heroPortraitUrl ? (
-                <HeroPortraitImg
-                  src={hero.heroPortraitUrl}
-                  alt={`${hero.heroTitle} — ${hero.heroSubtitleAccent ?? ""} ${hero.heroSubtitleRest ?? ""}`.trim()}
-                />
-              ) : null}
-              {/* Overlay gradient sutil para legibilidad del chip inferior */}
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background:
-                    "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.45) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  left: 20,
-                  right: 20,
-                  bottom: 20,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-end",
-                  zIndex: 2,
-                }}
-              >
-                <div>
-                  <div
-                    className="mono"
-                    style={{ fontSize: 10, color: "rgba(255,255,255,0.9)", letterSpacing: "0.12em" }}
-                  >
-                    {hero.heroPortraitFooterLine}
-                  </div>
-                  <div className="serif" style={{ fontSize: 26, color: "white", marginTop: 4, textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>
-                    {hero.heroTitle.replace(/\.$/, "")}
-                  </div>
-                </div>
-                <Chip
-                  style={{ background: "oklch(94% 0.05 145)", color: "oklch(40% 0.13 145)", borderColor: "transparent" }}
-                >
-                  {hero.heroPortraitChip}
-                </Chip>
-              </div>
-            </div>
+              {user ? "Ir a mi plataforma →" : hero.heroCtaPrimaryLabel}
+            </Link>
+            <Link href="#saas" className="hero3d-cta hero3d-cta--ghost">
+              {hero.heroCtaSecondaryLabel}
+            </Link>
+            <Link href="/programas" className="hero3d-cta hero3d-cta--ghost">
+              Programas
+            </Link>
+          </div>
+          <div
+            className="mono"
+            style={{
+              marginTop: 22,
+              color: "rgba(255,255,255,0.62)",
+              fontSize: 12,
+              letterSpacing: "0.18em",
+            }}
+          >
+            DESLIZA ↓
           </div>
         </div>
       </section>
