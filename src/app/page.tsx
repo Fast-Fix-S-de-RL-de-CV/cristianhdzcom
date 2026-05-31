@@ -11,6 +11,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { TallerBanner } from "@/components/marketing/TallerBanner";
 import { ProgramsCarousel } from "@/components/marketing/ProgramsCarousel";
 import { ServicesCarousel } from "@/components/marketing/ServicesCarousel";
+import { Hero3D } from "@/components/marketing/Hero3D";
 import { getSiteSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
@@ -139,75 +140,9 @@ export default async function HomePage() {
           {hero.heroTitle} {hero.heroSubtitleAccent} {hero.heroSubtitleRest}
         </h1>
 
-        {/* Fondo 3D vivo. pointer-events:none -> NO atrapa el scroll: la pagina
-            se desplaza normal por encima. Vive en /public/modern-visual. */}
-        <iframe
-          src="/modern-visual/index.html"
-          title="Visual 3D"
-          aria-hidden="true"
-          tabIndex={-1}
-          loading="eager"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            border: 0,
-            display: "block",
-            pointerEvents: "none",
-          }}
-        />
-
-        {/* Overlay de CTAs. pointer-events:none deja pasar el scroll; solo los
-            botones reciben clics. */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 1,
-            pointerEvents: "none",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            textAlign: "center",
-            padding: "clamp(28px, 7vw, 96px) clamp(20px, 5vw, 48px)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              flexWrap: "wrap",
-              justifyContent: "center",
-              pointerEvents: "auto",
-            }}
-          >
-            <Link
-              href={user ? "/plataforma" : "/registro"}
-              className="hero3d-cta hero3d-cta--primary"
-            >
-              {user ? "Ir a mi plataforma →" : hero.heroCtaPrimaryLabel}
-            </Link>
-            <Link href="#saas" className="hero3d-cta hero3d-cta--ghost">
-              {hero.heroCtaSecondaryLabel}
-            </Link>
-            <Link href="/programas" className="hero3d-cta hero3d-cta--ghost">
-              Programas
-            </Link>
-          </div>
-          <div
-            className="mono"
-            style={{
-              marginTop: 22,
-              color: "rgba(255,255,255,0.62)",
-              fontSize: 12,
-              letterSpacing: "0.18em",
-            }}
-          >
-            DESLIZA ↓
-          </div>
-        </div>
+        {/* Visual 3D interactivo (Three.js, in-page): arrastra para rotar en
+            desktop; la rueda hace scroll normal de la página. Ver Hero3D.tsx. */}
+        <Hero3D />
       </section>
 
       <div className="rule" />
