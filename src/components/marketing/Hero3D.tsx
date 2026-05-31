@@ -73,9 +73,6 @@ export function Hero3D() {
       composer.addPass(renderScene);
       composer.addPass(bloomPass);
 
-      const finePointer =
-        typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches;
-
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
@@ -83,12 +80,36 @@ export function Hero3D() {
       controls.autoRotateSpeed = 1.2;
       controls.enableZoom = false; // la rueda hace scroll de la página, no zoom
       controls.enablePan = false;
-      controls.enableRotate = finePointer; // arrastrar para rotar solo en desktop
+      controls.enableRotate = true; // arrastrar para rotar (desktop y móvil)
       controls.rotateSpeed = 1;
       controls.target.set(0, 0, 0);
-      // OrbitControls fija touch-action:none; en táctil lo soltamos para que la
-      // página pueda desplazarse con el dedo.
-      renderer.domElement.style.touchAction = finePointer ? "none" : "pan-y";
+      // touch-action: pan-y -> swipe VERTICAL = scroll de la página; swipe
+      // HORIZONTAL = rota el objeto. (OrbitControls pondría 'none' por defecto,
+      // lo que atraparía el scroll en móvil.)
+      renderer.domElement.style.touchAction = "pan-y";
+
+      // Encuadra la escena según el aspect: en pantallas verticales (móvil)
+      // aleja la cámara para que el texto 3D y el aura no se corten ni se vean
+      // enormes. En desktop (aspect ancho) no cambia el look.
+      const frame = () => {
+        const a = W() / H();
+        const vHalf = (camera.fov * Math.PI) / 360; // (fov/2) en radianes
+        const hHalf = Math.atan(Math.tan(vHalf) * a);
+        const needed = 2.1 / Math.max(Math.tan(hHalf), 0.0001);
+        const radius = Math.max(6.2, needed);
+        const dx = camera.position.x - controls.target.x;
+        const dy = camera.position.y - controls.target.y;
+        const dz = camera.position.z - controls.target.z;
+        const len = Math.hypot(dx, dy, dz) || 1;
+        camera.position.set(
+          controls.target.x + (dx / len) * radius,
+          controls.target.y + (dy / len) * radius,
+          controls.target.z + (dz / len) * radius,
+        );
+        camera.updateProjectionMatrix();
+        controls.update();
+      };
+      frame();
 
       const ambientLight = new THREE.AmbientLight(2236962);
       scene.add(ambientLight);
@@ -301,6 +322,7 @@ export function Hero3D() {
         camera.updateProjectionMatrix();
         renderer.setSize(W(), H());
         composer.setSize(W(), H());
+        frame();
       };
       const ro = new ResizeObserver(onResize);
       ro.observe(mount);
@@ -346,7 +368,6 @@ export function Hero3D() {
         }
         .hero3d-cue-arrow { font-size: 16px; animation: hero3d-bounce 1.8s ease-in-out infinite; }
         @keyframes hero3d-bounce { 0%,100% { transform: translateY(0); opacity: .6; } 50% { transform: translateY(6px); opacity: 1; } }
-        @media (pointer: coarse) { .hero3d-cue span:first-child { display: none; } }
       `}</style>
     </>
   );
