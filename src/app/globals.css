@@ -1214,7 +1214,7 @@ html { scroll-behavior: smooth; }
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--bg-2);
-  color: var(--text);
+  color: var(--ink);
   cursor: pointer;
   padding: 0;
   transition: background .15s ease, border-color .15s ease;
@@ -1254,7 +1254,7 @@ html { scroll-behavior: smooth; }
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--bg-2);
-  color: var(--text);
+  color: var(--ink);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
@@ -1272,7 +1272,7 @@ html { scroll-behavior: smooth; }
   padding: 15px 10px;
   font-size: 19px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--ink);
   text-decoration: none;
   border-bottom: 1px solid var(--line);
   transition: color .15s ease, padding-left .2s ease;
