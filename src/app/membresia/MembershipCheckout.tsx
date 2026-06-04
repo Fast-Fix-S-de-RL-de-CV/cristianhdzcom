@@ -2,6 +2,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/ConfirmProvider";
+import { Field } from "@/components/ui/Field";
+import { Button } from "@/components/ui/Button";
 
 type PlanCard = {
   slug: string;
@@ -265,33 +267,41 @@ export function MembershipCheckout({
             <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 22 }}>
               {billing === "yearly" ? "Suscripción anual" : "Suscripción mensual"}. Cancelas cuando quieras.
             </p>
-            <div className="col" style={{ gap: 12 }}>
-              <input
-                placeholder="Nombre completo"
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <Field
+                label="Nombre completo"
+                format="name"
+                size="md"
+                required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={inputStyle()}
+                onChange={setName}
+                placeholder="Tu nombre"
+                autoComplete="name"
               />
-              <input
-                placeholder="Email"
-                type="email"
+              <Field
+                label="Correo"
+                format="email"
+                size="md"
+                required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={inputStyle()}
+                onChange={setEmail}
+                placeholder="tu@correo.com"
+                autoComplete="email"
                 disabled={!!userPrefilled}
               />
             </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-              <button
+            <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+              <Button
+                variant="ghost"
                 onClick={() => setSelectedPlan(null)}
                 disabled={pending}
-                style={{ ...btnStyle("ghost"), flex: 1 }}
+                style={{ flex: 1, justifyContent: "center" }}
               >
                 Cancelar
-              </button>
-              <button onClick={confirm} disabled={pending} style={{ ...btnStyle("primary"), flex: 2 }}>
+              </Button>
+              <Button onClick={confirm} disabled={pending} style={{ flex: 2, justifyContent: "center" }}>
                 {pending ? "Procesando…" : `Pagar ${billing === "yearly" ? "anual" : "mensual"} →`}
-              </button>
+              </Button>
             </div>
             <div
               className="mono"
@@ -306,26 +316,3 @@ export function MembershipCheckout({
   );
 }
 
-function inputStyle(): React.CSSProperties {
-  return {
-    width: "100%",
-    padding: "11px 14px",
-    border: "1px solid var(--line-2)",
-    borderRadius: 8,
-    fontSize: 14,
-    background: "white",
-  };
-}
-
-function btnStyle(kind: "primary" | "ghost"): React.CSSProperties {
-  return {
-    padding: "12px 18px",
-    borderRadius: 10,
-    fontSize: 13,
-    fontWeight: 700,
-    cursor: "pointer",
-    background: kind === "primary" ? "var(--ink)" : "white",
-    color: kind === "primary" ? "white" : "var(--ink)",
-    border: kind === "ghost" ? "1px solid var(--line)" : "none",
-  };
-}

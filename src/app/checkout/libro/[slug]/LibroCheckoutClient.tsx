@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { computeBumps, basePrice, type Bump, type CheckoutFormat } from "@/lib/book-bumps";
 import { useToast } from "@/components/ui/ConfirmProvider";
+import { Field } from "@/components/ui/Field";
+import { SelectField } from "@/components/ui/SelectField";
+import { Button } from "@/components/ui/Button";
 
 type Book = {
   id: string;
@@ -263,58 +266,108 @@ export function LibroCheckoutClient({
         )}
 
         {/* ────── Datos del comprador ────── */}
-        <div style={{ marginBottom: 32 }}>
-          <div className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.08em", marginBottom: 12 }}>
+        <div style={{ marginBottom: 36 }}>
+          <div className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.08em", marginBottom: 18 }}>
             TUS DATOS
           </div>
-          <div className="row" style={{ gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <input
-                placeholder="Nombre completo"
-                value={buyer.name}
-                onChange={(e) => setBuyer({ ...buyer, name: e.target.value })}
-                style={inputStyle()}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <input
-                placeholder="Email"
-                type="email"
-                value={buyer.email}
-                onChange={(e) => setBuyer({ ...buyer, email: e.target.value })}
-                style={inputStyle()}
-              />
-            </div>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            <Field
+              label="Nombre completo"
+              format="name"
+              required
+              value={buyer.name}
+              onChange={(v) => setBuyer({ ...buyer, name: v })}
+              placeholder="Tu nombre"
+              autoComplete="name"
+              style={{ flex: "1 1 220px" }}
+            />
+            <Field
+              label="Correo"
+              format="email"
+              required
+              value={buyer.email}
+              onChange={(v) => setBuyer({ ...buyer, email: v })}
+              placeholder="tu@correo.com"
+              autoComplete="email"
+              style={{ flex: "1 1 220px" }}
+            />
           </div>
         </div>
 
         {/* ────── Dirección (solo si físico) ────── */}
         {needsShipping && (
-          <div style={{ marginBottom: 32 }}>
-            <div className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.08em", marginBottom: 12 }}>
+          <div style={{ marginBottom: 36 }}>
+            <div className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.08em", marginBottom: 18 }}>
               📦 DIRECCIÓN DE ENVÍO
             </div>
-            <div className="col" style={{ gap: 12 }}>
-              <input placeholder="Calle y número" value={shipping.line1} onChange={(e) => setShipping({ ...shipping, line1: e.target.value })} style={inputStyle()} />
-              <input placeholder="Colonia / Apartamento (opcional)" value={shipping.line2} onChange={(e) => setShipping({ ...shipping, line2: e.target.value })} style={inputStyle()} />
-              <div className="row" style={{ gap: 12 }}>
-                <input placeholder="Ciudad" value={shipping.city} onChange={(e) => setShipping({ ...shipping, city: e.target.value })} style={{ ...inputStyle(), flex: 1 }} />
-                <input placeholder="Estado" value={shipping.state} onChange={(e) => setShipping({ ...shipping, state: e.target.value })} style={{ ...inputStyle(), flex: 1 }} />
-                <input placeholder="C.P." value={shipping.postalCode} onChange={(e) => setShipping({ ...shipping, postalCode: e.target.value })} style={{ ...inputStyle(), width: 100 }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+              <Field
+                label="Calle y número"
+                required
+                value={shipping.line1}
+                onChange={(v) => setShipping({ ...shipping, line1: v })}
+                placeholder="Av. Reforma 123"
+                autoComplete="address-line1"
+              />
+              <Field
+                label="Colonia / Apartamento"
+                value={shipping.line2}
+                onChange={(v) => setShipping({ ...shipping, line2: v })}
+                placeholder="Opcional"
+                autoComplete="address-line2"
+              />
+              <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
+                <Field
+                  label="Ciudad"
+                  format="title"
+                  required
+                  value={shipping.city}
+                  onChange={(v) => setShipping({ ...shipping, city: v })}
+                  placeholder="Tu ciudad"
+                  autoComplete="address-level2"
+                  style={{ flex: "1 1 170px" }}
+                />
+                <Field
+                  label="Estado"
+                  format="title"
+                  required
+                  value={shipping.state}
+                  onChange={(v) => setShipping({ ...shipping, state: v })}
+                  placeholder="Tu estado"
+                  autoComplete="address-level1"
+                  style={{ flex: "1 1 170px" }}
+                />
+                <Field
+                  label="C.P."
+                  format="postal"
+                  required
+                  value={shipping.postalCode}
+                  onChange={(v) => setShipping({ ...shipping, postalCode: v })}
+                  placeholder="00000"
+                  autoComplete="postal-code"
+                  maxLength={6}
+                  style={{ flex: "0 1 120px" }}
+                />
               </div>
-              <div className="row" style={{ gap: 12 }}>
-                <select
+              <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
+                <SelectField
+                  label="País"
+                  required
                   value={shipping.country}
-                  onChange={(e) => setShipping({ ...shipping, country: e.target.value })}
-                  style={{ ...inputStyle(), flex: 1 }}
-                >
-                  {["México", "Colombia", "Argentina", "Chile", "Perú", "USA", "España", "Otro"].map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                <input placeholder="Teléfono (opcional)" value={shipping.phone} onChange={(e) => setShipping({ ...shipping, phone: e.target.value })} style={{ ...inputStyle(), flex: 1 }} />
+                  onChange={(v) => setShipping({ ...shipping, country: v })}
+                  options={["México", "Colombia", "Argentina", "Chile", "Perú", "USA", "España", "Otro"]}
+                  style={{ flex: "1 1 200px" }}
+                />
+                <Field
+                  label="Teléfono"
+                  format="phone"
+                  value={shipping.phone}
+                  onChange={(v) => setShipping({ ...shipping, phone: v })}
+                  placeholder="10 dígitos"
+                  autoComplete="tel"
+                  help="Opcional — para coordinar la entrega"
+                  style={{ flex: "1 1 200px" }}
+                />
               </div>
             </div>
           </div>
@@ -361,21 +414,14 @@ export function LibroCheckoutClient({
             </div>
           </div>
 
-          <button
+          <Button
             onClick={submit}
             disabled={pending}
-            className="btn btn-primary"
-            style={{
-              marginTop: 20,
-              width: "100%",
-              padding: "14px 20px",
-              fontSize: 14,
-              fontWeight: 700,
-              justifyContent: "center",
-            }}
+            size="lg"
+            style={{ marginTop: 20, width: "100%", justifyContent: "center" }}
           >
             {pending ? "Procesando…" : `Pagar $${totalUsd} USD →`}
-          </button>
+          </Button>
 
           <div
             className="mono"
@@ -452,18 +498,6 @@ function FormatOption({
       </div>
     </button>
   );
-}
-
-function inputStyle(): React.CSSProperties {
-  return {
-    width: "100%",
-    padding: "11px 14px",
-    border: "1px solid var(--line-2)",
-    borderRadius: 8,
-    fontSize: 14,
-    fontFamily: "var(--font-sans)",
-    background: "white",
-  };
 }
 
 function formatLabel(f: CheckoutFormat, isBundle: boolean): string {

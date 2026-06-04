@@ -1597,5 +1597,52 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
 }
 .tf-disabled { opacity: 0.55; }
 
+/* Select propio (ui/SelectField.tsx): mismo look de línea, menú custom. */
+.tf-select-btn {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  gap: 8px;
+}
+.tf-select-btn:disabled { cursor: not-allowed; }
+.tf-select-ph { color: var(--muted); opacity: 0.6; font-weight: 400; }
+.tf-select-chevron {
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+.tf-select-chevron.is-open { transform: translateY(-50%) rotate(180deg); }
+.tf-select-menu {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--bg, #fff);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(15, 17, 21, 0.16);
+  animation: tf-menu-in 0.16s ease;
+}
+@keyframes tf-menu-in { from { opacity: 0; transform: translateY(-6px); } }
+.tf-select-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.tf-select-opt.is-active { background: var(--bg-2); }
+.tf-select-opt.is-sel { color: var(--accent); font-weight: 600; }
+
 /* Prevent body horizontal scroll always */
 html, body { overflow-x: hidden; }
