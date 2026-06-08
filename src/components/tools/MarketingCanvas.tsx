@@ -22,6 +22,7 @@ import {
   status as statusMeta,
   STATUSES,
   STAGE_COLORS,
+  CARD_COLORS,
   makeNodeData,
   type MarketingNodeData,
 } from "@/lib/marketing";
@@ -266,6 +267,32 @@ function Inner({ plan }: { plan: Plan }) {
                   >
                     <Icon size={15} />
                   </button>
+                );
+              })}
+            </div>
+
+            <Lbl>Color de la card</Lbl>
+            <div className="mk-swatches">
+              <button
+                type="button"
+                className={`mk-swatch-auto${!d.color ? " on" : ""}`}
+                onClick={() => patch({ color: "" })}
+                title="Usar el color del canal"
+              >
+                <span className="mk-swatch-auto-dot" style={{ background: channel(d.channel).color }} />
+                Auto
+              </button>
+              {CARD_COLORS.map((c) => {
+                const on = d.color === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`mk-swatch${on ? " on" : ""}`}
+                    style={{ background: c }}
+                    onClick={() => patch({ color: c })}
+                    aria-label="Color de la card"
+                  />
                 );
               })}
             </div>

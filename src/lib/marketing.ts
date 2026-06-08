@@ -59,7 +59,7 @@ export function status(key: string) {
 
 export type ChecklistItem = { id: string; text: string; done: boolean };
 
-/** Colores sugeridos para las etapas (cinta superior de la card). */
+/** Colores sugeridos para las etapas (punto identificador de la card). */
 export const STAGE_COLORS = [
   "#0b1b34",
   "#2563eb",
@@ -69,6 +69,22 @@ export const STAGE_COLORS = [
   "#16a34a",
   "#0891b2",
   "#ca8a04",
+];
+
+/** Paleta para el color de identidad de la card (puede sobreescribir al del canal). */
+export const CARD_COLORS = [
+  "#0b1b34",
+  "#2563eb",
+  "#1d4ed8",
+  "#7c3aed",
+  "#db2777",
+  "#dc2626",
+  "#ea580c",
+  "#b45309",
+  "#ca8a04",
+  "#16a34a",
+  "#0d9488",
+  "#0891b2",
 ];
 
 /** Detecta YouTube/Vimeo de un link y devuelve la miniatura (YT es directa). */
@@ -89,7 +105,9 @@ export type MarketingNodeData = {
   subtitle: string;
   text: string;
   status: StatusKey;
-  /** Etapa del embudo (independiente del ad): título + subtítulo + color. */
+  /** Color de identidad de la card. Si está vacío usa el color del canal. */
+  color: string;
+  /** Etapa del embudo (independiente del ad): título + subtítulo + color del punto. */
   stageTitle: string;
   stageSubtitle: string;
   stageColor: string;
@@ -116,6 +134,7 @@ export function makeNodeData(channelKey: string): MarketingNodeData {
     subtitle: "",
     text: "",
     status: "faltante",
+    color: "",
     stageTitle: "",
     stageSubtitle: "",
     stageColor: "",

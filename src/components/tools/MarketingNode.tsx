@@ -10,6 +10,8 @@ export function MarketingNode({ data, selected }: NodeProps) {
   const ch = channel(d.channel);
   const st = status(d.status);
   const Icon = ch.icon;
+  const cardColor = d.color || ch.color; // identidad editable de la card
+  const stageColor = d.stageColor || "#0b1b34";
   const done = d.checklist?.filter((c) => c.done).length ?? 0;
   const total = d.checklist?.length ?? 0;
 
@@ -17,23 +19,24 @@ export function MarketingNode({ data, selected }: NodeProps) {
     <div
       className="mk-node"
       style={{
-        borderColor: selected ? ch.color : "var(--line)",
+        borderColor: selected ? cardColor : "var(--line)",
         boxShadow: selected
-          ? `0 0 0 2px ${ch.color}40, 0 10px 26px rgba(15,17,21,0.12)`
+          ? `0 0 0 2px ${cardColor}40, 0 10px 26px rgba(15,17,21,0.12)`
           : "0 6px 18px rgba(15,17,21,0.07)",
       }}
     >
       <Handle type="target" position={Position.Top} className="mk-handle" />
 
-      {/* Cinta de ETAPA (independiente del ad) */}
+      {/* ETAPA: punto identificador (NO toma el color de la card) */}
       {d.stageTitle ? (
-        <div className="mk-node-stage" style={{ background: d.stageColor || "#0b1b34" }}>
+        <div className="mk-node-stage">
+          <span className="mk-node-stage-dot" style={{ background: stageColor }} />
           <span className="mk-node-stage-t">{d.stageTitle}</span>
           {d.stageSubtitle ? <span className="mk-node-stage-s">· {d.stageSubtitle}</span> : null}
         </div>
       ) : null}
 
-      <div className="mk-node-head" style={{ background: ch.color }}>
+      <div className="mk-node-head" style={{ background: cardColor }}>
         <span className="mk-node-ch">
           <Icon size={13} strokeWidth={2.2} /> {ch.short}
         </span>

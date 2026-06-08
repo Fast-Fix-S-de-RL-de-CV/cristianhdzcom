@@ -1712,13 +1712,14 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
 }
 .mk-handle { width: 9px !important; height: 9px !important; background: #fff !important; border: 2px solid var(--accent) !important; }
 
-/* ── Cinta de etapa (independiente del ad) ── */
+/* ── Etapa: punto identificador (NO toma el color de la card) ── */
 .mk-node-stage {
-  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
-  padding: 5px 11px; color: #fff;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 5px 11px; background: var(--bg-2); border-bottom: 1px solid var(--line);
 }
-.mk-node-stage-t { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-.mk-node-stage-s { font-size: 10px; font-weight: 600; opacity: .85; letter-spacing: .01em; }
+.mk-node-stage-dot { width: 9px; height: 9px; border-radius: 999px; flex: none; box-shadow: 0 0 0 2px #fff; }
+.mk-node-stage-t { font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ink); }
+.mk-node-stage-s { font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: .01em; }
 
 /* ── Miniatura de video en la card ── */
 .mk-video {
@@ -1744,6 +1745,13 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
   box-shadow: 0 0 0 1px var(--line); padding: 0;
 }
 .mk-swatch.on { box-shadow: 0 0 0 2px var(--ink); }
+.mk-swatch-auto {
+  display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px;
+  border-radius: 6px; border: 1px solid var(--line-2); background: #fff; cursor: pointer;
+  font-size: 11px; font-weight: 700; color: var(--ink-2);
+}
+.mk-swatch-auto.on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.mk-swatch-auto-dot { width: 11px; height: 11px; border-radius: 999px; box-shadow: 0 0 0 1px var(--line); flex: none; }
 .mk-swatch-clear {
   margin-left: auto; font-size: 11px; font-weight: 600; color: var(--muted);
   background: none; border: none; cursor: pointer; text-decoration: underline;
