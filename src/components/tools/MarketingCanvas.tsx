@@ -21,10 +21,12 @@ import {
   channel,
   status as statusMeta,
   STATUSES,
+  STAGE_COLORS,
   makeNodeData,
   type MarketingNodeData,
 } from "@/lib/marketing";
 import { MarketingNode } from "./MarketingNode";
+import { VideoThumb } from "./VideoThumb";
 import { Plus, Trash2, X, Download, Printer, ArrowLeft, Check } from "lucide-react";
 
 const nodeTypes = { marketing: MarketingNode };
@@ -54,6 +56,22 @@ function Inner({ plan }: { plan: Plan }) {
 
   const selected = useMemo(() => nodes.find((n) => n.id === selectedId) ?? null, [nodes, selectedId]);
   const d = selected ? (selected.data as MarketingNodeData) : null;
+
+  // Etapas ya usadas en el plan (para reusar en otras cards).
+  const existingStages = useMemo(() => {
+    const seen = new Map<string, { title: string; subtitle: string; color: string }>();
+    for (const n of nodes) {
+      const x = n.data as MarketingNodeData;
+      if (x.stageTitle && !seen.has(x.stageTitle.toLowerCase())) {
+        seen.set(x.stageTitle.toLowerCase(), {
+          title: x.stageTitle,
+          subtitle: x.stageSubtitle || "",
+          color: x.stageColor || "#0b1b34",
+        });
+      }
+    }
+    return Array.from(seen.values());
+  }, [nodes]);
 
   const onConnect = useCallback(
     (c: Connection) => setEdges((eds) => addEdge({ ...c, animated: true }, eds)),
@@ -252,6 +270,62 @@ function Inner({ plan }: { plan: Plan }) {
               })}
             </div>
 
+            <Lbl>Etapa del embudo (independiente del ad)</Lbl>
+            <input
+              style={ed}
+              value={d.stageTitle}
+              onChange={(e) => patch({ stageTitle: e.target.value })}
+              placeholder="Ej. Principal · Calentamiento · Cierre"
+            />
+            <input
+              style={{ ...ed, marginTop: 6 }}
+              value={d.stageSubtitle}
+              onChange={(e) => patch({ stageSubtitle: e.target.value })}
+              placeholder="Subtítulo de la etapa (ej. antes del registro)"
+            />
+            <div className="mk-swatches">
+              {STAGE_COLORS.map((c) => {
+                const on = (d.stageColor || "#0b1b34") === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`mk-swatch${on ? " on" : ""}`}
+                    style={{ background: c }}
+                    onClick={() => patch({ stageColor: c })}
+                    aria-label="Color de etapa"
+                  />
+                );
+              })}
+              {d.stageTitle ? (
+                <button
+                  type="button"
+                  className="mk-swatch-clear"
+                  onClick={() => patch({ stageTitle: "", stageSubtitle: "", stageColor: "" })}
+                >
+                  Quitar etapa
+                </button>
+              ) : null}
+            </div>
+            {existingStages.length > 0 ? (
+              <div className="mk-stage-reuse">
+                <span className="mk-stage-reuse-lbl">Reusar:</span>
+                {existingStages.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="mk-stage-chip"
+                    style={{ borderColor: s.color, color: s.color }}
+                    onClick={() => patch({ stageTitle: s.title, stageSubtitle: s.subtitle, stageColor: s.color })}
+                    title={s.subtitle ? `${s.title} · ${s.subtitle}` : s.title}
+                  >
+                    <span className="mk-stage-chip-dot" style={{ background: s.color }} />
+                    {s.title}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             <Lbl>Título</Lbl>
             <input style={ed} value={d.title} onChange={(e) => patch({ title: e.target.value })} placeholder={channel(d.channel).label} />
 
@@ -322,9 +396,18 @@ function Inner({ plan }: { plan: Plan }) {
 
             <Lbl>Imagen (ads, correo…)</Lbl>
             <input style={ed} value={d.imageUrl} onChange={(e) => patch({ imageUrl: e.target.value })} placeholder="https://… (URL de imagen)" />
+            {d.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={d.imageUrl} alt="" className="mk-ed-preview" />
+            ) : null}
 
-            <Lbl>Video</Lbl>
+            <Lbl>Video (YouTube o Vimeo)</Lbl>
             <input style={ed} value={d.videoUrl} onChange={(e) => patch({ videoUrl: e.target.value })} placeholder="https://… (URL de video)" />
+            {d.videoUrl ? (
+              <div className="mk-ed-preview-video">
+                <VideoThumb url={d.videoUrl} height={120} />
+              </div>
+            ) : null}
 
             <button type="button" className="mk-delete" onClick={removeSelected}>
               <Trash2 size={15} /> Eliminar card

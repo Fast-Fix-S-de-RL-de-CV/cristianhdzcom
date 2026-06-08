@@ -59,6 +59,29 @@ export function status(key: string) {
 
 export type ChecklistItem = { id: string; text: string; done: boolean };
 
+/** Colores sugeridos para las etapas (cinta superior de la card). */
+export const STAGE_COLORS = [
+  "#0b1b34",
+  "#2563eb",
+  "#7c3aed",
+  "#db2777",
+  "#ea580c",
+  "#16a34a",
+  "#0891b2",
+  "#ca8a04",
+];
+
+/** Detecta YouTube/Vimeo de un link y devuelve la miniatura (YT es directa). */
+export function parseVideo(url: string): { kind: "youtube" | "vimeo" | "other"; id: string; thumb: string } {
+  const u = (url || "").trim();
+  if (!u) return { kind: "other", id: "", thumb: "" };
+  let m = u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  if (m) return { kind: "youtube", id: m[1], thumb: `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg` };
+  m = u.match(/vimeo\.com\/(?:video\/|channels\/[\w]+\/|groups\/[\w]+\/videos\/)?(\d+)/);
+  if (m) return { kind: "vimeo", id: m[1], thumb: "" }; // requiere oEmbed
+  return { kind: "other", id: "", thumb: "" };
+}
+
 /** Datos de cada card (nodo). Es informativo: planeación, no ejecución. */
 export type MarketingNodeData = {
   channel: string;
@@ -66,6 +89,10 @@ export type MarketingNodeData = {
   subtitle: string;
   text: string;
   status: StatusKey;
+  /** Etapa del embudo (independiente del ad): título + subtítulo + color. */
+  stageTitle: string;
+  stageSubtitle: string;
+  stageColor: string;
   /** Quién trabaja en esta pieza. */
   assignee: string;
   /** Cuándo: "Día 1", "Semana 2", "Lun-Vie", "Final del día"… */
@@ -89,6 +116,9 @@ export function makeNodeData(channelKey: string): MarketingNodeData {
     subtitle: "",
     text: "",
     status: "faltante",
+    stageTitle: "",
+    stageSubtitle: "",
+    stageColor: "",
     assignee: "",
     when: "",
     time: "",

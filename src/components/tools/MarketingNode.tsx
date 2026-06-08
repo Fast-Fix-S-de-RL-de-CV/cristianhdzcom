@@ -1,7 +1,8 @@
 "use client";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { channel, status, type MarketingNodeData } from "@/lib/marketing";
-import { Video, Image as ImageIcon, Clock, User, CheckSquare, Infinity as InfinityIcon } from "lucide-react";
+import { Image as ImageIcon, Clock, User, CheckSquare, Infinity as InfinityIcon } from "lucide-react";
+import { VideoThumb } from "./VideoThumb";
 
 /** Card de un paso del plan (nodo del canvas). */
 export function MarketingNode({ data, selected }: NodeProps) {
@@ -24,6 +25,14 @@ export function MarketingNode({ data, selected }: NodeProps) {
     >
       <Handle type="target" position={Position.Top} className="mk-handle" />
 
+      {/* Cinta de ETAPA (independiente del ad) */}
+      {d.stageTitle ? (
+        <div className="mk-node-stage" style={{ background: d.stageColor || "#0b1b34" }}>
+          <span className="mk-node-stage-t">{d.stageTitle}</span>
+          {d.stageSubtitle ? <span className="mk-node-stage-s">· {d.stageSubtitle}</span> : null}
+        </div>
+      ) : null}
+
       <div className="mk-node-head" style={{ background: ch.color }}>
         <span className="mk-node-ch">
           <Icon size={13} strokeWidth={2.2} /> {ch.short}
@@ -42,6 +51,8 @@ export function MarketingNode({ data, selected }: NodeProps) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={d.imageUrl} alt="" className="mk-node-img" />
         ) : null}
+
+        {d.videoUrl ? <VideoThumb url={d.videoUrl} height={92} /> : null}
 
         <div className="mk-node-meta">
           {d.evergreen ? (
@@ -63,9 +74,9 @@ export function MarketingNode({ data, selected }: NodeProps) {
               <CheckSquare size={11} /> {done}/{total}
             </span>
           ) : null}
-          {d.videoUrl ? (
+          {d.imageUrl ? (
             <span className="mk-chip">
-              <Video size={11} />
+              <ImageIcon size={11} />
             </span>
           ) : null}
         </div>
