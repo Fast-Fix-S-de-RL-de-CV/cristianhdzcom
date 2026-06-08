@@ -1,22 +1,23 @@
 import { AdminShell } from "./AdminShell";
 import { Eyebrow } from "@/components/ui/Eyebrow";
+import { adminIcon } from "./adminIcons";
 
 const ITEMS = [
-  ["◎", "Dashboard", "/admin"],
-  ["🎯", "Prospectos", "/admin/prospectos"],
-  ["👥", "Alumnos", "/admin/alumnos"],
-  ["💼", "Clientes", "/admin/clientes"],
-  ["✨", "Membresías", "/admin/membresias"],
-  ["💳", "Suscripciones", "/admin/suscripciones"],
-  ["💰", "Pagos", "/admin/pagos"],
-  ["📚", "Cursos", "/admin/cursos"],
-  ["🎙️", "Talleres", "/admin/talleres"],
-  ["📖", "Libros", "/admin/libros"],
-  ["🚀", "Servicios", "/admin/servicios"],
-  ["✍️", "Blog", "/admin/blog"],
-  ["💬", "Comunidad", "/admin/comunidad"],
-  ["📞", "Soporte", "/admin/soporte"],
-  ["⚙️", "Ajustes", "/admin/ajustes"],
+  ["Dashboard", "/admin"],
+  ["Prospectos", "/admin/prospectos"],
+  ["Alumnos", "/admin/alumnos"],
+  ["Clientes", "/admin/clientes"],
+  ["Membresías", "/admin/membresias"],
+  ["Suscripciones", "/admin/suscripciones"],
+  ["Pagos", "/admin/pagos"],
+  ["Cursos", "/admin/cursos"],
+  ["Talleres", "/admin/talleres"],
+  ["Libros", "/admin/libros"],
+  ["Servicios", "/admin/servicios"],
+  ["Blog", "/admin/blog"],
+  ["Comunidad", "/admin/comunidad"],
+  ["Soporte", "/admin/soporte"],
+  ["Ajustes", "/admin/ajustes"],
 ] as const;
 
 export function AdminPageShell({
@@ -49,7 +50,7 @@ export function AdminPageShell({
         >
           <Eyebrow style={{ padding: "0 12px 12px" }}>Operación</Eyebrow>
           <div className="col" style={{ gap: 2 }}>
-            {ITEMS.map(([icon, label, href]) => {
+            {ITEMS.map(([label, href]) => {
               const isActive = href === active;
               return (
                 <a
@@ -68,7 +69,9 @@ export function AdminPageShell({
                     textDecoration: "none",
                   }}
                 >
-                  <span style={{ width: 18 }}>{icon}</span>
+                  <span style={{ width: 18, display: "inline-flex", alignItems: "center" }}>
+                    {adminIcon(label)}
+                  </span>
                   <span style={{ flex: 1 }}>{label}</span>
                 </a>
               );

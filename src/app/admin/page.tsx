@@ -3,6 +3,8 @@ import { db, schema } from "@/db";
 import { desc, sql, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminIcon, activityIcon } from "@/components/admin/adminIcons";
+import { PenLine, BookOpen, Radio, Megaphone, GraduationCap, Wallet, Rocket, Repeat } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -120,19 +122,19 @@ export default async function AdminDashboard() {
   const churnPct = 0;
 
   const sidebarItems = [
-    ["◎", "Dashboard", true, "/admin"],
-    ["✨", "Prospectos", false, "/admin/prospectos"],
-    ["👥", "Alumnos", false, "/admin/alumnos", String(counts.users)],
-    ["💼", "Clientes", false, "/admin/clientes", String(counts.users)],
-    ["💳", "Suscripciones", false, "/admin/suscripciones", String(counts.orders)],
-    ["💰", "Pagos", false, "/admin/pagos", `$${Math.round((counts.revenueCents || 0) / 100)}`],
-    ["📚", "Cursos", false, "/admin/cursos", String(counts.programs)],
-    ["✍️", "Blog", false, "/admin/blog", String(counts.blog || 0)],
-    ["🎙️", "Talleres", false, "/admin/talleres", String(counts.events || 0)],
-    ["💬", "Comunidad", false, "/admin/comunidad", String(counts.posts)],
-    ["🎯", "Marketing", false, "/admin/marketing"],
-    ["📞", "Soporte", false, "/admin/soporte", String(counts.leads || 0)],
-    ["⚙️", "Ajustes", false, "/admin/ajustes"],
+    ["Dashboard", true, "/admin"],
+    ["Prospectos", false, "/admin/prospectos"],
+    ["Alumnos", false, "/admin/alumnos", String(counts.users)],
+    ["Clientes", false, "/admin/clientes", String(counts.users)],
+    ["Suscripciones", false, "/admin/suscripciones", String(counts.orders)],
+    ["Pagos", false, "/admin/pagos", `$${Math.round((counts.revenueCents || 0) / 100)}`],
+    ["Cursos", false, "/admin/cursos", String(counts.programs)],
+    ["Blog", false, "/admin/blog", String(counts.blog || 0)],
+    ["Talleres", false, "/admin/talleres", String(counts.events || 0)],
+    ["Comunidad", false, "/admin/comunidad", String(counts.posts)],
+    ["Marketing", false, "/admin/marketing"],
+    ["Soporte", false, "/admin/soporte", String(counts.leads || 0)],
+    ["Ajustes", false, "/admin/ajustes"],
   ] as const;
 
   return (
@@ -142,7 +144,7 @@ export default async function AdminDashboard() {
         <aside style={{ padding: "24px 16px", background: "var(--bg)", borderRight: "1px solid var(--line)" }}>
           <Eyebrow style={{ padding: "0 12px 12px" }}>Operación</Eyebrow>
           <div className="col" style={{ gap: 2 }}>
-            {sidebarItems.map(([icon, label, active, href, count]) => (
+            {sidebarItems.map(([label, active, href, count]) => (
               <a
                 key={String(label)}
                 href={String(href)}
@@ -159,7 +161,9 @@ export default async function AdminDashboard() {
                   textDecoration: "none",
                 }}
               >
-                <span style={{ width: 18 }}>{String(icon)}</span>
+                <span style={{ width: 18, display: "inline-flex", alignItems: "center" }}>
+                  {adminIcon(String(label))}
+                </span>
                 <span style={{ flex: 1 }}>{String(label)}</span>
                 {count ? (
                   <span
@@ -306,11 +310,11 @@ export default async function AdminDashboard() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: 14,
+                        color: "var(--ink-2)",
                         flexShrink: 0,
                       }}
                     >
-                      {a.icon}
+                      {activityIcon(a.icon)}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, lineHeight: 1.4, color: "var(--ink)" }}>{a.text}</div>
@@ -414,15 +418,15 @@ export default async function AdminDashboard() {
             <Eyebrow style={{ marginBottom: 14 }}>Acciones rápidas</Eyebrow>
             <div className="grid-4" style={{ gap: 12 }}>
               {([
-                ["✍️", "Nuevo post de blog", "/admin/blog"],
-                ["📚", "Nuevo módulo curso", "/admin/cursos"],
-                ["🎙️", "Crear taller en vivo", "/admin/talleres"],
-                ["💸", "Marketing y ofertas", "/admin/marketing"],
-                ["📩", "Ver alumnos", "/admin/alumnos"],
-                ["🏷️", "Pagos y cobros", "/admin/pagos"],
-                ["🚀", "Servicios / Empresas", "/admin/servicios"],
-                ["💳", "Suscripciones", "/admin/suscripciones"],
-              ] as const).map(([i, l, href]) => (
+                [<PenLine size={16} />, "Nuevo post de blog", "/admin/blog"],
+                [<BookOpen size={16} />, "Nuevo módulo curso", "/admin/cursos"],
+                [<Radio size={16} />, "Crear taller en vivo", "/admin/talleres"],
+                [<Megaphone size={16} />, "Marketing y ofertas", "/admin/marketing"],
+                [<GraduationCap size={16} />, "Ver alumnos", "/admin/alumnos"],
+                [<Wallet size={16} />, "Pagos y cobros", "/admin/pagos"],
+                [<Rocket size={16} />, "Servicios / Empresas", "/admin/servicios"],
+                [<Repeat size={16} />, "Suscripciones", "/admin/suscripciones"],
+              ] as [React.ReactNode, string, string][]).map(([i, l, href]) => (
                 <a
                   key={l}
                   href={href}
@@ -437,7 +441,7 @@ export default async function AdminDashboard() {
                     color: "var(--ink)",
                   }}
                 >
-                  <span style={{ fontSize: 16 }}>{i}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", color: "var(--accent)" }}>{i}</span>
                   <span style={{ fontSize: 13, fontWeight: 500 }}>{l}</span>
                 </a>
               ))}
