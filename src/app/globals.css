@@ -1756,6 +1756,17 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
 }
 .mk-stage-chip-dot { width: 8px; height: 8px; border-radius: 999px; }
 
+/* ── Editor: subir archivo ── */
+.mk-upload { display: flex; align-items: center; gap: 9px; margin-top: 7px; flex-wrap: wrap; }
+.mk-upload-btn {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+  padding: 6px 11px; border-radius: 8px; border: 1px dashed var(--line-2); background: var(--bg-2);
+  color: var(--ink-2); cursor: pointer;
+}
+.mk-upload-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.mk-upload-btn:disabled { opacity: .6; cursor: default; }
+.mk-upload-err { font-size: 11px; color: #dc2626; font-weight: 600; }
+
 /* ── Editor: previews de media ── */
 .mk-ed-preview {
   width: 100%; max-height: 150px; object-fit: cover; border-radius: 10px;

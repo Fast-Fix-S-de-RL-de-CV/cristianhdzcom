@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from "react";
 import Link from "next/link";
 import {
   ReactFlow,
@@ -27,7 +27,7 @@ import {
 } from "@/lib/marketing";
 import { MarketingNode } from "./MarketingNode";
 import { VideoThumb } from "./VideoThumb";
-import { Plus, Trash2, X, Download, Printer, ArrowLeft, Check } from "lucide-react";
+import { Plus, Trash2, X, Download, Printer, ArrowLeft, Check, Upload } from "lucide-react";
 
 const nodeTypes = { marketing: MarketingNode };
 
@@ -395,7 +395,8 @@ function Inner({ plan }: { plan: Plan }) {
             </div>
 
             <Lbl>Imagen (ads, correo…)</Lbl>
-            <input style={ed} value={d.imageUrl} onChange={(e) => patch({ imageUrl: e.target.value })} placeholder="https://… (URL de imagen)" />
+            <input style={ed} value={d.imageUrl} onChange={(e) => patch({ imageUrl: e.target.value })} placeholder="https://… o sube un archivo" />
+            <MediaUpload onDone={(url) => patch({ imageUrl: url })} />
             {d.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={d.imageUrl} alt="" className="mk-ed-preview" />
@@ -470,6 +471,43 @@ function Lbl({ children }: { children: React.ReactNode }) {
       style={{ fontSize: 10, letterSpacing: "0.08em", color: "var(--muted)", margin: "14px 0 5px", textTransform: "uppercase" }}
     >
       {children}
+    </div>
+  );
+}
+
+/** Botón para subir una imagen a R2 y devolver su URL pública. */
+function MediaUpload({ onDone }: { onDone: (url: string) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function pick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setErr("");
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/tools/upload", { method: "POST", body: fd });
+      const j = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !j.url) throw new Error(j.error || "No se pudo subir");
+      onDone(j.url);
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : "Error al subir");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mk-upload">
+      <input ref={ref} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden onChange={pick} />
+      <button type="button" className="mk-upload-btn" onClick={() => ref.current?.click()} disabled={busy}>
+        <Upload size={13} /> {busy ? "Subiendo…" : "Subir imagen"}
+      </button>
+      {err ? <span className="mk-upload-err">{err}</span> : null}
     </div>
   );
 }
