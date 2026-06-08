@@ -7,6 +7,7 @@ export type AlumnoActiveKey =
   | "talleres"
   | "biblioteca"
   | "proyectos"
+  | "herramientas"
   | "comunidad"
   | "calendario"
   | "miembros"

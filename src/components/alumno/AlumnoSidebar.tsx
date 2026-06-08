@@ -46,6 +46,11 @@ const Icon = {
       <line x1="13" y1="6" x2="11" y2="18" />
     </svg>
   ),
+  Tools: (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </svg>
+  ),
   Book: (
     <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 5 a2 2 0 0 1 2 -2 h10 a2 2 0 0 1 2 2 v14 a2 2 0 0 1 -2 2 h-10 a2 2 0 0 1 -2 -2 z" />
@@ -113,6 +118,7 @@ const APRENDER: NavLink[] = [
   { key: "talleres", href: "/plataforma/talleres", label: "Talleres en vivo", icon: Icon.Live },
   { key: "biblioteca", href: "/plataforma/biblioteca", label: "Biblioteca", icon: Icon.Library },
   { key: "proyectos", href: "/plataforma/proyectos", label: "Mis proyectos", icon: Icon.Code },
+  { key: "herramientas", href: "/plataforma/herramientas", label: "Herramientas", icon: Icon.Tools },
   { key: "libros", href: "/libros", label: "Libros", icon: Icon.Book },
 ];
 

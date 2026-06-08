@@ -959,3 +959,23 @@ export const siteSettings = pgTable("site_settings", {
 
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Herramientas · Plan de Marketing (canvas tipo n8n).
+ * Cada fila es un tablero del usuario: nodos (cards por canal) + edges (flujo),
+ * guardados como JSON. Informativo (planeación visual), gratis para todos.
+ */
+export const marketingPlans = pgTable("marketing_plans", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 160 }).notNull().default("Plan de marketing"),
+  product: varchar("product", { length: 200 }).notNull().default(""),
+  data: jsonb("data")
+    .$type<{ nodes: unknown[]; edges: unknown[] }>()
+    .notNull()
+    .default({ nodes: [], edges: [] }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

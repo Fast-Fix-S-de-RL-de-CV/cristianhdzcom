@@ -1,0 +1,100 @@
+import {
+  Globe,
+  Mail,
+  MessageSquare,
+  Phone,
+  Megaphone,
+  Search,
+  Repeat,
+  FileImage,
+  Video,
+  Users,
+  Calendar,
+  Star,
+  Flag,
+  type LucideIcon,
+} from "lucide-react";
+
+/** Un canal = un tipo de card del plan de marketing. */
+export type Channel = {
+  key: string;
+  label: string;
+  short: string;
+  icon: LucideIcon;
+  color: string;
+  hint: string;
+};
+
+export const CHANNELS: Channel[] = [
+  { key: "inicio", label: "Inicio / Lanzamiento", short: "Inicio", icon: Flag, color: "#0b1b34", hint: "Punto de arranque del flujo" },
+  { key: "landing", label: "Landing / Web", short: "Landing", icon: Globe, color: "#2563eb", hint: "Página de venta o captura" },
+  { key: "email", label: "Email", short: "Email", icon: Mail, color: "#7c3aed", hint: "Correo o secuencia" },
+  { key: "sms", label: "SMS", short: "SMS", icon: MessageSquare, color: "#0891b2", hint: "Mensaje de texto" },
+  { key: "whatsapp", label: "WhatsApp", short: "WhatsApp", icon: Phone, color: "#16a34a", hint: "Mensaje o difusión" },
+  { key: "meta_ads", label: "Facebook / Instagram Ads", short: "Meta Ads", icon: Megaphone, color: "#1d4ed8", hint: "Campaña pagada en Meta" },
+  { key: "google_ads", label: "Google Ads", short: "Google Ads", icon: Search, color: "#ea4335", hint: "Search · Display · YouTube" },
+  { key: "remarketing", label: "Remarketing", short: "Remarketing", icon: Repeat, color: "#db2777", hint: "Reimpacto a visitantes" },
+  { key: "flyer", label: "Flyer / Impreso", short: "Flyer", icon: FileImage, color: "#b45309", hint: "Volante físico o digital" },
+  { key: "video", label: "Video / Reel", short: "Video", icon: Video, color: "#dc2626", hint: "Contenido en video" },
+  { key: "organico", label: "Post orgánico", short: "Orgánico", icon: Users, color: "#0d9488", hint: "Publicación sin pauta" },
+  { key: "evento", label: "Evento / Webinar", short: "Evento", icon: Calendar, color: "#9333ea", hint: "En vivo o grabado" },
+  { key: "influencer", label: "Influencer / PR", short: "Influencer", icon: Star, color: "#ca8a04", hint: "Colaboración o prensa" },
+];
+
+const CHANNEL_MAP: Record<string, Channel> = Object.fromEntries(CHANNELS.map((c) => [c.key, c]));
+export function channel(key: string): Channel {
+  return CHANNEL_MAP[key] ?? CHANNELS[1];
+}
+
+export type StatusKey = "faltante" | "trabajando" | "listo";
+export const STATUSES: { key: StatusKey; label: string; color: string; bg: string }[] = [
+  { key: "faltante", label: "Faltante", color: "#64748b", bg: "#f1f5f9" },
+  { key: "trabajando", label: "Trabajando", color: "#b45309", bg: "#fef3c7" },
+  { key: "listo", label: "Listo", color: "#15803d", bg: "#dcfce7" },
+];
+const STATUS_MAP = Object.fromEntries(STATUSES.map((s) => [s.key, s]));
+export function status(key: string) {
+  return STATUS_MAP[key] ?? STATUSES[0];
+}
+
+export type ChecklistItem = { id: string; text: string; done: boolean };
+
+/** Datos de cada card (nodo). Es informativo: planeación, no ejecución. */
+export type MarketingNodeData = {
+  channel: string;
+  title: string;
+  subtitle: string;
+  text: string;
+  status: StatusKey;
+  /** Quién trabaja en esta pieza. */
+  assignee: string;
+  /** Cuándo: "Día 1", "Semana 2", "Lun-Vie", "Final del día"… */
+  when: string;
+  /** Hora: "09:00". */
+  time: string;
+  /** Pieza siempre activa (no atada a una fecha). */
+  evergreen: boolean;
+  /** Checklist de pendientes de esa card. */
+  checklist: ChecklistItem[];
+  /** Links/recursos visuales. */
+  videoUrl: string;
+  imageUrl: string;
+};
+
+export function makeNodeData(channelKey: string): MarketingNodeData {
+  const ch = channel(channelKey);
+  return {
+    channel: channelKey,
+    title: ch.label,
+    subtitle: "",
+    text: "",
+    status: "faltante",
+    assignee: "",
+    when: "",
+    time: "",
+    evergreen: false,
+    checklist: [],
+    videoUrl: "",
+    imageUrl: "",
+  };
+}
