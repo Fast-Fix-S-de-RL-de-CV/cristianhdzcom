@@ -197,7 +197,10 @@ button {
   font-weight: 700;
 }
 .ch-nav .btn-primary:hover {
-  filter: brightness(1.05);
+  /* En hover el fondo pasa a azul (var(--accent)); el texto debe ir BLANCO
+     para no perderse, y la sombra de profundidad a navy oscuro. */
+  color: #fff;
+  box-shadow: 0 3px 0 #0B1B34;
 }
 .ch-nav .btn-ghost {
   background: rgba(255, 255, 255, 0.06);
