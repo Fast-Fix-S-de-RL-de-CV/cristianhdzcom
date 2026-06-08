@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { requireUser } from "@/lib/auth";
-import { r2, r2Configured, R2_BUCKET, publicUrl } from "@/lib/r2";
+import { r2, r2Configured, R2_BUCKET, mediaUrl } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -81,7 +81,8 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({
-    url: publicUrl(key),
+    url: mediaUrl(key),
+    key,
     kind: file.type.startsWith("video/") ? "video" : "image",
   });
 }
