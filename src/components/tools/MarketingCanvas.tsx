@@ -12,6 +12,7 @@ import {
   useEdgesState,
   addEdge,
   MarkerType,
+  ConnectionMode,
   type Node,
   type Edge,
   type Connection,
@@ -205,6 +206,7 @@ function Inner({ plan }: { plan: Plan }) {
             onPaneClick={() => setSelectedId(null)}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={EDGE_OPTS}
+            connectionMode={ConnectionMode.Loose}
             fitView
             minZoom={0.2}
             maxZoom={2}

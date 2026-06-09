@@ -26,6 +26,8 @@ export function MarketingNode({ data, selected }: NodeProps) {
       }}
     >
       <Handle type="target" position={Position.Top} className="mk-handle" />
+      <Handle type="target" position={Position.Left} id="left" className="mk-handle mk-handle-side" />
+      <Handle type="source" position={Position.Right} id="right" className="mk-handle mk-handle-side" />
 
       {/* ETAPA: punto identificador (NO toma el color de la card) */}
       {d.stageTitle ? (
