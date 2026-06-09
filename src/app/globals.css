@@ -1704,6 +1704,14 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
   font-size: 11.5px; color: var(--muted); margin-top: 6px; line-height: 1.4;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
+.mk-node-link {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%; margin-top: 8px;
+  padding: 3px 9px; border-radius: 7px; background: var(--bg-2); border: 1px solid var(--line);
+  font-size: 11px; font-weight: 600; color: var(--accent); text-decoration: none;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.mk-node-link:hover { border-color: var(--accent); }
+.mk-node-link svg { flex: none; }
 .mk-node-img { width: 100%; height: 84px; object-fit: cover; border-radius: 8px; margin-top: 8px; display: block; }
 .mk-node-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
 .mk-chip {

@@ -12,6 +12,8 @@ import {
   Calendar,
   Star,
   Flag,
+  CreditCard,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 
@@ -28,6 +30,8 @@ export type Channel = {
 export const CHANNELS: Channel[] = [
   { key: "inicio", label: "Inicio / Lanzamiento", short: "Inicio", icon: Flag, color: "#0b1b34", hint: "Punto de arranque del flujo" },
   { key: "landing", label: "Landing / Web", short: "Landing", icon: Globe, color: "#2563eb", hint: "Página de venta o captura" },
+  { key: "registro", label: "Registro / Formulario", short: "Registro", icon: ClipboardList, color: "#4f46e5", hint: "Formulario de registro o captura" },
+  { key: "checkout", label: "Checkout / Pago", short: "Checkout", icon: CreditCard, color: "#059669", hint: "Página de pago o cobro" },
   { key: "email", label: "Email", short: "Email", icon: Mail, color: "#7c3aed", hint: "Correo o secuencia" },
   { key: "sms", label: "SMS", short: "SMS", icon: MessageSquare, color: "#0891b2", hint: "Mensaje de texto" },
   { key: "whatsapp", label: "WhatsApp", short: "WhatsApp", icon: Phone, color: "#16a34a", hint: "Mensaje o difusión" },
@@ -121,10 +125,32 @@ export type MarketingNodeData = {
   evergreen: boolean;
   /** Checklist de pendientes de esa card. */
   checklist: ChecklistItem[];
+  /** Link de referencia del paso (evento, formulario, checkout, página…). */
+  linkUrl: string;
   /** Links/recursos visuales. */
   videoUrl: string;
   imageUrl: string;
 };
+
+/** Dominio legible de un link para mostrar en la card. */
+export function linkHost(url: string): string {
+  const u = (url || "").trim();
+  if (!u) return "";
+  try {
+    const parsed = new URL(/^https?:\/\//i.test(u) ? u : `https://${u}`);
+    const host = parsed.hostname.replace(/^www\./, "");
+    return parsed.pathname && parsed.pathname !== "/" ? `${host}${parsed.pathname}`.slice(0, 38) : host;
+  } catch {
+    return u.slice(0, 38);
+  }
+}
+
+/** Normaliza un link para abrirlo (le agrega https:// si falta). */
+export function linkHref(url: string): string {
+  const u = (url || "").trim();
+  if (!u) return "";
+  return /^https?:\/\//i.test(u) ? u : `https://${u}`;
+}
 
 export function makeNodeData(channelKey: string): MarketingNodeData {
   const ch = channel(channelKey);
@@ -143,6 +169,7 @@ export function makeNodeData(channelKey: string): MarketingNodeData {
     time: "",
     evergreen: false,
     checklist: [],
+    linkUrl: "",
     videoUrl: "",
     imageUrl: "",
   };

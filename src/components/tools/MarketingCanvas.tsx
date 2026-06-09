@@ -362,6 +362,14 @@ function Inner({ plan }: { plan: Plan }) {
             <Lbl>Descripción</Lbl>
             <textarea style={{ ...ed, minHeight: 64, resize: "vertical" }} value={d.text} onChange={(e) => patch({ text: e.target.value })} placeholder="Qué dice / qué hace este paso" />
 
+            <Lbl>Link / referencia (evento, formulario, checkout, página…)</Lbl>
+            <input
+              style={ed}
+              value={d.linkUrl}
+              onChange={(e) => patch({ linkUrl: e.target.value })}
+              placeholder="https://… (link de referencia del paso)"
+            />
+
             <Lbl>Estatus</Lbl>
             <div className="mk-status-row">
               {STATUSES.map((s) => (
@@ -462,6 +470,7 @@ function Inner({ plan }: { plan: Plan }) {
                 </div>
                 {x.subtitle ? <div className="mk-print-sub">{x.subtitle}</div> : null}
                 {x.text ? <div>{x.text}</div> : null}
+                {x.linkUrl ? <div className="mk-print-link">🔗 {x.linkUrl}</div> : null}
                 {(x.checklist ?? []).length > 0 ? (
                   <ul>
                     {x.checklist.map((c) => (

@@ -1,7 +1,7 @@
 "use client";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { channel, status, type MarketingNodeData } from "@/lib/marketing";
-import { Image as ImageIcon, Clock, User, CheckSquare, Infinity as InfinityIcon } from "lucide-react";
+import { channel, status, linkHost, linkHref, type MarketingNodeData } from "@/lib/marketing";
+import { Image as ImageIcon, Clock, User, CheckSquare, Infinity as InfinityIcon, Link2 } from "lucide-react";
 import { VideoThumb } from "./VideoThumb";
 
 /** Card de un paso del plan (nodo del canvas). */
@@ -49,6 +49,19 @@ export function MarketingNode({ data, selected }: NodeProps) {
         <div className="mk-node-title">{d.title || ch.label}</div>
         {d.subtitle ? <div className="mk-node-sub">{d.subtitle}</div> : null}
         {d.text ? <div className="mk-node-text">{d.text}</div> : null}
+
+        {d.linkUrl ? (
+          <a
+            className="mk-node-link"
+            href={linkHref(d.linkUrl)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title={d.linkUrl}
+          >
+            <Link2 size={12} /> {linkHost(d.linkUrl)}
+          </a>
+        ) : null}
 
         {d.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
