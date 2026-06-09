@@ -1762,9 +1762,12 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
   display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600;
   padding: 3px 7px; border-radius: 6px; background: var(--bg-2); color: var(--ink-2);
 }
-.mk-handle { width: 10px !important; height: 10px !important; background: #fff !important; border: 2px solid var(--accent) !important; z-index: 3; }
-.mk-handle:hover { width: 14px !important; height: 14px !important; background: var(--accent) !important; }
-.mk-handle-side { border-color: #64748b !important; }
+.mk-handle { border-radius: 50%; }
+/* Punto visible de SALIDA (jálalo para sacar la flecha) */
+.mk-handle-source { width: 10px !important; height: 10px !important; background: #fff !important; border: 2px solid var(--accent) !important; z-index: 5; }
+.mk-handle-source:hover { width: 15px !important; height: 15px !important; background: var(--accent) !important; }
+/* Zona de ENTRADA: transparente, detrás del punto, generosa para soltar */
+.mk-handle-target { width: 14px !important; height: 14px !important; background: transparent !important; border: none !important; z-index: 4; }
 
 /* ── Etapa: punto identificador (NO toma el color de la card) ── */
 .mk-node-stage {

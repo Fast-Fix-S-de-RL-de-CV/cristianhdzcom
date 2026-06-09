@@ -4,6 +4,14 @@ import { channel, status, linkHost, linkHref, type MarketingNodeData } from "@/l
 import { Image as ImageIcon, Clock, User, CheckSquare, Infinity as InfinityIcon, Link2 } from "lucide-react";
 import { VideoThumb } from "./VideoThumb";
 
+/** Los 4 lados de la card, cada uno con salida (source) y entrada (target). */
+const HANDLE_SIDES = [
+  { pos: Position.Top, key: "top" },
+  { pos: Position.Right, key: "right" },
+  { pos: Position.Bottom, key: "bottom" },
+  { pos: Position.Left, key: "left" },
+] as const;
+
 /** Card de un paso del plan (nodo del canvas). */
 export function MarketingNode({ data, selected }: NodeProps) {
   const d = data as MarketingNodeData;
@@ -25,9 +33,14 @@ export function MarketingNode({ data, selected }: NodeProps) {
           : "0 6px 18px rgba(15,17,21,0.07)",
       }}
     >
-      <Handle type="target" position={Position.Top} className="mk-handle" />
-      <Handle type="target" position={Position.Left} id="left" className="mk-handle mk-handle-side" />
-      <Handle type="source" position={Position.Right} id="right" className="mk-handle mk-handle-side" />
+      {/* Zona de entrada (target) — invisible y amplia — detrás del punto */}
+      {HANDLE_SIDES.map((s) => (
+        <Handle key={`t-${s.key}`} type="target" id={`t-${s.key}`} position={s.pos} className="mk-handle mk-handle-target" />
+      ))}
+      {/* Punto visible de salida (source) — se jala para sacar la flecha */}
+      {HANDLE_SIDES.map((s) => (
+        <Handle key={`s-${s.key}`} type="source" id={`s-${s.key}`} position={s.pos} className="mk-handle mk-handle-source" />
+      ))}
 
       {/* ETAPA: punto identificador (NO toma el color de la card) */}
       {d.stageTitle ? (

@@ -13,7 +13,6 @@ import {
   addEdge,
   reconnectEdge,
   MarkerType,
-  ConnectionMode,
   type Node,
   type Edge,
   type Connection,
@@ -42,6 +41,23 @@ const EDGE_OPTS = {
   style: { stroke: "#64748b", strokeWidth: 2 },
 };
 
+/** Mapea handles de versiones anteriores al esquema actual (s-/t- por lado). */
+function normHandle(h: string | null | undefined, kind: "source" | "target"): string {
+  if (h && /^[st]-(top|right|bottom|left)$/.test(h)) return h;
+  const side = h && /^(top|right|bottom|left)$/.test(h) ? h : kind === "source" ? "bottom" : "top";
+  return `${kind === "source" ? "s" : "t"}-${side}`;
+}
+
+/** Normaliza una edge guardada: estilo + handles válidos. */
+function normEdge(e: Edge): Edge {
+  return {
+    ...e,
+    ...EDGE_OPTS,
+    sourceHandle: normHandle(e.sourceHandle, "source"),
+    targetHandle: normHandle(e.targetHandle, "target"),
+  };
+}
+
 type Plan = {
   id: string;
   title: string;
@@ -60,7 +76,7 @@ export function MarketingCanvas({ plan }: { plan: Plan }) {
 function Inner({ plan }: { plan: Plan }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>((plan.data?.nodes as Node[]) ?? []);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(
-    (((plan.data?.edges as Edge[]) ?? []).map((e) => ({ ...e, ...EDGE_OPTS }))) as Edge[]
+    (((plan.data?.edges as Edge[]) ?? []).map(normEdge)) as Edge[]
   );
   const [title, setTitle] = useState(plan.title);
   const [product, setProduct] = useState(plan.product ?? "");
@@ -248,7 +264,6 @@ function Inner({ plan }: { plan: Plan }) {
             }}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={EDGE_OPTS}
-            connectionMode={ConnectionMode.Loose}
             edgesReconnectable
             deleteKeyCode={["Delete", "Backspace"]}
             fitView
