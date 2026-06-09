@@ -1701,6 +1701,33 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
 .mk-minimap-node {
   filter: drop-shadow(0 1px 1.5px rgba(15, 17, 21, 0.18));
 }
+
+/* ── Conexiones (edges): hover, selección y re-ruteo ── */
+.react-flow__edge { cursor: pointer; }
+.react-flow__edge:hover .react-flow__edge-path { stroke: #475569; }
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--accent) !important;
+  stroke-width: 3.5 !important;
+}
+.react-flow__edgeupdater { fill: var(--accent); fill-opacity: 0; cursor: grab; }
+.react-flow__edge.selected .react-flow__edgeupdater,
+.react-flow__edge:hover .react-flow__edgeupdater { fill-opacity: 0.9; r: 5; }
+
+/* ── Barra de estado de la conexión seleccionada ── */
+.mk-edge-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: #fff; border: 1px solid var(--line); border-radius: 999px;
+  padding: 7px 8px 7px 14px; box-shadow: 0 10px 30px rgba(15, 17, 21, 0.12);
+}
+.mk-edge-bar-dot { width: 9px; height: 9px; border-radius: 999px; background: var(--accent); flex: none; }
+.mk-edge-bar-txt { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+.mk-edge-bar-hint { font-size: 11.5px; color: var(--muted); }
+.mk-edge-bar-del {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700;
+  padding: 5px 11px; border-radius: 999px; border: 1px solid #fecaca; background: #fef2f2;
+  color: #dc2626; cursor: pointer;
+}
+.mk-edge-bar-del:hover { background: #fee2e2; }
 .mk-canvas .react-flow { background: #f6f7fb; }
 
 /* ── Card (nodo) ── */

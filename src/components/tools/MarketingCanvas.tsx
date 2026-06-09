@@ -11,6 +11,7 @@ import {
   useNodesState,
   useEdgesState,
   addEdge,
+  reconnectEdge,
   MarkerType,
   ConnectionMode,
   type Node,
@@ -64,6 +65,7 @@ function Inner({ plan }: { plan: Plan }) {
   const [title, setTitle] = useState(plan.title);
   const [product, setProduct] = useState(plan.product ?? "");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   const selected = useMemo(() => nodes.find((n) => n.id === selectedId) ?? null, [nodes, selectedId]);
@@ -89,6 +91,33 @@ function Inner({ plan }: { plan: Plan }) {
     (c: Connection) => setEdges((eds) => addEdge({ ...c, ...EDGE_OPTS }, eds)),
     [setEdges],
   );
+
+  // Re-rutear una conexión: arrastra un extremo a otro nodo.
+  // Si se suelta en el vacío, se elimina.
+  const reconnectOk = useRef(true);
+  const onReconnectStart = useCallback(() => {
+    reconnectOk.current = false;
+  }, []);
+  const onReconnect = useCallback(
+    (oldEdge: Edge, newConn: Connection) => {
+      reconnectOk.current = true;
+      setEdges((els) => reconnectEdge({ ...oldEdge, ...EDGE_OPTS }, newConn, els));
+    },
+    [setEdges],
+  );
+  const onReconnectEnd = useCallback(
+    (_: unknown, edge: Edge) => {
+      if (!reconnectOk.current) setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+      reconnectOk.current = true;
+    },
+    [setEdges],
+  );
+
+  const removeSelectedEdge = useCallback(() => {
+    if (!selectedEdgeId) return;
+    setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId));
+    setSelectedEdgeId(null);
+  }, [selectedEdgeId, setEdges]);
 
   const addNode = useCallback(
     (chKey: string) => {
@@ -202,11 +231,26 @@ function Inner({ plan }: { plan: Plan }) {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onNodeClick={(_, n) => setSelectedId(n.id)}
-            onPaneClick={() => setSelectedId(null)}
+            onReconnect={onReconnect}
+            onReconnectStart={onReconnectStart}
+            onReconnectEnd={onReconnectEnd}
+            onNodeClick={(_, n) => {
+              setSelectedId(n.id);
+              setSelectedEdgeId(null);
+            }}
+            onEdgeClick={(_, e) => {
+              setSelectedEdgeId(e.id);
+              setSelectedId(null);
+            }}
+            onPaneClick={() => {
+              setSelectedId(null);
+              setSelectedEdgeId(null);
+            }}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={EDGE_OPTS}
             connectionMode={ConnectionMode.Loose}
+            edgesReconnectable
+            deleteKeyCode={["Delete", "Backspace"]}
             fitView
             minZoom={0.2}
             maxZoom={2}
@@ -231,6 +275,20 @@ function Inner({ plan }: { plan: Plan }) {
               maskStrokeWidth={1.5}
               bgColor="#f8fafc"
             />
+
+            {/* Estado de la conexión seleccionada */}
+            {selectedEdgeId ? (
+              <Panel position="top-center">
+                <div className="mk-edge-bar">
+                  <span className="mk-edge-bar-dot" />
+                  <span className="mk-edge-bar-txt">Conexión seleccionada</span>
+                  <span className="mk-edge-bar-hint">Arrastra un extremo a otro nodo para cambiar el rumbo</span>
+                  <button type="button" className="mk-edge-bar-del" onClick={removeSelectedEdge}>
+                    <Trash2 size={13} /> Eliminar
+                  </button>
+                </div>
+              </Panel>
+            ) : null}
 
             {/* Paleta para agregar cards */}
             <Panel position="top-left">
