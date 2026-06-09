@@ -10,6 +10,7 @@ import {
   Panel,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   addEdge,
   reconnectEdge,
   MarkerType,
@@ -90,6 +91,28 @@ function Inner({ plan }: { plan: Plan }) {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
+  const rf = useReactFlow();
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const addSeq = useRef(0);
+
+  /** Posición para un paso nuevo: centro de lo que el usuario está viendo. */
+  const spawnPos = useCallback(
+    (w: number, h: number) => {
+      let cx = 0;
+      let cy = 0;
+      const el = canvasRef.current;
+      if (el) {
+        const r = el.getBoundingClientRect();
+        const p = rf.screenToFlowPosition({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+        cx = p.x;
+        cy = p.y;
+      }
+      const k = addSeq.current++ % 6; // pequeño cascadeo para que no se encimen
+      return { x: cx - w / 2 + k * 26, y: cy - h / 2 + k * 26 };
+    },
+    [rf],
+  );
+
   const selected = useMemo(() => nodes.find((n) => n.id === selectedId) ?? null, [nodes, selectedId]);
   const isTime = selected?.type === "tiempo";
   const d = selected && !isTime ? (selected.data as MarketingNodeData) : null;
@@ -146,25 +169,19 @@ function Inner({ plan }: { plan: Plan }) {
   const addNode = useCallback(
     (chKey: string) => {
       const id = crypto.randomUUID();
-      setNodes((nds) => {
-        const i = nds.length;
-        const position = { x: 40 + (i % 5) * 300, y: 40 + Math.floor(i / 5) * 240 };
-        return nds.concat({ id, type: "marketing", position, data: makeNodeData(chKey) } as Node);
-      });
+      const position = spawnPos(244, 140);
+      setNodes((nds) => nds.concat({ id, type: "marketing", position, data: makeNodeData(chKey) } as Node));
       setSelectedId(id);
     },
-    [setNodes],
+    [setNodes, spawnPos],
   );
 
   const addTime = useCallback(() => {
     const id = crypto.randomUUID();
-    setNodes((nds) => {
-      const i = nds.length;
-      const position = { x: 120 + (i % 5) * 300, y: 120 + Math.floor(i / 5) * 240 };
-      return nds.concat({ id, type: "tiempo", position, data: makeTimeData() } as Node);
-    });
+    const position = spawnPos(78, 78);
+    setNodes((nds) => nds.concat({ id, type: "tiempo", position, data: makeTimeData() } as Node));
     setSelectedId(id);
-  }, [setNodes]);
+  }, [setNodes, spawnPos]);
 
   const patch = useCallback(
     (patchData: Partial<MarketingNodeData>) => {
@@ -268,7 +285,7 @@ function Inner({ plan }: { plan: Plan }) {
 
       {/* ── Canvas + editor ── */}
       <div className="mk-main">
-        <div className="mk-canvas">
+        <div className="mk-canvas" ref={canvasRef}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
