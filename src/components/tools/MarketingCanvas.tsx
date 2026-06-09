@@ -14,6 +14,7 @@ import {
   addEdge,
   reconnectEdge,
   MarkerType,
+  SelectionMode,
   type Node,
   type Edge,
   type Connection,
@@ -37,7 +38,7 @@ import {
 import { MarketingNode } from "./MarketingNode";
 import { TimeNode } from "./TimeNode";
 import { VideoThumb } from "./VideoThumb";
-import { Plus, Trash2, X, Download, Printer, ArrowLeft, Check, Upload, Clock } from "lucide-react";
+import { Plus, Trash2, X, Download, Printer, ArrowLeft, Check, Upload, Clock, Hand, BoxSelect } from "lucide-react";
 
 const nodeTypes = { marketing: MarketingNode, tiempo: TimeNode };
 
@@ -90,6 +91,7 @@ function Inner({ plan }: { plan: Plan }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [selectMode, setSelectMode] = useState(false);
 
   const rf = useReactFlow();
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -287,6 +289,7 @@ function Inner({ plan }: { plan: Plan }) {
       <div className="mk-main">
         <div className="mk-canvas" ref={canvasRef}>
           <ReactFlow
+            className={selectMode ? "mk-rf-select" : undefined}
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
@@ -311,6 +314,10 @@ function Inner({ plan }: { plan: Plan }) {
             defaultEdgeOptions={EDGE_OPTS}
             edgesReconnectable
             deleteKeyCode={["Delete", "Backspace"]}
+            selectionOnDrag={selectMode}
+            panOnDrag={selectMode ? [1, 2] : true}
+            selectionMode={SelectionMode.Partial}
+            selectNodesOnDrag={false}
             fitView
             minZoom={0.2}
             maxZoom={2}
@@ -318,6 +325,28 @@ function Inner({ plan }: { plan: Plan }) {
           >
             <Background gap={20} color="#dfe5ee" />
             <Controls showInteractive={false} />
+
+            {/* Herramienta: mover lienzo vs seleccionar varias */}
+            <Panel position="top-right">
+              <div className="mk-tools">
+                <button
+                  type="button"
+                  className={`mk-tool${!selectMode ? " on" : ""}`}
+                  onClick={() => setSelectMode(false)}
+                  title="Mover: arrastra para desplazar el lienzo"
+                >
+                  <Hand size={15} /> Mover
+                </button>
+                <button
+                  type="button"
+                  className={`mk-tool${selectMode ? " on" : ""}`}
+                  onClick={() => setSelectMode(true)}
+                  title="Seleccionar: arrastra un recuadro para elegir varias cards y moverlas juntas"
+                >
+                  <BoxSelect size={15} /> Seleccionar
+                </button>
+              </div>
+            </Panel>
             <MiniMap
               pannable
               zoomable

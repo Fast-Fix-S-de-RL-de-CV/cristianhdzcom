@@ -1728,6 +1728,26 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
   color: #dc2626; cursor: pointer;
 }
 .mk-edge-bar-del:hover { background: #fee2e2; }
+
+/* ── Herramienta: mover vs seleccionar ── */
+.mk-tools {
+  display: flex; gap: 4px; background: #fff; border: 1px solid var(--line);
+  border-radius: 10px; padding: 4px; box-shadow: 0 8px 24px rgba(15, 17, 21, 0.10);
+}
+.mk-tool {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+  padding: 6px 11px; border-radius: 7px; border: none; background: transparent;
+  color: var(--ink-2); cursor: pointer;
+}
+.mk-tool:hover { background: var(--bg-2); }
+.mk-tool.on { background: var(--accent); color: #fff; }
+
+/* Cursor + recuadro en modo selección */
+.mk-rf-select .react-flow__pane { cursor: crosshair; }
+.react-flow__selection {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid var(--accent);
+}
 .mk-canvas .react-flow { background: #f6f7fb; }
 
 /* ── Card (nodo) ── */
