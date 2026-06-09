@@ -214,7 +214,23 @@ function Inner({ plan }: { plan: Plan }) {
           >
             <Background gap={20} color="#dfe5ee" />
             <Controls showInteractive={false} />
-            <MiniMap pannable zoomable nodeColor={(n) => channel((n.data as MarketingNodeData)?.channel)?.color || "#cbd5e1"} />
+            <MiniMap
+              pannable
+              zoomable
+              className="mk-minimap"
+              nodeClassName="mk-minimap-node"
+              nodeColor={(n) => {
+                const d = n.data as MarketingNodeData;
+                return d?.color || channel(d?.channel)?.color || "#cbd5e1";
+              }}
+              nodeStrokeColor="#ffffff"
+              nodeStrokeWidth={3}
+              nodeBorderRadius={6}
+              maskColor="rgba(15,27,52,0.10)"
+              maskStrokeColor="#94a3b8"
+              maskStrokeWidth={1.5}
+              bgColor="#f8fafc"
+            />
 
             {/* Paleta para agregar cards */}
             <Panel position="top-left">

@@ -1684,6 +1684,23 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
 
 .mk-main { flex: 1; display: flex; min-height: 0; }
 .mk-canvas { flex: 1; position: relative; min-width: 0; }
+
+/* ── Minimapa elegante ── */
+.react-flow__minimap.mk-minimap {
+  width: 208px; height: 148px;
+  margin: 0 16px 16px 0;
+  background: #f8fafc !important;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(15, 17, 21, 0.12);
+  overflow: hidden;
+}
+.react-flow__minimap.mk-minimap .react-flow__minimap-mask {
+  rx: 6; ry: 6;
+}
+.mk-minimap-node {
+  filter: drop-shadow(0 1px 1.5px rgba(15, 17, 21, 0.18));
+}
 .mk-canvas .react-flow { background: #f6f7fb; }
 
 /* ── Card (nodo) ── */
