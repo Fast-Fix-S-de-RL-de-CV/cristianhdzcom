@@ -11,6 +11,7 @@ import {
   useNodesState,
   useEdgesState,
   addEdge,
+  MarkerType,
   type Node,
   type Edge,
   type Connection,
@@ -32,6 +33,13 @@ import { Plus, Trash2, X, Download, Printer, ArrowLeft, Check, Upload } from "lu
 
 const nodeTypes = { marketing: MarketingNode };
 
+/** Estilo de las conexiones: animadas (origen → destino) + flecha al final. */
+const EDGE_OPTS = {
+  animated: true,
+  markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: "#64748b" },
+  style: { stroke: "#64748b", strokeWidth: 2 },
+};
+
 type Plan = {
   id: string;
   title: string;
@@ -49,7 +57,9 @@ export function MarketingCanvas({ plan }: { plan: Plan }) {
 
 function Inner({ plan }: { plan: Plan }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>((plan.data?.nodes as Node[]) ?? []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>((plan.data?.edges as Edge[]) ?? []);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(
+    (((plan.data?.edges as Edge[]) ?? []).map((e) => ({ ...e, ...EDGE_OPTS }))) as Edge[]
+  );
   const [title, setTitle] = useState(plan.title);
   const [product, setProduct] = useState(plan.product ?? "");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -75,7 +85,7 @@ function Inner({ plan }: { plan: Plan }) {
   }, [nodes]);
 
   const onConnect = useCallback(
-    (c: Connection) => setEdges((eds) => addEdge({ ...c, animated: true }, eds)),
+    (c: Connection) => setEdges((eds) => addEdge({ ...c, ...EDGE_OPTS }, eds)),
     [setEdges],
   );
 
@@ -194,6 +204,7 @@ function Inner({ plan }: { plan: Plan }) {
             onNodeClick={(_, n) => setSelectedId(n.id)}
             onPaneClick={() => setSelectedId(null)}
             nodeTypes={nodeTypes}
+            defaultEdgeOptions={EDGE_OPTS}
             fitView
             minZoom={0.2}
             maxZoom={2}
