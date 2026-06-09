@@ -26,13 +26,18 @@ import {
   STAGE_COLORS,
   CARD_COLORS,
   makeNodeData,
+  makeTimeData,
+  TIME_UNITS,
+  timeUnit,
   type MarketingNodeData,
+  type TimeNodeData,
 } from "@/lib/marketing";
 import { MarketingNode } from "./MarketingNode";
+import { TimeNode } from "./TimeNode";
 import { VideoThumb } from "./VideoThumb";
-import { Plus, Trash2, X, Download, Printer, ArrowLeft, Check, Upload } from "lucide-react";
+import { Plus, Trash2, X, Download, Printer, ArrowLeft, Check, Upload, Clock } from "lucide-react";
 
-const nodeTypes = { marketing: MarketingNode };
+const nodeTypes = { marketing: MarketingNode, tiempo: TimeNode };
 
 /** Estilo de las conexiones: animadas (origen → destino) + flecha al final. */
 const EDGE_OPTS = {
@@ -85,7 +90,9 @@ function Inner({ plan }: { plan: Plan }) {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   const selected = useMemo(() => nodes.find((n) => n.id === selectedId) ?? null, [nodes, selectedId]);
-  const d = selected ? (selected.data as MarketingNodeData) : null;
+  const isTime = selected?.type === "tiempo";
+  const d = selected && !isTime ? (selected.data as MarketingNodeData) : null;
+  const td = selected && isTime ? (selected.data as TimeNodeData) : null;
 
   // Etapas ya usadas en el plan (para reusar en otras cards).
   const existingStages = useMemo(() => {
@@ -148,11 +155,31 @@ function Inner({ plan }: { plan: Plan }) {
     [setNodes],
   );
 
+  const addTime = useCallback(() => {
+    const id = crypto.randomUUID();
+    setNodes((nds) => {
+      const i = nds.length;
+      const position = { x: 120 + (i % 5) * 300, y: 120 + Math.floor(i / 5) * 240 };
+      return nds.concat({ id, type: "tiempo", position, data: makeTimeData() } as Node);
+    });
+    setSelectedId(id);
+  }, [setNodes]);
+
   const patch = useCallback(
     (patchData: Partial<MarketingNodeData>) => {
       if (!selectedId) return;
       setNodes((nds) =>
         nds.map((n) => (n.id === selectedId ? { ...n, data: { ...(n.data as MarketingNodeData), ...patchData } } : n)),
+      );
+    },
+    [selectedId, setNodes],
+  );
+
+  const patchTime = useCallback(
+    (patchData: Partial<TimeNodeData>) => {
+      if (!selectedId) return;
+      setNodes((nds) =>
+        nds.map((n) => (n.id === selectedId ? { ...n, data: { ...(n.data as TimeNodeData), ...patchData } } : n)),
       );
     },
     [selectedId, setNodes],
@@ -279,6 +306,7 @@ function Inner({ plan }: { plan: Plan }) {
               className="mk-minimap"
               nodeClassName="mk-minimap-node"
               nodeColor={(n) => {
+                if (n.type === "tiempo") return "#475569";
                 const d = n.data as MarketingNodeData;
                 return d?.color || channel(d?.channel)?.color || "#cbd5e1";
               }}
@@ -309,6 +337,13 @@ function Inner({ plan }: { plan: Plan }) {
             <Panel position="top-left">
               <div className="mk-palette">
                 <div className="mk-palette-title">Agregar paso</div>
+                <button type="button" className="mk-palette-time" onClick={addTime} title="Tiempo de espera entre pasos (ej. 1D, 5HR)">
+                  <span className="mk-palette-time-ico">
+                    <Clock size={15} />
+                  </span>
+                  <span>Tiempo de espera</span>
+                </button>
+                <div className="mk-palette-sep" />
                 <div className="mk-palette-grid">
                   {CHANNELS.map((ch) => {
                     const Icon = ch.icon;
@@ -343,7 +378,61 @@ function Inner({ plan }: { plan: Plan }) {
           </ReactFlow>
         </div>
 
-        {/* ── Panel de edición ── */}
+        {/* ── Panel de edición: TIEMPO ── */}
+        {selected && td ? (
+          <aside className="mk-editor">
+            <div className="mk-editor-head">
+              <span style={{ fontWeight: 700, fontSize: 14, display: "inline-flex", alignItems: "center", gap: 7 }}>
+                <Clock size={15} /> Tiempo de espera
+              </span>
+              <button type="button" className="mk-icon-btn" onClick={() => setSelectedId(null)} aria-label="Cerrar">
+                <X size={16} />
+              </button>
+            </div>
+
+            <Lbl>Cantidad</Lbl>
+            <input
+              style={ed}
+              type="number"
+              min={1}
+              value={td.amount}
+              onChange={(e) => patchTime({ amount: Math.max(1, parseInt(e.target.value || "1", 10) || 1) })}
+            />
+
+            <Lbl>Unidad</Lbl>
+            <div className="mk-status-row">
+              {TIME_UNITS.map((u) => (
+                <button
+                  key={u.key}
+                  type="button"
+                  className="mk-status-btn"
+                  onClick={() => patchTime({ unit: u.key })}
+                  style={td.unit === u.key ? { background: "#e2e8f0", color: "#0b1b34", borderColor: "#475569" } : undefined}
+                >
+                  {u.label}
+                </button>
+              ))}
+            </div>
+
+            <Lbl>Nota (opcional)</Lbl>
+            <input
+              style={ed}
+              value={td.note}
+              onChange={(e) => patchTime({ note: e.target.value })}
+              placeholder="Ej. antes del webinar · recordatorio"
+            />
+
+            <div className="mk-time-preview">
+              Se verá: <strong>{td.amount}{timeUnit(td.unit).abbr}</strong> de espera
+            </div>
+
+            <button type="button" className="mk-delete" onClick={removeSelected}>
+              <Trash2 size={15} /> Eliminar tiempo
+            </button>
+          </aside>
+        ) : null}
+
+        {/* ── Panel de edición: CARD ── */}
         {selected && d ? (
           <aside className="mk-editor">
             <div className="mk-editor-head">

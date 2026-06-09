@@ -174,3 +174,34 @@ export function makeNodeData(channelKey: string): MarketingNodeData {
     imageUrl: "",
   };
 }
+
+/* ── Nodo de TIEMPO (espera entre pasos) ── */
+export type TimeUnitKey = "min" | "hr" | "d" | "sem";
+export const TIME_UNITS: { key: TimeUnitKey; label: string; abbr: string }[] = [
+  { key: "min", label: "Minutos", abbr: "MIN" },
+  { key: "hr", label: "Horas", abbr: "HR" },
+  { key: "d", label: "Días", abbr: "D" },
+  { key: "sem", label: "Semanas", abbr: "SEM" },
+];
+const TIME_UNIT_MAP = Object.fromEntries(TIME_UNITS.map((u) => [u.key, u]));
+export function timeUnit(key: string) {
+  return TIME_UNIT_MAP[key] ?? TIME_UNITS[2];
+}
+
+/** Datos del nodo de espera. */
+export type TimeNodeData = {
+  kind: "tiempo";
+  amount: number;
+  unit: TimeUnitKey;
+  /** Nota opcional: "antes del webinar", "recordatorio"… */
+  note: string;
+};
+
+export function makeTimeData(): TimeNodeData {
+  return { kind: "tiempo", amount: 1, unit: "d", note: "" };
+}
+
+/** Etiqueta compacta: "1D", "5HR", "30MIN", "2SEM". */
+export function timeLabel(d: TimeNodeData): string {
+  return `${d.amount}${timeUnit(d.unit).abbr}`;
+}
