@@ -1,6 +1,6 @@
 "use client";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { channel, status, linkHost, linkHref, type MarketingNodeData } from "@/lib/marketing";
+import { channel, status, linkHost, linkHref, parseVideo, type MarketingNodeData } from "@/lib/marketing";
 import { Image as ImageIcon, Clock, User, CheckSquare, Infinity as InfinityIcon, Link2 } from "lucide-react";
 import { VideoThumb } from "./VideoThumb";
 
@@ -79,8 +79,20 @@ export function MarketingNode({ data, selected }: NodeProps) {
         ) : null}
 
         {d.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={d.imageUrl} alt="" className="mk-node-img" />
+          parseVideo(d.imageUrl).kind !== "other" ? (
+            <VideoThumb url={d.imageUrl} height={92} />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={d.imageUrl}
+              src={d.imageUrl}
+              alt=""
+              className="mk-node-img"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          )
         ) : null}
 
         {d.videoUrl ? <VideoThumb url={d.videoUrl} height={92} /> : null}

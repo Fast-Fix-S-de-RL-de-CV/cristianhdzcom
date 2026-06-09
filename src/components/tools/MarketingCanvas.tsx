@@ -27,6 +27,7 @@ import {
   CARD_COLORS,
   makeNodeData,
   makeTimeData,
+  parseVideo,
   TIME_UNITS,
   timeUnit,
   type MarketingNodeData,
@@ -624,8 +625,22 @@ function Inner({ plan }: { plan: Plan }) {
             <input style={ed} value={d.imageUrl} onChange={(e) => patch({ imageUrl: e.target.value })} placeholder="https://… o sube un archivo" />
             <MediaUpload onDone={(url) => patch({ imageUrl: url })} />
             {d.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={d.imageUrl} alt="" className="mk-ed-preview" />
+              parseVideo(d.imageUrl).kind !== "other" ? (
+                <div className="mk-ed-preview-video">
+                  <VideoThumb url={d.imageUrl} height={120} />
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={d.imageUrl}
+                  src={d.imageUrl}
+                  alt=""
+                  className="mk-ed-preview"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              )
             ) : null}
 
             <Lbl>Video (YouTube o Vimeo)</Lbl>
