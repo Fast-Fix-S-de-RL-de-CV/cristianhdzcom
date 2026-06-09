@@ -52,7 +52,7 @@ export function channel(key: string): Channel {
 
 export type StatusKey = "faltante" | "trabajando" | "listo";
 export const STATUSES: { key: StatusKey; label: string; color: string; bg: string }[] = [
-  { key: "faltante", label: "Faltante", color: "#64748b", bg: "#f1f5f9" },
+  { key: "faltante", label: "Faltante", color: "#dc2626", bg: "#fee2e2" },
   { key: "trabajando", label: "Trabajando", color: "#b45309", bg: "#fef3c7" },
   { key: "listo", label: "Listo", color: "#15803d", bg: "#dcfce7" },
 ];
