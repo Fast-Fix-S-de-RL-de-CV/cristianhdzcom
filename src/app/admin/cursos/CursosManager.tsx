@@ -12,6 +12,7 @@ import {
   suggestPricing,
 } from "@/lib/money";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { SelectField } from "@/components/ui/SelectField";
 import { apiErrorMessage } from "@/lib/apiError";
 import {
   BulkActionBar,
@@ -612,34 +613,22 @@ function ProgramDialog({
 
           <div className="row" style={{ gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <Field label="Tipo">
-                <select
-                  value={form.type}
-                  onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  style={input()}
-                >
-                  {TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              <SelectField
+                label="Tipo"
+                size="md"
+                value={form.type}
+                onChange={(v) => setForm({ ...form, type: v })}
+                options={TYPES}
+              />
             </div>
             <div style={{ flex: 1 }}>
-              <Field label="Color acento">
-                <select
-                  value={form.accent}
-                  onChange={(e) => setForm({ ...form, accent: e.target.value as Accent })}
-                  style={input()}
-                >
-                  {ACCENTS.map((a) => (
-                    <option key={a} value={a}>
-                      {a}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              <SelectField
+                label="Color acento"
+                size="md"
+                value={form.accent}
+                onChange={(v) => setForm({ ...form, accent: v as Accent })}
+                options={ACCENTS}
+              />
             </div>
             <div style={{ flex: 1 }}>
               <Field label="Duración">
@@ -683,36 +672,25 @@ function ProgramDialog({
             </label>
           </div>
 
-          <Field label="Incluido en membresía">
-            <select
-              value={form.includedInMembership ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                setForm({
-                  ...form,
-                  includedInMembership:
-                    v === "silver" || v === "gold" || v === "black" ? v : null,
-                });
-              }}
-              style={input()}
-            >
-              <option value="">No incluido (solo compra)</option>
-              <option value="silver">🥈 Plata o superior</option>
-              <option value="gold">🥇 Oro o superior</option>
-              <option value="black">🖤 Solo Black</option>
-            </select>
-            <div
-              className="mono"
-              style={{
-                fontSize: 10,
-                color: "var(--muted)",
-                marginTop: 4,
-                lineHeight: 1.5,
-              }}
-            >
-              Si está marcado, los miembros del plan elegido (o superior) acceden gratis MIENTRAS la membresía esté activa. No afecta compras one-shot — sigue siendo comprable también.
-            </div>
-          </Field>
+          <SelectField
+            label="Incluido en membresía"
+            size="md"
+            value={form.includedInMembership ?? ""}
+            onChange={(v) => {
+              setForm({
+                ...form,
+                includedInMembership:
+                  v === "silver" || v === "gold" || v === "black" ? v : null,
+              });
+            }}
+            options={[
+              { value: "", label: "No incluido (solo compra)" },
+              { value: "silver", label: "🥈 Plata o superior" },
+              { value: "gold", label: "🥇 Oro o superior" },
+              { value: "black", label: "🖤 Solo Black" },
+            ]}
+            help="Si está marcado, los miembros del plan elegido (o superior) acceden gratis MIENTRAS la membresía esté activa. No afecta compras one-shot — sigue siendo comprable también."
+          />
         </div>
 
         {err && (
@@ -1027,19 +1005,14 @@ function PricingSection({
       {/* Moneda + Precio único + Comparativo */}
       <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
         <div style={{ width: 180 }}>
-          <Field label="Moneda" required>
-            <select
-              value={currency}
-              onChange={(e) => onChange({ currency: e.target.value as Currency })}
-              style={input()}
-            >
-              {SUPPORTED_CURRENCIES.map((c) => (
-                <option key={c} value={c}>
-                  {CURRENCY_META[c].label}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <SelectField
+            label="Moneda"
+            size="md"
+            required
+            value={currency}
+            onChange={(v) => onChange({ currency: v as Currency })}
+            options={SUPPORTED_CURRENCIES.map((c) => ({ value: c, label: CURRENCY_META[c].label }))}
+          />
         </div>
         <div style={{ flex: 1, minWidth: 180 }}>
           <Field label={`Precio único (${currency})`} required>

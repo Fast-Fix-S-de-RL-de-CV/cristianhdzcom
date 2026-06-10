@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { and, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { bumpStreak } from "@/lib/streak";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,9 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
         .where(eq(schema.users.id, user.id));
     }
   }
+
+  // Racha: completar una lección cuenta como actividad del día (también al repasar).
+  await bumpStreak(user.id);
 
   // Check whether the module is now complete.
   const moduleId = lesson.moduleId;

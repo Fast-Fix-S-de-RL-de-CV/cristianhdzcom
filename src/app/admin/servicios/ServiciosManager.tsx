@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { SelectField } from "@/components/ui/SelectField";
 import {
   BulkActionBar,
   BulkCheckbox,
@@ -525,15 +526,19 @@ function ServiceDialog({
 
           <div className="row" style={{ gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <Field label="Tipo">
-                <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} style={inputStyle()}>
-                  <option value="saas">💻 SaaS productizado</option>
-                  <option value="software">🛠️ Software a medida</option>
-                  <option value="consulting">🤝 Consultoría</option>
-                  <option value="agency">🚀 Agencia / desarrollo</option>
-                  <option value="service">📦 Servicio</option>
-                </select>
-              </Field>
+              <SelectField
+                label="Tipo"
+                size="md"
+                value={form.kind}
+                onChange={(v) => setForm({ ...form, kind: v })}
+                options={[
+                  { value: "saas", label: "💻 SaaS productizado" },
+                  { value: "software", label: "🛠️ Software a medida" },
+                  { value: "consulting", label: "🤝 Consultoría" },
+                  { value: "agency", label: "🚀 Agencia / desarrollo" },
+                  { value: "service", label: "📦 Servicio" },
+                ]}
+              />
             </div>
             <div style={{ flex: 1 }}>
               <Field label="Tagline (eyebrow sobre el nombre)">

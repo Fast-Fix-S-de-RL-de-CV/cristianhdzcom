@@ -10,6 +10,7 @@ import {
   useBulkSelection,
 } from "@/components/admin/BulkActions";
 import { MediaUploadField } from "@/components/admin/MediaUploadField";
+import { SelectField } from "@/components/ui/SelectField";
 import { apiErrorMessage } from "@/lib/apiError";
 
 export type BookRow = {
@@ -649,17 +650,17 @@ function BookDialog({
           {/* Display */}
           <div className="row" style={{ gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <Field label="Acento visual">
-                <select
-                  value={form.accent}
-                  onChange={(e) => setForm({ ...form, accent: e.target.value })}
-                  style={inputStyle()}
-                >
-                  <option value="accent">accent (dorado)</option>
-                  <option value="warm">warm (cobrizo)</option>
-                  <option value="ink">ink (navy)</option>
-                </select>
-              </Field>
+              <SelectField
+                label="Acento visual"
+                size="md"
+                value={form.accent}
+                onChange={(v) => setForm({ ...form, accent: v })}
+                options={[
+                  { value: "accent", label: "accent (dorado)" },
+                  { value: "warm", label: "warm (cobrizo)" },
+                  { value: "ink", label: "ink (navy)" },
+                ]}
+              />
             </div>
             <div style={{ flex: 1 }}>
               <Field label="Badge (opcional)">

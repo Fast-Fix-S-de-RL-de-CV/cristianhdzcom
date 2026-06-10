@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { SelectField } from "@/components/ui/SelectField";
 import { apiErrorMessage } from "@/lib/apiError";
 import { isValidSlug, sanitizeSlugInput } from "@/lib/slug";
 import { AIGenerateModal } from "./AIGenerateModal";
@@ -386,19 +387,13 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
         </Field>
         <div className="row" style={{ gap: 12 }}>
           <div style={{ flex: 1 }}>
-            <Field label="Tipo">
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                style={input()}
-              >
-                {TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <SelectField
+              label="Tipo"
+              size="md"
+              value={form.type}
+              onChange={(v) => setForm({ ...form, type: v })}
+              options={TYPES}
+            />
           </div>
           <div style={{ flex: 1 }}>
             <Field label="Duración">
@@ -411,19 +406,13 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
             </Field>
           </div>
           <div style={{ width: 160 }}>
-            <Field label="Color acento">
-              <select
-                value={form.accent}
-                onChange={(e) => setForm({ ...form, accent: e.target.value as Accent })}
-                style={input()}
-              >
-                {ACCENTS.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <SelectField
+              label="Color acento"
+              size="md"
+              value={form.accent}
+              onChange={(v) => setForm({ ...form, accent: v as Accent })}
+              options={ACCENTS}
+            />
           </div>
         </div>
         <div className="row" style={{ gap: 12 }}>
@@ -1265,30 +1254,14 @@ function LessonsTab({
           flexWrap: "wrap",
         }}
       >
-        <label className="row" style={{ gap: 10, alignItems: "center" }}>
-          <span
-            className="mono"
-            style={{
-              fontSize: 10,
-              color: "var(--muted)",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            Módulo
-          </span>
-          <select
-            value={selectedModule}
-            onChange={(e) => setSelectedModule(e.target.value)}
-            style={{ ...input(), width: 320 }}
-          >
-            {modules.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.code} — {m.title}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label="Módulo"
+          size="md"
+          value={selectedModule}
+          onChange={(v) => setSelectedModule(v)}
+          options={modules.map((m) => ({ value: m.id, label: `${m.code} — ${m.title}` }))}
+          style={{ width: 320 }}
+        />
         <button
           onClick={() => setCreating(true)}
           disabled={!selectedModule}
@@ -1596,17 +1569,17 @@ function LessonDialog({
             </Field>
           </div>
           <div style={{ width: 170 }}>
-            <Field label="Tipo">
-              <select
-                value={form.kind}
-                onChange={(e) => setForm({ ...form, kind: e.target.value })}
-                style={input()}
-              >
-                <option value="video">🎬 Video (Vimeo/YouTube)</option>
-                <option value="multiple_choice">Quiz: opción múltiple</option>
-                <option value="true_false">Quiz: verdadero/falso</option>
-              </select>
-            </Field>
+            <SelectField
+              label="Tipo"
+              size="md"
+              value={form.kind}
+              onChange={(v) => setForm({ ...form, kind: v })}
+              options={[
+                { value: "video", label: "🎬 Video (Vimeo/YouTube)" },
+                { value: "multiple_choice", label: "Quiz: opción múltiple" },
+                { value: "true_false", label: "Quiz: verdadero/falso" },
+              ]}
+            />
           </div>
         </div>
 

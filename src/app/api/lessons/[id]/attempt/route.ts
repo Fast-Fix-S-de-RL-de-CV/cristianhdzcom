@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { eq, and, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { bumpStreak } from "@/lib/streak";
 
 /**
  * POST /api/lessons/[id]/attempt
@@ -69,14 +70,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         .values({ userId: user.id, lessonId: id, xpEarned })
         .onConflictDoNothing();
     }
-    await db
-      .update(schema.users)
-      .set(
-        xpEarned > 0
-          ? { xp: sql`${schema.users.xp} + ${xpEarned}`, streakLastAt: new Date() }
-          : { streakLastAt: new Date() },
-      )
-      .where(eq(schema.users.id, user.id));
+    if (xpEarned > 0) {
+      await db
+        .update(schema.users)
+        .set({ xp: sql`${schema.users.xp} + ${xpEarned}` })
+        .where(eq(schema.users.id, user.id));
+    }
+    // Racha: responder bien una lección cuenta como actividad del día.
+    await bumpStreak(user.id);
 
     // Same module-completion / promotion / certificate logic as /complete,
     // so modules whose last lesson is a quiz can actually finish.

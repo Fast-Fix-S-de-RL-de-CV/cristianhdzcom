@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
+import { SelectField } from "@/components/ui/SelectField";
 import { initials, formatRelative } from "@/lib/utils";
 import { apiErrorMessage } from "@/lib/apiError";
 
@@ -183,18 +184,17 @@ export function CommunityFeed({
               </p>
             )}
             <div className="between" style={{ gap: 8, flexWrap: "wrap" }}>
-              <select
-                className="input"
-                value={composerCat}
-                onChange={(e) => setComposerCat(Number(e.target.value))}
-                style={{ maxWidth: 220 }}
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.emoji} {c.name}
-                  </option>
-                ))}
-              </select>
+              <SelectField
+                label="Categoría"
+                size="md"
+                value={composerCat != null ? String(composerCat) : ""}
+                onChange={(v) => setComposerCat(Number(v))}
+                options={categories.map((c) => ({
+                  value: String(c.id),
+                  label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
+                }))}
+                style={{ flex: 1, maxWidth: 220 }}
+              />
               <div className="row" style={{ gap: 8 }}>
                 <Button variant="ghost" type="button" onClick={() => setComposerOpen(false)}>
                   Cancelar

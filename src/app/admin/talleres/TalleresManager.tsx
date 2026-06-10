@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { SelectField } from "@/components/ui/SelectField";
 import {
   BulkActionBar,
   BulkCheckbox,
@@ -525,21 +526,13 @@ function EventDialog({
                 </Field>
               </div>
               <div style={{ width: 220 }}>
-                <Field label="Badge 1 · color">
-                  <select
-                    value={form.badge1Color}
-                    onChange={(e) =>
-                      setForm({ ...form, badge1Color: e.target.value as BadgeColorOpt })
-                    }
-                    style={inputStyle()}
-                  >
-                    {BADGE_COLORS.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                <SelectField
+                  label="Badge 1 · color"
+                  size="md"
+                  value={form.badge1Color}
+                  onChange={(v) => setForm({ ...form, badge1Color: v as BadgeColorOpt })}
+                  options={BADGE_COLORS}
+                />
               </div>
             </div>
             <div className="row" style={{ gap: 10 }}>
@@ -555,21 +548,13 @@ function EventDialog({
                 </Field>
               </div>
               <div style={{ width: 220 }}>
-                <Field label="Badge 2 · color">
-                  <select
-                    value={form.badge2Color}
-                    onChange={(e) =>
-                      setForm({ ...form, badge2Color: e.target.value as BadgeColorOpt })
-                    }
-                    style={inputStyle()}
-                  >
-                    {BADGE_COLORS.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                <SelectField
+                  label="Badge 2 · color"
+                  size="md"
+                  value={form.badge2Color}
+                  onChange={(v) => setForm({ ...form, badge2Color: v as BadgeColorOpt })}
+                  options={BADGE_COLORS}
+                />
               </div>
             </div>
             <div className="mono" style={{ fontSize: 10, color: "var(--muted)", lineHeight: 1.55 }}>
@@ -626,36 +611,25 @@ function EventDialog({
               Ej: &apos;Cada miércoles 7pm CDMX&apos; o &apos;Disponible al inscribirte&apos;. Solo aplica si el toggle anterior está activo.
             </div>
           </Field>
-          <Field label="Incluido en membresía">
-            <select
-              value={form.includedInMembership ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                setForm({
-                  ...form,
-                  includedInMembership:
-                    v === "silver" || v === "gold" || v === "black" ? v : null,
-                });
-              }}
-              style={inputStyle()}
-            >
-              <option value="">No incluido (solo compra)</option>
-              <option value="silver">🥈 Plata o superior</option>
-              <option value="gold">🥇 Oro o superior</option>
-              <option value="black">🖤 Solo Black</option>
-            </select>
-            <div
-              className="mono"
-              style={{
-                fontSize: 10,
-                color: "var(--muted)",
-                marginTop: 4,
-                lineHeight: 1.5,
-              }}
-            >
-              Si está marcado, los miembros del plan elegido (o superior) acceden gratis MIENTRAS la membresía esté activa. No afecta compras one-shot — sigue siendo comprable también.
-            </div>
-          </Field>
+          <SelectField
+            label="Incluido en membresía"
+            size="md"
+            value={form.includedInMembership ?? ""}
+            onChange={(v) => {
+              setForm({
+                ...form,
+                includedInMembership:
+                  v === "silver" || v === "gold" || v === "black" ? v : null,
+              });
+            }}
+            options={[
+              { value: "", label: "No incluido (solo compra)" },
+              { value: "silver", label: "🥈 Plata o superior" },
+              { value: "gold", label: "🥇 Oro o superior" },
+              { value: "black", label: "🖤 Solo Black" },
+            ]}
+            help="Si está marcado, los miembros del plan elegido (o superior) acceden gratis MIENTRAS la membresía esté activa. No afecta compras one-shot — sigue siendo comprable también."
+          />
           <div className="row" style={{ gap: 18 }}>
             <label className="row" style={{ gap: 6, fontSize: 13, cursor: "pointer" }}>
               <input

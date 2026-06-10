@@ -3,6 +3,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
+import { BackfillTiersButton } from "./BackfillTiersButton";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,7 @@ export default async function MembresiasAdminPage() {
       active="/admin/membresias"
       title="Membresías"
       subtitle={`MRR $${mrrUsd.toLocaleString("es-MX")} · ARR $${arrUsd.toLocaleString("es-MX")} · ${mrrRow.activeCount} miembros activos`}
+      actions={<BackfillTiersButton />}
     >
       {/* KPI cards */}
       <div className="grid-4 admin-kpi-grid" style={{ gap: 14, marginBottom: 20 }}>
