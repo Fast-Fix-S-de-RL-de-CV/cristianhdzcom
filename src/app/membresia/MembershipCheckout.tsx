@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/ConfirmProvider";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import { apiErrorMessage } from "@/lib/apiError";
 
 type PlanCard = {
   slug: string;
@@ -69,7 +70,7 @@ export function MembershipCheckout({
               ? json.message ?? "Cupo agotado."
               : json?.error === "already_subscribed"
                 ? json.message ?? "Ya tienes una suscripción activa."
-                : "No se pudo procesar la suscripción.";
+                : apiErrorMessage(json, "No se pudo procesar la suscripción.");
           toast.error(msg);
           return;
         }

@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/ConfirmProvider";
+import { apiErrorMessage } from "@/lib/apiError";
 
 /**
  * Button that starts (or reopens) a DM conversation with a member and
@@ -17,6 +19,7 @@ export function StartDmButton({
   style?: React.CSSProperties;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
 
   async function start() {
@@ -33,9 +36,11 @@ export function StartDmButton({
         router.push(`/mensajes/${j.conversation.id}`);
       } else {
         setBusy(false);
+        toast.error(apiErrorMessage(j, "No se pudo abrir el chat — intenta de nuevo"));
       }
     } catch {
       setBusy(false);
+      toast.error("Sin conexión — no se pudo abrir el chat");
     }
   }
 

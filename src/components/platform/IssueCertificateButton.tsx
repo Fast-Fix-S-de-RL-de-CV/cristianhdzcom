@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiErrorMessage } from "@/lib/apiError";
 
 /**
  * Calls /api/certificates/[programId]/issue and navigates to the cert.
@@ -21,7 +22,16 @@ export function IssueCertificateButton({ programId }: { programId: string }) {
       if (res.ok && j.certificate?.code) {
         router.push(`/cert/${j.certificate.code}`);
       } else {
-        setErr(j.error || "No se pudo emitir el certificado");
+        const MSGS: Record<string, string> = {
+          not_completed:
+            typeof j.remaining === "number" && j.remaining > 0
+              ? `Te ${j.remaining === 1 ? "falta 1 módulo" : `faltan ${j.remaining} módulos`} por completar`
+              : "Aún no completas todos los módulos del programa",
+          not_enrolled: "No estás inscrito en este programa",
+          program_not_found: "El programa ya no existe",
+          program_empty: "El programa todavía no tiene módulos",
+        };
+        setErr(MSGS[j.error] ?? apiErrorMessage(j, "No se pudo emitir el certificado"));
       }
     } catch {
       setErr("Error de red");

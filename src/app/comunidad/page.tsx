@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
@@ -77,7 +77,29 @@ export default async function CommunityPage() {
 
   // ──────── Logged user → AlumnoShell with sidebar + feed ────────
   const cats = await db.select().from(schema.categories);
-  const events = await db.select().from(schema.events).orderBy(schema.events.startsAt).limit(3);
+  const events = await db
+    .select()
+    .from(schema.events)
+    .where(gte(schema.events.startsAt, new Date()))
+    .orderBy(schema.events.startsAt)
+    .limit(3);
+
+  // Posts que el viewer ya likeó, para sembrar los corazones del feed.
+  const likedRows = posts.length
+    ? await db
+        .select({ postId: schema.postLikes.postId })
+        .from(schema.postLikes)
+        .where(
+          and(
+            eq(schema.postLikes.userId, user.id),
+            inArray(
+              schema.postLikes.postId,
+              posts.map((p) => p.id),
+            ),
+          ),
+        )
+    : [];
+  const likedIds = new Set(likedRows.map((r) => r.postId));
 
   return (
     <AlumnoShell user={user} active="comunidad">
@@ -100,6 +122,7 @@ export default async function CommunityPage() {
           initialPosts={posts.map((p) => ({
             ...p,
             createdAt: (p.createdAt as Date).toISOString(),
+            viewerLiked: likedIds.has(p.id),
           }))}
           categories={cats}
           currentUser={{ id: user.id, name: user.name, level: user.level }}

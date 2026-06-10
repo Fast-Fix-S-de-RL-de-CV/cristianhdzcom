@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { apiErrorMessage } from "@/lib/apiError";
+import { isValidSlug, sanitizeSlugInput } from "@/lib/slug";
 import { AIGenerateModal } from "./AIGenerateModal";
 import { OutlineEditor } from "./OutlineEditor";
 
@@ -263,6 +265,7 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
   const dirty = useMemo(() => {
     return JSON.stringify(form) !== JSON.stringify(program);
   }, [form, program]);
+  const slugValid = form.slug.length === 0 || isValidSlug(form.slug);
 
   async function save() {
     setBusy(true);
@@ -291,7 +294,7 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error al guardar");
+        throw new Error(apiErrorMessage(j, "Error al guardar"));
       }
       setSavedAt(Date.now());
       onSaved();
@@ -342,7 +345,7 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
         </div>
         <button
           onClick={save}
-          disabled={busy || !dirty || !form.title || !form.slug}
+          disabled={busy || !dirty || !form.title || !form.slug || !slugValid}
           className="btn btn-primary"
           style={{ padding: "8px 16px", fontSize: 12 }}
         >
@@ -361,10 +364,17 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
         <Field label="Slug">
           <input
             value={form.slug}
-            onChange={(e) => setForm({ ...form, slug: e.target.value })}
-            style={input()}
+            onChange={(e) => setForm({ ...form, slug: sanitizeSlugInput(e.target.value) })}
+            style={{ ...input(), borderColor: slugValid ? undefined : "var(--red)" }}
             placeholder="curso-ia"
+            spellCheck={false}
+            autoCapitalize="off"
           />
+          {!slugValid && (
+            <div className="mono" style={{ fontSize: 10, color: "var(--red)", marginTop: 4 }}>
+              Solo a-z, 0-9 y guiones simples. Ej: curso-ia
+            </div>
+          )}
         </Field>
         <Field label="Subtítulo (max 240)">
           <textarea
@@ -1090,7 +1100,7 @@ function ModuleDialog({
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error al guardar");
+        throw new Error(apiErrorMessage(j, "Error al guardar"));
       }
       onSaved();
     } catch (e) {
@@ -1542,7 +1552,7 @@ function LessonDialog({
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error al guardar");
+        throw new Error(apiErrorMessage(j, "Error al guardar"));
       }
       onSaved();
     } catch (e) {
@@ -1994,7 +2004,7 @@ function CohortDialog({
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error al guardar");
+        throw new Error(apiErrorMessage(j, "Error al guardar"));
       }
       onSaved();
     } catch (e) {

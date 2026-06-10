@@ -27,7 +27,7 @@ const Body = z.object({
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "invalid", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "invalid", details: parsed.error.issues }, { status: 400 });
   }
   const { planSlug, billingCycle, buyer } = parsed.data;
 
@@ -140,7 +140,9 @@ export async function POST(req: Request) {
     // suscripción (card + Link + PayPal cuando esté activado).
     line_items: [{ price: priceId, quantity: 1 }],
     customer_email: lower,
-    success_url: `${siteUrl()}/cuenta/membresia?welcome=${planSlug}&session_id={CHECKOUT_SESSION_ID}`,
+    // Pasamos por /api/checkout/finish (Route Handler): finaliza la orden y
+    // abre la sesión web del comprador antes de llevarlo a su membresía.
+    success_url: `${siteUrl()}/api/checkout/finish?session_id={CHECKOUT_SESSION_ID}&next=${encodeURIComponent(`/cuenta/membresia?welcome=${planSlug}`)}`,
     cancel_url: `${siteUrl()}/membresia?cancelled=1`,
     metadata: {
       kind: "membership",

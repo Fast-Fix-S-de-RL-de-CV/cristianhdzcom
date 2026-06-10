@@ -10,6 +10,7 @@ import {
   useBulkDelete,
   useBulkSelection,
 } from "@/components/admin/BulkActions";
+import { apiErrorMessage } from "@/lib/apiError";
 
 type Row = {
   id: string;
@@ -55,7 +56,11 @@ export function BlogManager({ rows }: { rows: Row[] }) {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error");
+        throw new Error(
+          j.error === "slug_in_use"
+            ? "Ese slug ya está en uso en otro post."
+            : apiErrorMessage(j, "No se pudo guardar"),
+        );
       }
       setEditing(null);
       setCreating(false);
@@ -343,7 +348,7 @@ function PostDialog({
                 <input
                   type="number"
                   value={form.readMinutes}
-                  onChange={(e) => setForm({ ...form, readMinutes: parseInt(e.target.value || "0", 10) })}
+                  onChange={(e) => setForm({ ...form, readMinutes: parseInt(e.target.value || "1", 10) || 1 })}
                   style={inputStyle()}
                 />
               </Field>

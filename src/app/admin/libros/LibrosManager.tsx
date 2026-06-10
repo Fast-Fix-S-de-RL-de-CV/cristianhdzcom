@@ -10,6 +10,7 @@ import {
   useBulkSelection,
 } from "@/components/admin/BulkActions";
 import { MediaUploadField } from "@/components/admin/MediaUploadField";
+import { apiErrorMessage } from "@/lib/apiError";
 
 export type BookRow = {
   id: string;
@@ -408,9 +409,7 @@ function BookDialog({
         const msg =
           json.error === "slug_taken"
             ? "Ese slug ya existe en otro producto."
-            : json.error === "invalid"
-              ? humanizeIssues(json.details)
-              : "No se pudo guardar.";
+            : apiErrorMessage(json, "No se pudo guardar.");
         setErr(msg);
         return;
       }
@@ -771,13 +770,4 @@ function slugify(s: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 80);
-}
-
-function humanizeIssues(details: unknown): string {
-  if (!details || typeof details !== "object") return "Validación falló.";
-  const issues = (details as { issues?: Array<{ path: (string | number)[]; message: string }> }).issues;
-  if (!issues?.length) return "Validación falló.";
-  const first = issues[0];
-  const path = first.path.join(".");
-  return path ? `${path}: ${first.message}` : first.message;
 }

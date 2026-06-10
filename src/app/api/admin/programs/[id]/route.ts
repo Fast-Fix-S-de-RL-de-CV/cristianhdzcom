@@ -11,7 +11,12 @@ const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const body = z
   .object({
     title: z.string().min(2).max(200).optional(),
-    slug: z.string().min(2).max(80).regex(SLUG_RE).optional(),
+    slug: z
+      .string()
+      .min(2)
+      .max(80)
+      .regex(SLUG_RE, { message: "slug debe ser kebab-case (a-z, 0-9 y guiones simples)" })
+      .optional(),
     subtitle: z.string().max(2000).optional().nullable(),
     type: z.string().min(2).max(40).optional(),
     durationLabel: z.string().max(80).optional().nullable(),
@@ -93,6 +98,12 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return NextResponse.json({ program: row });
   } catch (e) {
     if (e instanceof z.ZodError) return NextResponse.json({ error: "invalid", details: e.issues }, { status: 400 });
+    const code =
+      (e as { cause?: { code?: string }; code?: string })?.cause?.code ??
+      (e as { code?: string })?.code;
+    if (code === "23505") {
+      return NextResponse.json({ error: "slug_in_use" }, { status: 409 });
+    }
     console.error(e);
     return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
@@ -105,6 +116,27 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
-  await db.delete(schema.programs).where(eq(schema.programs.id, id));
+  // orders.programId no tiene onDelete: cualquier orden (pagada o pendiente)
+  // bloquea el DELETE a nivel FK. Pre-check para responder algo legible.
+  const [order] = await db
+    .select({ id: schema.orders.id })
+    .from(schema.orders)
+    .where(eq(schema.orders.programId, id))
+    .limit(1);
+  if (order) {
+    return NextResponse.json({ error: "has_paid_orders" }, { status: 409 });
+  }
+  try {
+    await db.delete(schema.programs).where(eq(schema.programs.id, id));
+  } catch (e) {
+    const code =
+      (e as { cause?: { code?: string }; code?: string })?.cause?.code ??
+      (e as { code?: string })?.code;
+    if (code === "23503") {
+      return NextResponse.json({ error: "in_use" }, { status: 409 });
+    }
+    console.error(e);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

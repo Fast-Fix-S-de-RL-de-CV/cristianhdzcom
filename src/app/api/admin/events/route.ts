@@ -25,6 +25,10 @@ const body = z.object({
   isEvergreen: z.boolean().optional(),
   evergreenScheduleHint: z.string().max(120).nullable().optional(),
   tagline: z.string().max(120).nullable().optional(),
+  badge1Text: z.string().max(80).nullable().optional(),
+  badge1Color: z.enum(["red", "navy", "warm", "green", "gold", "muted", "accent"]).nullable().optional(),
+  badge2Text: z.string().max(80).nullable().optional(),
+  badge2Color: z.enum(["red", "navy", "warm", "green", "gold", "muted", "accent"]).nullable().optional(),
 });
 
 export async function POST(req: Request) {
@@ -54,6 +58,10 @@ export async function POST(req: Request) {
         isEvergreen: data.isEvergreen ?? false,
         evergreenScheduleHint: data.evergreenScheduleHint ?? null,
         tagline: data.tagline ?? null,
+        badge1Text: data.badge1Text ?? null,
+        badge1Color: data.badge1Color ?? null,
+        badge2Text: data.badge2Text ?? null,
+        badge2Color: data.badge2Color ?? null,
       })
       .returning();
     return NextResponse.json({ event: row });

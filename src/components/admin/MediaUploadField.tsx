@@ -65,7 +65,13 @@ export function MediaUploadField({
       const res = await fetch("/api/admin/upload?type=cover", { method: "POST", body: fd });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setErr(j.error || "Error al subir");
+        setErr(
+          j.error === "too_large"
+            ? `Archivo muy grande (máx ${Math.round((j.maxBytes || 8 * 1048576) / 1048576)} MB)`
+            : j.error === "unsupported_mime"
+              ? "Formato no soportado"
+              : "Error al subir",
+        );
         return;
       }
       onChange(j.url, j.kind as Kind);

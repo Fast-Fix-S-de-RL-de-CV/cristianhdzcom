@@ -5,6 +5,7 @@ import { Heart } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { initials } from "@/lib/utils";
+import { apiErrorMessage } from "@/lib/apiError";
 
 interface Comment {
   id: string;
@@ -41,6 +42,7 @@ export function PostThreadClient({
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const [liked, setLiked] = useState(initialLiked);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
   const [likeBusy, setLikeBusy] = useState(false);
@@ -49,6 +51,7 @@ export function PostThreadClient({
     e.preventDefault();
     if (!body.trim() || submitting) return;
     setSubmitting(true);
+    setCommentError(null);
     try {
       const res = await fetch(`/api/posts/${postId}/comments`, {
         method: "POST",
@@ -60,7 +63,12 @@ export function PostThreadClient({
         // Server returns createdAt as ISO string already in this shape
         setComments((cs) => [...cs, { ...newComment, createdAt: newComment.createdAt }]);
         setBody("");
+      } else {
+        const j = await res.json().catch(() => null);
+        setCommentError(apiErrorMessage(j, "No se pudo publicar el comentario"));
       }
+    } catch {
+      setCommentError("Sin conexión — el comentario no se publicó");
     } finally {
       setSubmitting(false);
     }
@@ -74,9 +82,10 @@ export function PostThreadClient({
     setLiked(willLike);
     setLikesCount((c) => c + (willLike ? 1 : -1));
     try {
-      await fetch(`/api/posts/${postId}/like`, {
+      const res = await fetch(`/api/posts/${postId}/like`, {
         method: willLike ? "POST" : "DELETE",
       });
+      if (!res.ok) throw new Error("like_failed");
     } catch {
       // Revert
       setLiked(!willLike);
@@ -128,6 +137,11 @@ export function PostThreadClient({
               {submitting ? "Publicando…" : "Publicar comentario"}
             </Button>
           </div>
+          {commentError && (
+            <p role="alert" style={{ color: "var(--red)", fontSize: 13, margin: 0 }}>
+              {commentError}
+            </p>
+          )}
         </form>
       </Card>
 

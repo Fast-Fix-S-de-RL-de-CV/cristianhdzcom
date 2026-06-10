@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { initials } from "@/lib/utils";
+import { apiErrorMessage } from "@/lib/apiError";
 
 type Message = {
   id: string;
@@ -27,6 +28,7 @@ export function ChatRoom({
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async () => {
@@ -56,6 +58,7 @@ export function ChatRoom({
     const body = draft.trim();
     if (!body || busy) return;
     setBusy(true);
+    setSendError(null);
     const optimistic: Message = {
       id: `optimistic-${Date.now()}`,
       conversationId,
@@ -74,7 +77,17 @@ export function ChatRoom({
       });
       if (res.ok) {
         await load();
+      } else {
+        // Quitar el mensaje fantasma y devolver el texto al input.
+        const j = await res.json().catch(() => null);
+        setMessages((m) => m.filter((x) => x.id !== optimistic.id));
+        setDraft(body);
+        setSendError(apiErrorMessage(j, "No se pudo enviar el mensaje — intenta de nuevo"));
       }
+    } catch {
+      setMessages((m) => m.filter((x) => x.id !== optimistic.id));
+      setDraft(body);
+      setSendError("Sin conexión — el mensaje no se envió");
     } finally {
       setBusy(false);
     }
@@ -229,8 +242,14 @@ export function ChatRoom({
             gap: 8,
           }}
         >
+          {sendError && (
+            <div role="alert" style={{ gridColumn: "1 / -1", color: "var(--red)", fontSize: 12 }}>
+              {sendError}
+            </div>
+          )}
           <textarea
             value={draft}
+            maxLength={4000}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {

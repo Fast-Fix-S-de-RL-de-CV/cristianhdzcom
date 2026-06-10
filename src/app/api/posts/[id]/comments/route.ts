@@ -10,7 +10,10 @@ const commentBody = z.object({
 
 // GET /api/posts/[id]/comments → array of comments ordered oldest → newest
 // with author fields needed to render an avatar + name.
+// Requiere sesión: la página los oculta a anónimos y la API debe hacer lo mismo.
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await params;
   const rows = await db
     .select({
@@ -41,7 +44,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     parsed = commentBody.parse(await req.json());
   } catch (e) {
     if (e instanceof z.ZodError) {
-      return NextResponse.json({ error: "invalid", issues: e.issues }, { status: 400 });
+      return NextResponse.json({ error: "invalid", details: e.issues }, { status: 400 });
     }
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }

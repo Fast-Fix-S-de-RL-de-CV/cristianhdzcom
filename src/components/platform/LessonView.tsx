@@ -7,6 +7,7 @@ import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/ConfirmProvider";
 import { embedUrl } from "@/lib/video";
+import { apiErrorMessage } from "@/lib/apiError";
 
 type LessonCommentRow = {
   id: string;
@@ -203,6 +204,7 @@ function VideoLesson({
 }) {
   const [completed, setCompleted] = useState(alreadyCompleted);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<null | { awarded: number; cert?: { code: string } }>(null);
 
   if (!lesson.videoProvider || !lesson.videoId) {
@@ -219,6 +221,7 @@ function VideoLesson({
 
   async function markComplete() {
     setBusy(true);
+    setError(null);
     try {
       const res = await fetch(`/api/lessons/${lesson.id}/complete`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
@@ -229,7 +232,11 @@ function VideoLesson({
           cert: data.certificate || undefined,
         });
         onCompleted();
+      } else {
+        setError(apiErrorMessage(data, "No se pudo marcar la lección — intenta de nuevo"));
       }
+    } catch {
+      setError("Error de red — revisa tu conexión e intenta de nuevo");
     } finally {
       setBusy(false);
     }
@@ -306,6 +313,23 @@ function VideoLesson({
           </Button>
         )}
       </div>
+
+      {error && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "color-mix(in srgb, var(--red) 10%, white)",
+            border: "1px solid var(--red)",
+            color: "var(--red)",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       {feedback && (
         <Card
@@ -387,10 +411,11 @@ function QuizLesson({
       setShakeKey((x) => x + 1);
       setHearts((h) => Math.max(0, h - 1));
     }
+    // El servidor recalcula isCorrect por su cuenta; solo enviamos la respuesta.
     await fetch(`/api/lessons/${lesson.id}/attempt`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ answer: selected, isCorrect }),
+      body: JSON.stringify({ answer: selected }),
     }).catch(() => {});
   }
 
@@ -495,7 +520,7 @@ function QuizLesson({
           }}
         >
           <span className="mono" style={{ fontSize: 11, color: "oklch(45% 0.12 75)" }}>
-            💡 PISTA · –5 XP
+            💡 PISTA
           </span>
           <p style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>{lesson.hint}</p>
         </div>
@@ -598,7 +623,7 @@ function QuizLesson({
 function NotesPanel({ lessonId }: { lessonId: string }) {
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initial fetch
@@ -627,8 +652,11 @@ function NotesPanel({ lessonId }: { lessonId: string }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ body: next }),
       })
-        .then(() => setStatus("saved"))
-        .catch(() => setStatus("idle"));
+        .then((r) => {
+          if (!r.ok) throw new Error("save_failed");
+          setStatus("saved");
+        })
+        .catch(() => setStatus("error"));
     },
     [lessonId],
   );
@@ -653,11 +681,20 @@ function NotesPanel({ lessonId }: { lessonId: string }) {
             className="mono"
             style={{
               fontSize: 9,
-              color: status === "saving" ? "var(--muted)" : "var(--green-strong)",
+              color:
+                status === "saving"
+                  ? "var(--muted)"
+                  : status === "error"
+                    ? "var(--red)"
+                    : "var(--green-strong)",
               letterSpacing: "0.06em",
             }}
           >
-            {status === "saving" ? "GUARDANDO…" : "✓ GUARDADO"}
+            {status === "saving"
+              ? "GUARDANDO…"
+              : status === "error"
+                ? "⚠ NO SE GUARDÓ — COPIA TU NOTA"
+                : "✓ GUARDADO"}
           </span>
         )}
       </div>
@@ -699,6 +736,7 @@ function LessonComments({
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -715,16 +753,22 @@ function LessonComments({
   async function postComment() {
     if (!draft.trim()) return;
     setBusy(true);
+    setError(null);
     try {
       const res = await fetch(`/api/lessons/${lessonId}/comments`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ body: draft.trim() }),
       });
-      if (res.ok) {
-        setDraft("");
-        load();
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(apiErrorMessage(j, "No se pudo publicar el comentario — intenta de nuevo"));
+        return;
       }
+      setDraft("");
+      load();
+    } catch {
+      setError("Error de red — revisa tu conexión e intenta de nuevo");
     } finally {
       setBusy(false);
     }
@@ -737,8 +781,18 @@ function LessonComments({
       tone: "danger",
     });
     if (!ok) return;
-    const res = await fetch(`/api/lessons/${lessonId}/comments/${id}`, { method: "DELETE" });
-    if (res.ok) load();
+    setError(null);
+    try {
+      const res = await fetch(`/api/lessons/${lessonId}/comments/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        load();
+      } else {
+        const j = await res.json().catch(() => ({}));
+        setError(apiErrorMessage(j, "No se pudo eliminar el comentario"));
+      }
+    } catch {
+      setError("Error de red — revisa tu conexión e intenta de nuevo");
+    }
   }
 
   return (
@@ -777,6 +831,22 @@ function LessonComments({
             {busy ? "Publicando…" : "Publicar"}
           </Button>
         </div>
+        {error && (
+          <div
+            style={{
+              marginTop: 10,
+              padding: "8px 12px",
+              borderRadius: 10,
+              background: "color-mix(in srgb, var(--red) 10%, white)",
+              border: "1px solid var(--red)",
+              color: "var(--red)",
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            {error}
+          </div>
+        )}
       </Card>
 
       {loading ? (

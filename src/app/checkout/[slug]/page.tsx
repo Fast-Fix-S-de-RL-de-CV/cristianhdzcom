@@ -26,7 +26,13 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
     db
       .select({ c: sql<number>`COUNT(*)::int` })
       .from(schema.orders)
-      .where(and(eq(schema.orders.status, "succeeded"), gte(schema.orders.createdAt, sevenDaysAgo))),
+      .where(
+        and(
+          eq(schema.orders.programId, program.id),
+          eq(schema.orders.status, "succeeded"),
+          gte(schema.orders.createdAt, sevenDaysAgo),
+        ),
+      ),
     db
       .select()
       .from(schema.cohorts)

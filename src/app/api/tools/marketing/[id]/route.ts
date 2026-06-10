@@ -57,7 +57,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   try {
     body = SaveBody.parse(await req.json());
   } catch (e) {
-    if (e instanceof z.ZodError) return NextResponse.json({ error: "invalid", issues: e.issues }, { status: 400 });
+    if (e instanceof z.ZodError) return NextResponse.json({ error: "invalid", details: e.issues }, { status: 400 });
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
 

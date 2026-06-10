@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { eq, asc, sql } from "drizzle-orm";
+import { and, eq, asc, sql } from "drizzle-orm";
 import type { Metadata } from "next";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -123,9 +123,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     const liked = await db
       .select({ id: schema.postLikes.userId })
       .from(schema.postLikes)
-      .where(eq(schema.postLikes.postId, id))
-      .limit(50);
-    viewerLiked = liked.some((l) => l.id === user.id);
+      .where(and(eq(schema.postLikes.postId, id), eq(schema.postLikes.userId, user.id)))
+      .limit(1);
+    viewerLiked = liked.length > 0;
 
     comments = await db
       .select({

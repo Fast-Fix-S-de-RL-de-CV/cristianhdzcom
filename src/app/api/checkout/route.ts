@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { getStripe, siteUrl, isStripeConfigured, finalizeCheckoutSession } from "@/lib/stripe";
 import { usdToMxnCents, MXN_PER_USD } from "@/lib/fx";
+import { resolveProgramBumps } from "@/lib/program-bumps";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,9 +26,9 @@ const body = z.object({
   country: z.string().max(80).optional(),
   phone: z.string().max(40).optional(),
   paymentMethod: z.enum(["card", "paypal", "spei", "oxxo"]).default("card"),
-  bumps: z
-    .array(z.object({ id: z.string(), title: z.string(), priceCents: z.number().int().nonnegative() }))
-    .default([]),
+  // Solo el id del bump: título y precio se resuelven server-side contra
+  // el catálogo de lib/program-bumps (el precio del cliente se ignora).
+  bumps: z.array(z.object({ id: z.string().min(1).max(40) })).default([]),
   couponCode: z.string().max(40).optional(),
 });
 
@@ -41,9 +42,14 @@ export async function POST(req: Request) {
       .limit(1);
     if (!program) return NextResponse.json({ error: "program_not_found" }, { status: 404 });
 
+    // Resolver bumps por id contra el catálogo server-side. Id desconocido
+    // → 400 (el precio nunca viene del cliente).
+    const bumps = resolveProgramBumps(data.bumps.map((b) => b.id));
+    if (!bumps) return NextResponse.json({ error: "invalid_bump" }, { status: 400 });
+
     // ── MODO DEMO si no hay Stripe configurado ──
     if (!isStripeConfigured()) {
-      return demoFlow(data, program);
+      return demoFlow(data, program, bumps);
     }
 
     // ── MODO STRIPE: crear Checkout Session en MXN ──
@@ -63,7 +69,7 @@ export async function POST(req: Request) {
       // Solo aplica si está activo Y todavía tiene canjes (null = ilimitado).
       const hasUsesLeft = coupon?.usesLeft == null || coupon.usesLeft > 0;
       if (coupon?.active && hasUsesLeft) {
-        const subtotalUsdCents = program.priceUsd * 100 + data.bumps.reduce((s, b) => s + b.priceCents, 0);
+        const subtotalUsdCents = program.priceUsd * 100 + bumps.reduce((s, b) => s + b.priceCents, 0);
         couponDiscountUsdCents =
           coupon.kind === "amount" ? coupon.value : Math.round((subtotalUsdCents * coupon.value) / 100);
       }
@@ -83,7 +89,7 @@ export async function POST(req: Request) {
           },
         },
       },
-      ...data.bumps.map((b) => ({
+      ...bumps.map((b) => ({
         quantity: 1,
         price_data: {
           currency: "mxn" as const,
@@ -110,7 +116,9 @@ export async function POST(req: Request) {
             })).id,
           }]
         : undefined,
-      success_url: `${siteUrl()}/checkout/${program.slug}/confirmacion?session_id={CHECKOUT_SESSION_ID}`,
+      // Pasamos por /api/checkout/finish (Route Handler): finaliza la orden
+      // y abre la sesión web del comprador antes de mostrar la confirmación.
+      success_url: `${siteUrl()}/api/checkout/finish?session_id={CHECKOUT_SESSION_ID}&next=${encodeURIComponent(`/checkout/${program.slug}/confirmacion`)}`,
       cancel_url: `${siteUrl()}/checkout/${program.slug}?cancelled=1`,
       metadata: {
         kind: "program",
@@ -119,7 +127,7 @@ export async function POST(req: Request) {
         buyerEmail: data.email,
         country: data.country ?? "",
         phone: data.phone ?? "",
-        bumpsJson: JSON.stringify(data.bumps),
+        bumpsJson: JSON.stringify(bumps),
         couponCode: data.couponCode ?? "",
         fxRate: String(MXN_PER_USD),
       },
@@ -130,7 +138,7 @@ export async function POST(req: Request) {
       url: session.url,
     });
   } catch (e) {
-    if (e instanceof z.ZodError) return NextResponse.json({ error: "invalid", issues: e.issues }, { status: 400 });
+    if (e instanceof z.ZodError) return NextResponse.json({ error: "invalid", details: e.issues }, { status: 400 });
     console.error("[checkout program]", e);
     return NextResponse.json({ error: "server_error", message: (e as Error).message }, { status: 500 });
   }
@@ -141,6 +149,7 @@ export async function POST(req: Request) {
 async function demoFlow(
   data: z.infer<typeof body>,
   _program: typeof schema.programs.$inferSelect,
+  bumps: { id: string; title: string; priceCents: number }[],
 ) {
   // Simulamos una session con metadata equivalente y la pasamos al finalizer.
   const fake = {
@@ -157,7 +166,7 @@ async function demoFlow(
       buyerEmail: data.email,
       country: data.country ?? "",
       phone: data.phone ?? "",
-      bumpsJson: JSON.stringify(data.bumps),
+      bumpsJson: JSON.stringify(bumps),
       couponCode: data.couponCode ?? "",
     },
   } as unknown as import("stripe").Stripe.Checkout.Session;

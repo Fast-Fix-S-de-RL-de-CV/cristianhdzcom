@@ -10,13 +10,17 @@ export function NewsletterForm({ source = "blog" }: { source?: string }) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading");
-    const res = await fetch("/api/leads", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, source, tag: "newsletter" }),
-    });
-    setStatus(res.ok ? "ok" : "err");
-    if (res.ok) setEmail("");
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, source, tag: "newsletter" }),
+      });
+      setStatus(res.ok ? "ok" : "err");
+      if (res.ok) setEmail("");
+    } catch {
+      setStatus("err");
+    }
   }
 
   return (

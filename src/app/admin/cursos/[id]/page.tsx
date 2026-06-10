@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
@@ -39,8 +39,8 @@ export default async function CursoEditorPage({
       : await db
           .select()
           .from(schema.lessons)
-          .orderBy(asc(schema.lessons.sortOrder), asc(schema.lessons.code))
-          .then((all) => all.filter((l) => moduleIds.includes(l.moduleId)));
+          .where(inArray(schema.lessons.moduleId, moduleIds))
+          .orderBy(asc(schema.lessons.sortOrder), asc(schema.lessons.code));
 
   const cohortsRows = await db
     .select()

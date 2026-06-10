@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { and, eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -14,9 +14,11 @@ export const runtime = "nodejs";
  * Deletes programs (cursos / talleres / certificaciones / consultorías) and
  * their dependent rows (modules, lessons, cohorts, enrollments) via cascade.
  *
- * IMPORTANT: orders.programId is references-only (no cascade defined). If a
- * program has paid orders, we refuse to delete it to protect the sales
- * history — admin can deactivate it instead.
+ * IMPORTANT: orders.programId is references-only (no cascade defined), so the
+ * FK blocks the delete for ANY order (pending, failed, succeeded…). If a
+ * program has orders we refuse to delete it to protect the sales history —
+ * admin can deactivate it instead. Filtering only by "succeeded" here would
+ * make a single pending order abort the whole batch with an opaque error.
  */
 const Body = z.object({ ids: z.array(z.string().uuid()).min(1).max(200) });
 
@@ -32,11 +34,11 @@ export async function POST(req: Request) {
   }
   const { ids } = parsed.data;
 
-  // Programs with any successful order: protect them.
+  // Programs with ANY order: protect them (the FK would block the delete anyway).
   const withOrders = await db
     .select({ id: schema.orders.programId })
     .from(schema.orders)
-    .where(and(inArray(schema.orders.programId, ids), eq(schema.orders.status, "succeeded")))
+    .where(inArray(schema.orders.programId, ids))
     .groupBy(schema.orders.programId);
   const lockedIds = new Set(withOrders.map((r) => r.id).filter(Boolean) as string[]);
   const eligible = ids.filter((id) => !lockedIds.has(id));

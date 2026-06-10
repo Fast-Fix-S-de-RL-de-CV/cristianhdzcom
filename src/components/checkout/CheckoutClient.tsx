@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
+import { apiErrorMessage } from "@/lib/apiError";
+import { isValidEmail } from "@/lib/format";
 
 type Program = {
   id: string;
@@ -36,16 +38,10 @@ export function CheckoutClient({
   cohortRange: string | null;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<"info" | "pay">("info");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [country, setCountry] = useState("México");
   const [phone, setPhone] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("card");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExp, setCardExp] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
-  const [cardZip, setCardZip] = useState("");
   const [activeBumps, setActiveBumps] = useState<Record<string, boolean>>({ books: true });
   const [coupon, setCoupon] = useState("EMPIEZA");
   const [couponApplied, setCouponApplied] = useState(false);
@@ -92,36 +88,46 @@ export function CheckoutClient({
   }
 
   async function onSubmit() {
-    setSubmitting(true);
     setError(null);
+    if (name.trim().length < 2) {
+      setError("Nombre: debe tener al menos 2 caracteres.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError("Email: escribe un correo válido — ej. nombre@dominio.com.");
+      return;
+    }
+    setSubmitting(true);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           programId: program.id,
-          name,
-          email,
+          name: name.trim(),
+          email: email.trim(),
           country,
           phone,
-          paymentMethod,
           bumps: BUMPS.filter((b) => activeBumps[b.id]).map((b) => ({ id: b.id, title: b.title, priceCents: b.price * 100 })),
-          couponCode: couponApplied ? coupon : undefined,
+          couponCode: couponApplied ? coupon.trim() : undefined,
         }),
       });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j?.error || "Error");
+      const j = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(apiErrorMessage(j, "No pudimos procesar tu pago."));
+        return;
+      }
       // ── MODO STRIPE: redirigir a Stripe Checkout ──
-      if (j.url) {
+      if (j?.url) {
         window.location.href = j.url;
         return;
       }
       // ── MODO DEMO (sin Stripe): ir directo a confirmación ──
-      if (j.orderId) {
+      if (j?.orderId) {
         router.push(j.redirectTo ?? `/checkout/${program.slug}/confirmacion?order=${j.orderId}`);
       }
-    } catch (e: any) {
-      setError(e.message || "No pudimos procesar tu pago.");
+    } catch {
+      setError("Error de red — revisa tu conexión e intenta de nuevo.");
     } finally {
       setSubmitting(false);
     }
@@ -173,9 +179,9 @@ export function CheckoutClient({
             <img src="/logo.png" alt="Cristian Hernández" />
           </Link>
           <div className="row" style={{ gap: 24 }}>
-            <Step n="1" label="Tu información" active={step === "info"} done={step === "pay"} />
+            <Step n="1" label="Tu información" active />
             <span style={{ color: "var(--line-2)" }}>─</span>
-            <Step n="2" label="Pago" active={step === "pay"} />
+            <Step n="2" label="Pago seguro" />
             <span style={{ color: "var(--line-2)" }}>─</span>
             <Step n="3" label="Confirmar" />
           </div>
@@ -202,52 +208,12 @@ export function CheckoutClient({
         <div className="col" style={{ gap: 20 }}>
           <h1 style={{ fontSize: 40, lineHeight: 1.1 }}>Estás a 30 segundos de entrar a la generación.</h1>
 
-          {/* Express */}
-          <Card style={{ padding: 20 }}>
-            <Eyebrow style={{ marginBottom: 14 }}>Pago express</Eyebrow>
-            <div className="grid-3" style={{ gap: 10 }}>
-              {[
-                ["PayPal", "oklch(45% 0.16 245)"],
-                ["Apple Pay", "var(--ink)"],
-                ["Google Pay", "oklch(58% 0.16 145)"],
-              ].map(([n, c]) => (
-                <div
-                  key={n}
-                  className="center"
-                  style={{
-                    padding: "14px 12px",
-                    borderRadius: 10,
-                    border: "1px solid var(--line-2)",
-                    background: "white",
-                    fontFamily: "var(--font-mono)",
-                    fontSize: 13,
-                    color: c,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  {n}
-                </div>
-              ))}
-            </div>
-            <div className="row" style={{ marginTop: 16, gap: 12 }}>
-              <div className="rule" style={{ flex: 1 }} />
-              <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-                O PAGA CON TARJETA
-              </span>
-              <div className="rule" style={{ flex: 1 }} />
-            </div>
-          </Card>
-
           {/* Customer info */}
           <Card style={{ padding: 24 }}>
             <div className="between" style={{ marginBottom: 16 }}>
               <h3 className="serif" style={{ fontSize: 20 }}>
                 ① Tu información
               </h3>
-              {step === "pay" && (
-                <span style={{ color: "oklch(48% 0.13 155)", fontSize: 12, fontWeight: 600 }}>✓ Confirmado</span>
-              )}
             </div>
             <div className="grid-2" style={{ gap: 14 }}>
               <Field label="Nombre" value={name} onChange={setName} required />
@@ -255,70 +221,11 @@ export function CheckoutClient({
               <Field label="País" value={country} onChange={setCountry} />
               <Field label="Teléfono" value={phone} onChange={setPhone} />
             </div>
-            {step === "info" && (
-              <Button
-                style={{ marginTop: 16 }}
-                onClick={() => {
-                  if (name && email) setStep("pay");
-                }}
-                disabled={!name || !email}
-              >
-                Continuar al pago →
-              </Button>
-            )}
+            <div style={{ marginTop: 16, padding: 14, background: "var(--bg-2)", borderRadius: 10, fontSize: 13, color: "var(--muted)" }}>
+              El pago (tarjeta, PayPal, SPEI u OXXO) se completa en la página segura de Stripe — nunca capturamos tu
+              tarjeta aquí.
+            </div>
           </Card>
-
-          {/* Payment */}
-          {step === "pay" && (
-            <Card style={{ padding: 24, borderColor: "var(--accent)", borderWidth: 2 }}>
-              <h3 className="serif" style={{ fontSize: 20, marginBottom: 16 }}>
-                ② Método de pago
-              </h3>
-              <div className="grid-4" style={{ gap: 10, marginBottom: 16 }}>
-                {[
-                  ["card", "Tarjeta"],
-                  ["paypal", "PayPal"],
-                  ["spei", "SPEI"],
-                  ["oxxo", "OXXO"],
-                ].map(([k, t]) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setPaymentMethod(k)}
-                    className="center"
-                    style={{
-                      padding: 12,
-                      borderRadius: 10,
-                      border: paymentMethod === k ? "2px solid var(--ink)" : "1px solid var(--line-2)",
-                      background: paymentMethod === k ? "var(--bg-2)" : "white",
-                      fontFamily: "var(--font-mono)",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              {paymentMethod === "card" && (
-                <>
-                  <Field label="NÚMERO DE TARJETA" value={cardNumber} onChange={setCardNumber} mono placeholder="4242 4242 4242 4242" />
-                  <div className="grid-3" style={{ gap: 12, marginTop: 12 }}>
-                    <Field label="VENCE" value={cardExp} onChange={setCardExp} mono placeholder="12 / 28" />
-                    <Field label="CVC" value={cardCvc} onChange={setCardCvc} mono placeholder="•••" />
-                    <Field label="ZIP" value={cardZip} onChange={setCardZip} mono placeholder="03100" />
-                  </div>
-                </>
-              )}
-              {paymentMethod !== "card" && (
-                <div style={{ padding: 16, background: "var(--bg-2)", borderRadius: 10, fontSize: 13, color: "var(--muted)" }}>
-                  Te enviamos las instrucciones de pago por {paymentMethod === "spei" ? "SPEI" : paymentMethod === "oxxo" ? "OXXO" : "PayPal"} al
-                  email después de confirmar.
-                </div>
-              )}
-            </Card>
-          )}
 
           {/* Order bumps */}
           <div>
@@ -403,11 +310,11 @@ export function CheckoutClient({
           <Button
             size="lg"
             shine
-            disabled={submitting || step === "info" || !email || !name}
+            disabled={submitting || !email || !name}
             onClick={onSubmit}
             style={{ justifyContent: "center", padding: "22px", fontSize: 17, width: "100%" }}
           >
-            🔒 {submitting ? "Procesando…" : `Completar mi pedido · ${fmt(totalCents)} USD`}
+            {submitting ? "Procesando…" : `Continuar al pago seguro · ${fmt(totalCents)} USD 🔒`}
           </Button>
           <div className="row" style={{ justifyContent: "center", gap: 20, fontSize: 12, color: "var(--muted)" }}>
             <span>🔒 256-bit SSL</span>

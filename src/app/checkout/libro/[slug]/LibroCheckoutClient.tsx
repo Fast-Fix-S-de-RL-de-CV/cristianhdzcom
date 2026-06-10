@@ -3,6 +3,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { computeBumps, basePrice, type Bump, type CheckoutFormat } from "@/lib/book-bumps";
+import { apiErrorMessage } from "@/lib/apiError";
 import { useToast } from "@/components/ui/ConfirmProvider";
 import { Field } from "@/components/ui/Field";
 import { SelectField } from "@/components/ui/SelectField";
@@ -133,7 +134,7 @@ export function LibroCheckoutClient({
                 ? "Necesitamos tu dirección de envío."
                 : json?.error === "format_not_available"
                   ? "Ese formato no está disponible para este producto."
-                  : "No se pudo procesar la compra.";
+                  : apiErrorMessage(json, "No se pudo procesar la compra.");
           toast.error(msg);
           return;
         }

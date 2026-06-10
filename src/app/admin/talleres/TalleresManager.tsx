@@ -12,6 +12,7 @@ import {
 } from "@/components/admin/BulkActions";
 import { ActiveToggle } from "@/components/admin/ActiveToggle";
 import { MediaUploadField } from "@/components/admin/MediaUploadField";
+import { apiErrorMessage } from "@/lib/apiError";
 
 type BadgeColorOpt = "" | "red" | "navy" | "warm" | "green" | "gold" | "muted" | "accent";
 const BADGE_COLORS: { value: BadgeColorOpt; label: string }[] = [
@@ -83,7 +84,11 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error");
+        throw new Error(
+          j.error === "attending_exceeds_capacity"
+            ? "La asistencia no puede superar la capacidad"
+            : apiErrorMessage(j, "No se pudo guardar"),
+        );
       }
       setEditing(null);
       setCreating(false);
@@ -330,9 +335,7 @@ function EventDialog({
     title: event?.title || "",
     description: event?.description || "",
     host: event?.host || "",
-    startsAt: event?.startsAt
-      ? new Date(event.startsAt).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16),
+    startsAt: toLocalDatetimeInput(event?.startsAt ? new Date(event.startsAt) : new Date()),
     durationMinutes: event?.durationMinutes ?? 60,
     capacity: event?.capacity ?? 300,
     isLive: event?.isLive ?? false,
@@ -719,6 +722,16 @@ function EventDialog({
       </div>
     </div>
   );
+}
+
+/**
+ * "YYYY-MM-DDTHH:mm" en hora LOCAL — el DatePicker interpreta y edita el valor
+ * como hora local, así que NO usar toISOString() (hora UTC) para precargarlo:
+ * eso desplazaba startsAt por el offset del navegador en cada guardado.
+ */
+function toLocalDatetimeInput(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

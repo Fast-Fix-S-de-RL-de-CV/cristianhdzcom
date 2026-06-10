@@ -5,7 +5,8 @@ import { Nav } from "@/components/marketing/Nav";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
-import { getStripe, finalizeCheckoutSession, loginUserIfNeeded, isStripeConfigured } from "@/lib/stripe";
+import { getStripe, finalizeCheckoutSession, isStripeConfigured } from "@/lib/stripe";
+import { getCurrentUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,12 +14,13 @@ export const dynamic = "force-dynamic";
  * Confirmación post-Stripe-Checkout.
  *
  * Acepta dos params:
- *   - `?session_id=cs_...` (cuando viene de Stripe Checkout)
+ *   - `?session_id=cs_...` (cuando viene de Stripe vía /api/checkout/finish,
+ *     que ya finalizó la orden y abrió la sesión web del comprador)
  *   - `?order=<uuid>` (modo demo / legado)
  *
- * Si llega session_id pero el webhook todavía no ha procesado, finaliza
- * inline (idempotente). Si la cuenta del comprador es nueva, abre sesión
- * web aquí para que pueda navegar sin re-login.
+ * Si llega session_id pero ni el webhook ni /finish procesaron todavía,
+ * finaliza inline como fallback (idempotente). OJO: una página NO puede
+ * escribir cookies, así que el login solo ocurre en /api/checkout/finish.
  */
 export default async function ConfirmationPage({
   params,
@@ -52,20 +54,14 @@ export default async function ConfirmationPage({
         const result = await finalizeCheckoutSession(session);
         orderId = result.orderId;
         createdNewAccount = result.createdNewAccount;
-        // Abrir sesión web si la cuenta es nueva (no estaba logueado al volver).
-        if (createdNewAccount) {
-          const [newOrder] = await db
-            .select({ userId: schema.orders.userId })
-            .from(schema.orders)
-            .where(eq(schema.orders.id, result.orderId))
-            .limit(1);
-          if (newOrder?.userId) await loginUserIfNeeded(newOrder.userId);
-        }
       }
     } catch (e) {
       console.error("[checkout/confirmacion]", e);
     }
   }
+
+  // ¿Hay sesión web abierta? (la abre /api/checkout/finish; aquí solo leemos)
+  const me = await getCurrentUser();
 
   let order: typeof schema.orders.$inferSelect | null = null;
   let program: typeof schema.programs.$inferSelect | null = null;
@@ -110,7 +106,7 @@ export default async function ConfirmationPage({
           </p>
           {createdNewAccount && (
             <p style={{ fontSize: 14, color: "var(--gold-deep)", maxWidth: 480, margin: "0 auto 24px", lineHeight: 1.5 }}>
-              Te creamos cuenta automáticamente. Ya estás logueado — revisa tu correo para la contraseña temporal.
+              Te creamos cuenta automáticamente.{me ? " Ya estás logueado —" : ""} revisa tu correo para la contraseña temporal.
             </p>
           )}
           <div className="row" style={{ gap: 12, justifyContent: "center", flexWrap: "wrap" }}>

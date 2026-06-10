@@ -5,7 +5,8 @@ import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { getStripe, finalizeCheckoutSession, loginUserIfNeeded, isStripeConfigured } from "@/lib/stripe";
+import { getStripe, finalizeCheckoutSession, isStripeConfigured } from "@/lib/stripe";
+import { getCurrentUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -36,22 +37,20 @@ export default async function ConfirmacionLibroPage({
       if (existing) {
         orderId = existing.id;
       } else if (session.payment_status === "paid") {
+        // Fallback si ni el webhook ni /api/checkout/finish procesaron aún.
+        // El login NO ocurre aquí (una página no puede escribir cookies):
+        // lo hace /api/checkout/finish antes de redirigir.
         const result = await finalizeCheckoutSession(session);
         orderId = result.orderId;
         accountWasCreated = accountWasCreated || result.createdNewAccount;
-        if (result.createdNewAccount) {
-          const [newOrder] = await db
-            .select({ userId: schema.orders.userId })
-            .from(schema.orders)
-            .where(eq(schema.orders.id, result.orderId))
-            .limit(1);
-          if (newOrder?.userId) await loginUserIfNeeded(newOrder.userId);
-        }
       }
     } catch (e) {
       console.error("[checkout/libro/confirmacion]", e);
     }
   }
+
+  // ¿Hay sesión web abierta? (la abre /api/checkout/finish; aquí solo leemos)
+  const me = await getCurrentUser();
 
   // Datos del producto comprado (para mostrar título + cover)
   const [product] = await db.select().from(schema.books).where(eq(schema.books.slug, slug)).limit(1);
@@ -164,7 +163,7 @@ export default async function ConfirmacionLibroPage({
                 </div>
                 <p style={{ fontSize: 14, color: "var(--ink-2)", marginLeft: 32, lineHeight: 1.55 }}>
                   {accountWasCreated
-                    ? "Como acabas de convertirte en cliente, te creamos una cuenta y ya estás logueado. La contraseña temporal se mandó a tu correo — entra a 'Mi cuenta' para cambiarla."
+                    ? `Como acabas de convertirte en cliente, te creamos una cuenta${me ? " y ya estás logueado" : ""}. La contraseña temporal se mandó a tu correo — entra a 'Mi cuenta' para cambiarla.`
                     : "Ya eres parte oficial de la comunidad. Tienes acceso al feed privado, directorio de miembros y mensajería."}
                 </p>
               </div>

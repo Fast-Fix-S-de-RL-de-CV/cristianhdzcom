@@ -124,8 +124,6 @@ export function MarketingNode({ data, selected }: NodeProps) {
           ) : null}
         </div>
       </div>
-
-      <Handle type="source" position={Position.Bottom} className="mk-handle" />
     </div>
   );
 }

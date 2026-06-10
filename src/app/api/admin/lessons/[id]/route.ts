@@ -99,6 +99,25 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         if (parsed) {
           update.videoProvider = parsed.provider;
           update.videoId = parsed.id;
+        } else {
+          // El superRefine solo valida cuando el body trae kind="video". En
+          // payloads parciales (sin kind) consultamos el kind actual de la
+          // lección para no tragar silenciosamente una URL inválida.
+          const [current] = await db
+            .select({ kind: schema.lessons.kind })
+            .from(schema.lessons)
+            .where(eq(schema.lessons.id, id))
+            .limit(1);
+          if (!current) return NextResponse.json({ error: "not_found" }, { status: 404 });
+          if ((data.kind ?? current.kind) === "video") {
+            return NextResponse.json(
+              {
+                error: "invalid",
+                details: [{ path: ["videoUrl"], message: "URL no es de Vimeo o YouTube válida" }],
+              },
+              { status: 400 },
+            );
+          }
         }
       }
     }

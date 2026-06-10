@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ user });
   } catch (e) {
-    if (e instanceof z.ZodError) return NextResponse.json({ error: "invalid", issues: e.issues }, { status: 400 });
+    if (e instanceof z.ZodError) return NextResponse.json({ error: "invalid", details: e.issues }, { status: 400 });
     console.error(e);
     return NextResponse.json({ error: "server_error" }, { status: 500 });
   }

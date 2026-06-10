@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     data = Body.parse(await req.json());
   } catch (e) {
     if (e instanceof z.ZodError) {
-      return NextResponse.json({ error: "invalid", issues: e.issues }, { status: 400 });
+      return NextResponse.json({ error: "invalid", details: e.issues }, { status: 400 });
     }
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }

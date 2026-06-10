@@ -28,8 +28,18 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const data = body.parse(await req.json());
     const { published, ...rest } = data;
     const update: Record<string, unknown> = { ...rest };
-    if (published !== undefined) {
-      update.publishedAt = published ? new Date() : null;
+    if (published === false) {
+      update.publishedAt = null;
+    } else if (published === true) {
+      // Solo fechar la transición borrador → publicado; editar un post ya
+      // publicado NO debe pisar su fecha original de publicación.
+      const [existing] = await db
+        .select({ publishedAt: schema.blogPosts.publishedAt })
+        .from(schema.blogPosts)
+        .where(eq(schema.blogPosts.id, id))
+        .limit(1);
+      if (!existing) return NextResponse.json({ error: "not_found" }, { status: 404 });
+      update.publishedAt = existing.publishedAt ?? new Date();
     }
     const [row] = await db
       .update(schema.blogPosts)

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { apiErrorMessage } from "@/lib/apiError";
 import type { ModuleRow, LessonRow, Program } from "./CursoEditorClient";
 
 /**
@@ -147,12 +148,7 @@ export function OutlineEditor({
   /* ─────────── Quick add ─────────── */
   // Convierte el JSON de error de Zod en un mensaje legible (campo: motivo).
   function humanize(j: { error?: string; details?: Array<{ path?: (string | number)[]; message?: string }> }): string {
-    if (j?.error === "invalid" && Array.isArray(j.details) && j.details.length > 0) {
-      const issue = j.details[0];
-      const field = issue.path?.join(".") ?? "campo";
-      return `${field}: ${issue.message ?? "valor inválido"}`;
-    }
-    return j?.error || "No se pudo guardar";
+    return apiErrorMessage(j, "No se pudo guardar");
   }
 
   async function quickAddModule() {

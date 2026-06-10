@@ -14,7 +14,7 @@ import {
   serial,
   date,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 /* ─────────── USERS / AUTH ─────────── */
 export const users = pgTable(
@@ -570,6 +570,12 @@ export const orders = pgTable(
   (t) => ({
     emailIdx: index("orders_email_idx").on(t.email),
     statusIdx: index("orders_status_idx").on(t.status),
+    // Idempotencia de Stripe a nivel DB (además del advisory lock en
+    // finalizeCheckoutSession): una session id no puede crear dos orders.
+    // Ver MIGRATION_orders_session_unique.sql.
+    stripeSessionIdx: uniqueIndex("orders_stripe_session_uniq")
+      .on(sql`(${t.metadata}->>'stripeSessionId')`)
+      .where(sql`${t.metadata}->>'stripeSessionId' IS NOT NULL`),
   }),
 );
 

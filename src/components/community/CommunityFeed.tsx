@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { initials, formatRelative } from "@/lib/utils";
+import { apiErrorMessage } from "@/lib/apiError";
 
 type Post = {
   id: string;
@@ -22,6 +23,7 @@ type Post = {
   authorRole: string | null;
   categoryName: string | null;
   categoryColor: string | null;
+  viewerLiked?: boolean;
 };
 
 type Category = { id: number; slug: string; name: string; emoji: string | null; color: string | null };
@@ -44,8 +46,12 @@ export function CommunityFeed({
   const [composerBody, setComposerBody] = useState("");
   const [composerCat, setComposerCat] = useState<number | undefined>(categories[1]?.id);
   const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [liked, setLiked] = useState<Record<string, boolean>>({});
+  // Sembrado desde el server para que un post ya likeado no pinte el corazón vacío.
+  const [liked, setLiked] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(initialPosts.filter((p) => p.viewerLiked).map((p) => [p.id, true])),
+  );
 
   const byCategory = filter === "todo" ? posts : posts.filter((p) => p.categoryName?.toLowerCase() === filter.toLowerCase());
 
@@ -70,19 +76,28 @@ export function CommunityFeed({
     e.preventDefault();
     if (!composerTitle.trim() || !composerBody.trim()) return;
     setPosting(true);
-    const res = await fetch("/api/posts", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title: composerTitle, body: composerBody, categoryId: composerCat }),
-    });
-    setPosting(false);
-    if (res.ok) {
-      const { post } = await res.json();
-      setPosts((p) => [post, ...p]);
-      setComposerTitle("");
-      setComposerBody("");
-      setComposerOpen(false);
-      startTransition(() => router.refresh());
+    setPostError(null);
+    try {
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: composerTitle, body: composerBody, categoryId: composerCat }),
+      });
+      if (res.ok) {
+        const { post } = await res.json();
+        setPosts((p) => [post, ...p]);
+        setComposerTitle("");
+        setComposerBody("");
+        setComposerOpen(false);
+        startTransition(() => router.refresh());
+      } else {
+        const j = await res.json().catch(() => null);
+        setPostError(apiErrorMessage(j, "No se pudo publicar — intenta de nuevo"));
+      }
+    } catch {
+      setPostError("Sin conexión — revisa tu internet e intenta de nuevo");
+    } finally {
+      setPosting(false);
     }
   }
 
@@ -94,7 +109,14 @@ export function CommunityFeed({
     const next = !liked[id];
     setLiked((s) => ({ ...s, [id]: next }));
     setPosts((ps) => ps.map((p) => (p.id === id ? { ...p, likesCount: p.likesCount + (next ? 1 : -1) } : p)));
-    await fetch(`/api/posts/${id}/like`, { method: next ? "POST" : "DELETE" });
+    try {
+      const res = await fetch(`/api/posts/${id}/like`, { method: next ? "POST" : "DELETE" });
+      if (!res.ok) throw new Error("like_failed");
+    } catch {
+      // Revertir el optimismo: el server no guardó el cambio.
+      setLiked((s) => ({ ...s, [id]: !next }));
+      setPosts((ps) => ps.map((p) => (p.id === id ? { ...p, likesCount: p.likesCount + (next ? -1 : 1) } : p)));
+    }
   }
 
   return (
@@ -141,6 +163,7 @@ export function CommunityFeed({
               value={composerTitle}
               onChange={(e) => setComposerTitle(e.target.value)}
               required
+              minLength={3}
               maxLength={240}
             />
             <textarea
@@ -149,9 +172,16 @@ export function CommunityFeed({
               value={composerBody}
               onChange={(e) => setComposerBody(e.target.value)}
               required
+              minLength={3}
+              maxLength={10000}
               rows={4}
               style={{ resize: "vertical", minHeight: 120 }}
             />
+            {postError && (
+              <p role="alert" style={{ color: "var(--red)", fontSize: 13, margin: 0 }}>
+                {postError}
+              </p>
+            )}
             <div className="between" style={{ gap: 8, flexWrap: "wrap" }}>
               <select
                 className="input"

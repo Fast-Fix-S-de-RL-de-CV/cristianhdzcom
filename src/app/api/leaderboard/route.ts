@@ -11,7 +11,8 @@ import { desc, sql, gte, and, eq } from "drizzle-orm";
 // them as a tie-breaker on top of base xp.
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const limit = Math.min(Number(url.searchParams.get("limit") ?? 20), 100);
+  const rawLimit = Number(url.searchParams.get("limit") ?? 20);
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.trunc(rawLimit), 1), 100) : 20;
   const range = (url.searchParams.get("range") ?? "all") as "7d" | "30d" | "all";
 
   if (range === "all") {

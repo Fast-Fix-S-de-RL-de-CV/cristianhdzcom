@@ -38,26 +38,34 @@ const body = z.object({
   replaceExisting: z.boolean().default(false),
 });
 
-type GeneratedLesson = {
-  code: string;
-  title: string;
-  kind: "video" | "multiple_choice";
-  body?: string;
-  question?: string;
-  options?: Array<{ k: string; t: string; correct: boolean }>;
-  explanation?: string;
-  hint?: string;
-  estimatedMinutes?: number;
-};
-type GeneratedModule = {
-  code: string;
-  title: string;
-  description: string;
-  weekLabel?: string;
-  isBig?: boolean;
-  lessons: GeneratedLesson[];
-};
-type Generated = { modules: GeneratedModule[] };
+/**
+ * Schema de la salida de Claude. Claude puede alucinar la forma, así que
+ * validamos antes de insertar: títulos obligatorios (truncados a varchar(200)),
+ * lessons default [] y codes/weekLabel recortados a su varchar.
+ */
+const generatedLessonSchema = z.object({
+  code: z.string().transform((s) => s.slice(0, 20)).optional(),
+  title: z.string().min(1).transform((s) => s.slice(0, 200)),
+  kind: z.enum(["video", "multiple_choice"]),
+  body: z.string().optional(),
+  question: z.string().optional(),
+  options: z
+    .array(z.object({ k: z.string().max(10), t: z.string(), correct: z.boolean().optional() }))
+    .optional(),
+  explanation: z.string().optional(),
+  hint: z.string().optional(),
+  estimatedMinutes: z.number().optional(),
+});
+const generatedModuleSchema = z.object({
+  code: z.string().transform((s) => s.slice(0, 20)).optional(),
+  title: z.string().min(1).transform((s) => s.slice(0, 200)),
+  description: z.string().optional(),
+  weekLabel: z.string().transform((s) => s.slice(0, 60)).optional(),
+  isBig: z.boolean().optional(),
+  lessons: z.array(generatedLessonSchema).default([]),
+});
+const generatedSchema = z.object({ modules: z.array(generatedModuleSchema).default([]) });
+type Generated = z.infer<typeof generatedSchema>;
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
@@ -96,9 +104,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   // Call Claude
-  let generated: Generated;
+  let rawGenerated: unknown;
   try {
-    generated = await callClaude(apiKey, program, data);
+    rawGenerated = await callClaude(apiKey, program, data);
   } catch (e) {
     console.error("[ai-generate] Claude error:", e);
     return NextResponse.json(
@@ -106,96 +114,117 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       { status: 502 },
     );
   }
-  if (!generated.modules || generated.modules.length === 0) {
+  // Claude puede devolver una forma inesperada — validar ANTES de insertar.
+  const parsedGen = generatedSchema.safeParse(rawGenerated);
+  if (!parsedGen.success) {
+    console.error("[ai-generate] invalid Claude output:", parsedGen.error.issues);
+    return NextResponse.json(
+      { error: "claude_invalid_output", message: "La IA devolvió una estructura inválida — intenta de nuevo." },
+      { status: 502 },
+    );
+  }
+  const generated: Generated = parsedGen.data;
+  if (generated.modules.length === 0) {
     return NextResponse.json({ error: "empty_generation" }, { status: 502 });
   }
 
-  // Replace existing if requested
-  if (data.replaceExisting) {
-    await db.delete(schema.modules).where(eq(schema.modules.programId, program.id));
-  }
-
-  // Determine starting sortOrder
-  const startOrderRes = (await db.execute(sql`
-    SELECT COALESCE(MAX(sort_order), -1)::int + 1 AS next
-    FROM modules WHERE program_id = ${program.id}
-  `)) as unknown as { rows?: Array<{ next: number }> } | Array<{ next: number }>;
-  const startOrderRows = Array.isArray(startOrderRes) ? startOrderRes : (startOrderRes.rows ?? []);
-  let nextOrder = startOrderRows[0]?.next ?? 0;
-
-  // Insert modules + lessons
+  // Todo o nada: si algo truena a media inserción, no dejar módulos huérfanos.
   const moduleIds: string[] = [];
   let totalLessons = 0;
-  for (const m of generated.modules) {
-    const [insertedMod] = await db
-      .insert(schema.modules)
-      .values({
-        programId: program.id,
-        code: m.code || `M${String(nextOrder + 1).padStart(2, "0")}`,
-        title: m.title,
-        description: m.description ?? null,
-        weekLabel: m.weekLabel ?? null,
-        isBig: !!m.isBig,
-        sortOrder: nextOrder,
-        xpReward: m.isBig ? 120 : 80,
-      })
-      .returning({ id: schema.modules.id });
-    nextOrder += 1;
-    if (!insertedMod) continue;
-    moduleIds.push(insertedMod.id);
-
-    let lessonOrder = 0;
-    for (const l of m.lessons) {
-      if (l.kind === "video") {
-        await db.insert(schema.lessons).values({
-          moduleId: insertedMod.id,
-          code: l.code || `L${lessonOrder + 1}`,
-          title: l.title,
-          kind: "video",
-          question: l.question ?? null,
-          body: l.body ?? null,
-          options: [],
-          correctKey: null,
-          hint: l.hint ?? null,
-          explanation: l.explanation ?? null,
-          xpReward: 20,
-          sortOrder: lessonOrder,
-          // No videoUrl yet — admin pegará Vimeo después.
-          videoProvider: null,
-          videoId: null,
-        });
-      } else {
-        // multiple_choice — Claude returns options as {k,t,correct}
-        const opts = (l.options ?? []).map((o) => ({ k: o.k, t: o.t, correct: !!o.correct }));
-        const correctOpt = opts.find((o) => o.correct);
-        if (!correctOpt || !l.question) continue; // skip malformed
-        await db.insert(schema.lessons).values({
-          moduleId: insertedMod.id,
-          code: l.code || `L${lessonOrder + 1}`,
-          title: l.title,
-          kind: "multiple_choice",
-          question: l.question,
-          body: l.body ?? null,
-          options: opts,
-          correctKey: correctOpt.k,
-          hint: l.hint ?? null,
-          explanation: l.explanation ?? null,
-          xpReward: 15,
-          sortOrder: lessonOrder,
-        });
+  try {
+    await db.transaction(async (tx) => {
+      // Replace existing if requested
+      if (data.replaceExisting) {
+        await tx.delete(schema.modules).where(eq(schema.modules.programId, program.id));
       }
-      lessonOrder += 1;
-      totalLessons += 1;
-    }
-  }
 
-  // Refresh modulesCount on program
-  await db
-    .update(schema.programs)
-    .set({
-      modulesCount: sql`(SELECT COUNT(*)::int FROM ${schema.modules} WHERE program_id = ${program.id})`,
-    })
-    .where(eq(schema.programs.id, program.id));
+      // Determine starting sortOrder
+      const startOrderRes = (await tx.execute(sql`
+        SELECT COALESCE(MAX(sort_order), -1)::int + 1 AS next
+        FROM modules WHERE program_id = ${program.id}
+      `)) as unknown as { rows?: Array<{ next: number }> } | Array<{ next: number }>;
+      const startOrderRows = Array.isArray(startOrderRes) ? startOrderRes : (startOrderRes.rows ?? []);
+      let nextOrder = startOrderRows[0]?.next ?? 0;
+
+      // Insert modules + lessons
+      for (const m of generated.modules) {
+        const [insertedMod] = await tx
+          .insert(schema.modules)
+          .values({
+            programId: program.id,
+            code: m.code || `M${String(nextOrder + 1).padStart(2, "0")}`,
+            title: m.title,
+            description: m.description ?? null,
+            weekLabel: m.weekLabel ?? null,
+            isBig: !!m.isBig,
+            sortOrder: nextOrder,
+            xpReward: m.isBig ? 120 : 80,
+          })
+          .returning({ id: schema.modules.id });
+        nextOrder += 1;
+        if (!insertedMod) continue;
+        moduleIds.push(insertedMod.id);
+
+        let lessonOrder = 0;
+        for (const l of m.lessons) {
+          if (l.kind === "video") {
+            await tx.insert(schema.lessons).values({
+              moduleId: insertedMod.id,
+              code: l.code || `L${lessonOrder + 1}`,
+              title: l.title,
+              kind: "video",
+              question: l.question ?? null,
+              body: l.body ?? null,
+              options: [],
+              correctKey: null,
+              hint: l.hint ?? null,
+              explanation: l.explanation ?? null,
+              xpReward: 20,
+              sortOrder: lessonOrder,
+              // No videoUrl yet — admin pegará Vimeo después.
+              videoProvider: null,
+              videoId: null,
+            });
+          } else {
+            // multiple_choice — Claude returns options as {k,t,correct}
+            const opts = (l.options ?? []).map((o) => ({ k: o.k, t: o.t, correct: !!o.correct }));
+            const correctOpt = opts.find((o) => o.correct);
+            if (!correctOpt || !l.question) continue; // skip malformed
+            await tx.insert(schema.lessons).values({
+              moduleId: insertedMod.id,
+              code: l.code || `L${lessonOrder + 1}`,
+              title: l.title,
+              kind: "multiple_choice",
+              question: l.question,
+              body: l.body ?? null,
+              options: opts,
+              correctKey: correctOpt.k,
+              hint: l.hint ?? null,
+              explanation: l.explanation ?? null,
+              xpReward: 15,
+              sortOrder: lessonOrder,
+            });
+          }
+          lessonOrder += 1;
+          totalLessons += 1;
+        }
+      }
+
+      // Refresh modulesCount on program
+      await tx
+        .update(schema.programs)
+        .set({
+          modulesCount: sql`(SELECT COUNT(*)::int FROM ${schema.modules} WHERE program_id = ${program.id})`,
+        })
+        .where(eq(schema.programs.id, program.id));
+    });
+  } catch (e) {
+    console.error("[ai-generate] insert error:", e);
+    return NextResponse.json(
+      { error: "server_error", message: "No se pudo guardar el contenido generado — intenta de nuevo." },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({
     ok: true,
@@ -206,7 +235,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 /* ────────── Claude prompt ────────── */
-async function callClaude(apiKey: string, program: typeof schema.programs.$inferSelect, opts: z.infer<typeof body>): Promise<Generated> {
+async function callClaude(apiKey: string, program: typeof schema.programs.$inferSelect, opts: z.infer<typeof body>): Promise<unknown> {
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
   const client = new Anthropic({ apiKey });
 
@@ -298,7 +327,7 @@ Ahora produce el JSON.`;
   const raw = textBlock && textBlock.type === "text" ? textBlock.text : "";
   const json = extractJson(raw);
   if (!json) throw new Error("Claude no devolvió JSON parseable");
-  return json as Generated;
+  return json; // la forma se valida con generatedSchema en el handler
 }
 
 /** Extracts the first { ... } JSON object from a string, even if wrapped in code fences. */

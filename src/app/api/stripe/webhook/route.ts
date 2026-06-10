@@ -25,6 +25,7 @@ import { db, schema } from "@/db";
 import { and, eq, sql } from "drizzle-orm";
 import { getStripe, finalizeCheckoutSession } from "@/lib/stripe";
 import { accrueCredit, type PlanSlug } from "@/lib/membership";
+import { MXN_PER_USD } from "@/lib/fx";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,7 +98,14 @@ export async function POST(req: Request) {
         if (!subId) break;
         if (invoice.billing_reason === "subscription_create") break; // ya manejado
 
-        await handleSubscriptionRenewal(subId, invoice.amount_paid);
+        // Las suscripciones se cobran en MXN (ver checkout/membership). La
+        // DB guarda orders/crédito en centavos USD (convención de lib/fx),
+        // así que convertimos antes de acreditar.
+        const amountUsdCents =
+          invoice.currency?.toLowerCase() === "mxn"
+            ? Math.round(invoice.amount_paid / MXN_PER_USD)
+            : invoice.amount_paid;
+        await handleSubscriptionRenewal(subId, amountUsdCents);
         break;
       }
       case "customer.subscription.updated": {
@@ -131,7 +139,8 @@ export async function POST(req: Request) {
 }
 
 /** Renovación de suscripción: encuentra membership por stripeSubscriptionId
- *  guardado en el order original, acumula crédito y extiende periodo. */
+ *  guardado en el order original, acumula crédito y extiende periodo.
+ *  `amountPaidCents` viene YA convertido a centavos USD por el caller. */
 async function handleSubscriptionRenewal(stripeSubId: string, amountPaidCents: number) {
   // Buscar order original con este subscription id
   const [order] = await db

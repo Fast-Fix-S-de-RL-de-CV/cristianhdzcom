@@ -32,9 +32,11 @@ import {
   parseVideo,
   TIME_UNITS,
   timeUnit,
+  timeLabel,
   type MarketingNodeData,
   type TimeNodeData,
 } from "@/lib/marketing";
+import { apiErrorMessage } from "@/lib/apiError";
 import { MarketingNode } from "./MarketingNode";
 import { TimeNode } from "./TimeNode";
 import { VideoThumb } from "./VideoThumb";
@@ -90,7 +92,8 @@ function Inner({ plan }: { plan: Plan }) {
   const [product, setProduct] = useState(plan.product ?? "");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveErr, setSaveErr] = useState("");
   const [selectMode, setSelectMode] = useState(false);
 
   const rf = useReactFlow();
@@ -215,24 +218,56 @@ function Inner({ plan }: { plan: Plan }) {
   // ── Auto-guardado (debounced) ──
   const snapshot = JSON.stringify({ title, product, nodes, edges });
   const first = useRef(true);
+  const pendingBody = useRef<string | null>(null); // último payload sin confirmar en el server
   useEffect(() => {
     if (first.current) {
       first.current = false;
       return;
     }
+    // Título vacío se omite: el server pone "Plan de marketing" por default.
+    const body = JSON.stringify({ title: title.trim() || undefined, product, data: { nodes, edges } });
+    pendingBody.current = body;
     setSaveState("saving");
     const t = setTimeout(() => {
       fetch(`/api/tools/marketing/${plan.id}`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ title, product, data: { nodes, edges } }),
+        body,
       })
-        .then((r) => setSaveState(r.ok ? "saved" : "idle"))
-        .catch(() => setSaveState("idle"));
+        .then(async (r) => {
+          if (r.ok) {
+            if (pendingBody.current === body) pendingBody.current = null;
+            setSaveState("saved");
+            return;
+          }
+          const j = await r.json().catch(() => null);
+          setSaveState("error");
+          setSaveErr(
+            r.status === 401 ? "Tu sesión expiró — vuelve a iniciar sesión" : apiErrorMessage(j, "No se pudo guardar"),
+          );
+        })
+        .catch(() => {
+          setSaveState("error");
+          setSaveErr("Sin conexión — no se pudo guardar");
+        });
     }, 900);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot, plan.id]);
+
+  // Flush al desmontar (← Volver, navegación): manda el guardado pendiente que el debounce canceló.
+  useEffect(() => {
+    return () => {
+      if (!pendingBody.current) return;
+      fetch(`/api/tools/marketing/${plan.id}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: pendingBody.current,
+        keepalive: true,
+      }).catch(() => {});
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function exportJson() {
     const blob = new Blob([JSON.stringify({ title, product, nodes, edges }, null, 2)], {
@@ -262,6 +297,7 @@ function Inner({ plan }: { plan: Plan }) {
           <input
             className="mk-title-input"
             value={title}
+            maxLength={160}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Nombre del plan"
             aria-label="Nombre del plan"
@@ -274,8 +310,18 @@ function Inner({ plan }: { plan: Plan }) {
             aria-label="Producto"
           />
         </div>
-        <span className={`mk-save mk-save-${saveState}`}>
-          {saveState === "saving" ? "Guardando…" : saveState === "saved" ? "Guardado ✓" : "Auto-guardado"}
+        <span
+          className={`mk-save mk-save-${saveState}`}
+          style={saveState === "error" ? { color: "#dc2626", fontWeight: 700 } : undefined}
+          role={saveState === "error" ? "alert" : undefined}
+        >
+          {saveState === "saving"
+            ? "Guardando…"
+            : saveState === "saved"
+              ? "Guardado ✓"
+              : saveState === "error"
+                ? `⚠ ${saveErr}`
+                : "Auto-guardado"}
         </span>
         <button type="button" className="mk-btn" onClick={exportJson}>
           <Download size={15} /> Exportar
@@ -710,6 +756,16 @@ function Inner({ plan }: { plan: Plan }) {
         {product ? <p className="mk-print-product">Producto / negocio: {product}</p> : null}
         <ol>
           {nodes.map((n) => {
+            if (n.type === "tiempo") {
+              const t = n.data as TimeNodeData;
+              return (
+                <li key={n.id} className="mk-print-item">
+                  <div className="mk-print-h">
+                    ⏱ {timeLabel(t)} de espera{t.note ? ` · ${t.note}` : ""}
+                  </div>
+                </li>
+              );
+            }
             const x = n.data as MarketingNodeData;
             const ch = channel(x.channel);
             const st = statusMeta(x.status);

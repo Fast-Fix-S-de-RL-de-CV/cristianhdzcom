@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Megaphone } from "lucide-react";
 import { useConfirm } from "@/components/ui/ConfirmProvider";
+import { apiErrorMessage } from "@/lib/apiError";
 
 type PlanRow = { id: string; title: string; product: string; updatedAt: string; nodeCount: number };
 
@@ -11,6 +12,7 @@ export function PlansList() {
   const confirm = useConfirm();
   const [plans, setPlans] = useState<PlanRow[] | null>(null);
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetch("/api/tools/marketing")
@@ -21,14 +23,21 @@ export function PlansList() {
 
   async function create() {
     setCreating(true);
+    setError("");
     try {
       const r = await fetch("/api/tools/marketing", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({}),
       });
-      const j = await r.json();
-      if (r.ok && j.id) router.push(`/plataforma/herramientas/marketing/${j.id}`);
+      const j = await r.json().catch(() => null);
+      if (!r.ok || !j?.id) {
+        setError(apiErrorMessage(j, "No se pudo crear el plan"));
+        return;
+      }
+      router.push(`/plataforma/herramientas/marketing/${j.id}`);
+    } catch {
+      setError("Sin conexión — no se pudo crear el plan");
     } finally {
       setCreating(false);
     }
@@ -44,12 +53,34 @@ export function PlansList() {
       tone: "danger",
     });
     if (!ok) return;
-    await fetch(`/api/tools/marketing/${id}`, { method: "DELETE" });
+    setError("");
+    const r = await fetch(`/api/tools/marketing/${id}`, { method: "DELETE" }).catch(() => null);
+    if (!r || !r.ok) {
+      const j = r ? await r.json().catch(() => null) : null;
+      setError(apiErrorMessage(j, "No se pudo eliminar el plan"));
+      return;
+    }
     setPlans((p) => (p ?? []).filter((x) => x.id !== id));
   }
 
   return (
     <div className="grid-3" style={{ gap: 18 }}>
+      {error ? (
+        <div
+          role="alert"
+          style={{
+            gridColumn: "1 / -1",
+            padding: "10px 14px",
+            borderRadius: 10,
+            border: "1px solid #fecaca",
+            background: "#fef2f2",
+            color: "#b91c1c",
+            fontSize: 13.5,
+          }}
+        >
+          {error}
+        </div>
+      ) : null}
       {/* Nuevo plan */}
       <button
         type="button"

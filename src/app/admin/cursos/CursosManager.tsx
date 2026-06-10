@@ -12,6 +12,7 @@ import {
   suggestPricing,
 } from "@/lib/money";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { apiErrorMessage } from "@/lib/apiError";
 import {
   BulkActionBar,
   BulkCheckbox,
@@ -71,13 +72,13 @@ export function CursosManager({ rows }: { rows: Row[] }) {
     entityLabel: { singular: "programa", plural: "programas" },
     description:
       "Borra también módulos, lecciones, cohortes/generaciones e inscripciones. " +
-      "ATENCIÓN: programas con ventas pagadas NO se pueden eliminar — se preservan automáticamente. " +
+      "ATENCIÓN: programas con ventas registradas NO se pueden eliminar — se preservan automáticamente. " +
       "Esta acción no se puede deshacer.",
     successMessage: (b) => {
       const parts = [`${b.deleted} ${b.deleted === 1 ? "programa eliminado" : "programas eliminados"}`];
       const blocked = (b as { blocked?: unknown[] }).blocked ?? [];
       if (blocked.length > 0) {
-        parts.push(`${blocked.length} ${blocked.length === 1 ? "bloqueado" : "bloqueados"} por tener ventas pagadas`);
+        parts.push(`${blocked.length} ${blocked.length === 1 ? "bloqueado" : "bloqueados"} por tener ventas registradas`);
       }
       return parts.join(" · ");
     },
@@ -156,7 +157,12 @@ export function CursosManager({ rows }: { rows: Row[] }) {
       const res = await fetch(`/api/admin/programs/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error al borrar");
+        if (j.error === "has_paid_orders" || j.error === "in_use") {
+          throw new Error(
+            "Este programa tiene ventas registradas y no se puede eliminar. Desactívalo en su lugar.",
+          );
+        }
+        throw new Error(apiErrorMessage(j, "Error al borrar"));
       }
       router.refresh();
     } catch (e) {
@@ -370,7 +376,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
       <BulkActionBar
         selectedCount={bulk.size}
         entityLabel={{ singular: "programa", plural: "programas" }}
-        subtitle="PROGRAMAS CON VENTAS PAGADAS SE PRESERVAN AUTOMÁTICAMENTE"
+        subtitle="PROGRAMAS CON VENTAS REGISTRADAS SE PRESERVAN AUTOMÁTICAMENTE"
         onCancel={bulk.clear}
         onDelete={() => bulkDelete.run([...bulk.allSelected])}
         pending={bulkDelete.pending}
@@ -765,17 +771,12 @@ function Field({
 /**
  * Convierte el error JSON del API en un mensaje legible en español.
  * El API devuelve { error: "invalid", details: ZodIssue[] } para 400s de Zod,
- * { error: "slug_in_use" } para 409, etc. Antes mostrábamos solo "invalid"
- * lo cual era inútil — ahora apuntamos al campo y al mensaje del issue.
+ * { error: "slug_in_use" } para 409, etc. apiErrorMessage traduce los issues
+ * de Zod y los códigos genéricos; aquí solo agregamos el caso del slug.
  */
 function humanizeError(j: { error?: string; details?: Array<{ path?: (string | number)[]; message?: string }> }): string {
   if (j?.error === "slug_in_use") return "Ese slug ya está en uso. Cambia el título o el slug.";
-  if (j?.error === "invalid" && Array.isArray(j.details) && j.details.length > 0) {
-    const issue = j.details[0];
-    const field = issue.path?.join(".") ?? "campo";
-    return `${field}: ${issue.message ?? "valor inválido"}`;
-  }
-  return j?.error || "No se pudo guardar";
+  return apiErrorMessage(j, "No se pudo guardar");
 }
 
 function input(): React.CSSProperties {

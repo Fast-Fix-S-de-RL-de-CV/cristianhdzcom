@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatRelative } from "@/lib/utils";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { apiErrorMessage } from "@/lib/apiError";
 import {
   BulkActionBar,
   BulkCheckbox,
@@ -125,10 +126,14 @@ function PostsTab({ posts }: { posts: Post[] }) {
     setBusy(id);
     try {
       const res = await fetch(`/api/admin/posts/${id}/pin`, { method: "PUT" });
-      if (!res.ok) throw new Error("Error");
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        toast.error(apiErrorMessage(j, "No se pudo cambiar el pin"));
+        return;
+      }
       router.refresh();
-    } catch (e) {
-      toast.error((e as Error).message || "No se pudo cambiar el pin");
+    } catch {
+      toast.error("No se pudo cambiar el pin");
     } finally {
       setBusy(null);
     }
@@ -145,10 +150,14 @@ function PostsTab({ posts }: { posts: Post[] }) {
     setBusy(id);
     try {
       const res = await fetch(`/api/admin/posts/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Error");
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        toast.error(apiErrorMessage(j, "No se pudo eliminar el post"));
+        return;
+      }
       router.refresh();
-    } catch (e) {
-      toast.error((e as Error).message || "No se pudo eliminar el post");
+    } catch {
+      toast.error("No se pudo eliminar el post");
     } finally {
       setBusy(null);
     }
@@ -294,10 +303,14 @@ function CommentsTab({ comments }: { comments: Comment[] }) {
     setBusy(id);
     try {
       const res = await fetch(`/api/admin/comments/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Error");
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        toast.error(apiErrorMessage(j, "No se pudo eliminar el comentario"));
+        return;
+      }
       router.refresh();
-    } catch (e) {
-      toast.error((e as Error).message || "No se pudo eliminar el comentario");
+    } catch {
+      toast.error("No se pudo eliminar el comentario");
     } finally {
       setBusy(null);
     }
@@ -425,13 +438,14 @@ function CategoriesTab({ categories }: { categories: Category[] }) {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Error");
+        setErr(j.error === "slug_in_use" ? "Ese slug ya está en uso" : apiErrorMessage(j, "No se pudo guardar"));
+        return;
       }
       setEditing(null);
       setCreating(false);
       router.refresh();
-    } catch (e) {
-      setErr((e as Error).message);
+    } catch {
+      setErr("Error de red — intenta de nuevo");
     } finally {
       setBusy(false);
     }
@@ -447,10 +461,14 @@ function CategoriesTab({ categories }: { categories: Category[] }) {
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Error");
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        toast.error(apiErrorMessage(j, "No se pudo eliminar la categoría"));
+        return;
+      }
       router.refresh();
-    } catch (e) {
-      toast.error((e as Error).message || "No se pudo eliminar la categoría");
+    } catch {
+      toast.error("No se pudo eliminar la categoría");
     } finally {
       setBusy(false);
     }

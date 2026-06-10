@@ -22,11 +22,11 @@ import Stripe from "stripe";
 import { db, schema } from "@/db";
 import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { hashPassword, createSession } from "@/lib/auth";
+import { hashPassword } from "@/lib/auth";
 import { recomputeUserTier } from "@/lib/experience";
 import { accrueCredit, type PlanSlug } from "@/lib/membership";
 import { basePrice } from "@/lib/book-bumps";
-import { bookPurchaseEmailHtml, sendEmail } from "@/lib/email";
+import { bookPurchaseEmailHtml, purchaseAccessEmailHtml, sendEmail } from "@/lib/email";
 
 const SECRET_KEY = process.env.STRIPE_SECRET_KEY ?? "";
 
@@ -175,25 +175,33 @@ export async function finalizeCheckoutSession(
     throw new Error(`session_not_paid_${session.payment_status}`);
   }
 
-  // ¿Ya se procesó?
-  const existing = await findOrderBySessionId(session.id);
-  if (existing) {
-    const meta = (existing.metadata ?? {}) as { kind?: "program" | "book" | "membership" };
-    return {
-      orderId: existing.id,
-      kind: meta.kind ?? "program",
-      createdNewAccount: false,
-    };
-  }
+  // Serializar webhook vs página de confirmación / finish: ambos pueden
+  // llegar en el mismo instante. El advisory lock por session id hace que
+  // el segundo espere a que el primero commitee, y el re-check dentro del
+  // lock garantiza que no se dupliquen orders/crédito/cupones.
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${session.id}))`);
 
-  const meta = session.metadata ?? {};
-  const kind = meta.kind as "program" | "book" | "membership" | undefined;
-  if (!kind) throw new Error("session_missing_metadata_kind");
+    // ¿Ya se procesó? (re-check DENTRO del lock)
+    const existing = await findOrderBySessionId(session.id);
+    if (existing) {
+      const meta = (existing.metadata ?? {}) as { kind?: "program" | "book" | "membership" };
+      return {
+        orderId: existing.id,
+        kind: meta.kind ?? "program",
+        createdNewAccount: false,
+      };
+    }
 
-  if (kind === "program") return finalizeProgramOrder(session);
-  if (kind === "book") return finalizeBookOrder(session);
-  if (kind === "membership") return finalizeMembershipOrder(session);
-  throw new Error(`unknown_kind_${kind}`);
+    const meta = session.metadata ?? {};
+    const kind = meta.kind as "program" | "book" | "membership" | undefined;
+    if (!kind) throw new Error("session_missing_metadata_kind");
+
+    if (kind === "program") return finalizeProgramOrder(session);
+    if (kind === "book") return finalizeBookOrder(session);
+    if (kind === "membership") return finalizeMembershipOrder(session);
+    throw new Error(`unknown_kind_${kind}`);
+  });
 }
 
 /* ────────────────── PROGRAM ────────────────── */
@@ -290,7 +298,16 @@ async function finalizeProgramOrder(session: Stripe.Checkout.Session) {
       } as Record<string, unknown>,
       paidAt: new Date(),
     })
+    // Defensa en profundidad: índice único por expresión sobre
+    // metadata->>'stripeSessionId' (además del advisory lock del caller).
+    .onConflictDoNothing()
     .returning();
+
+  if (!order) {
+    const existing = await findOrderBySessionId(session.id);
+    if (existing) return { orderId: existing.id, kind: "program" as const, createdNewAccount: false };
+    throw new Error("order_conflict_unresolved");
+  }
 
   await db
     .insert(schema.enrollments)
@@ -301,6 +318,21 @@ async function finalizeProgramOrder(session: Stripe.Checkout.Session) {
     reason: "order_paid",
     sourceOrderId: order.id,
   }).catch((e) => console.error("[stripe.finalize program] tier:", e));
+
+  // Cuenta creada en este checkout → mandar la contraseña temporal por
+  // correo (la página de confirmación se lo promete al comprador).
+  if (resolved.tempPassword) {
+    const firstName = buyerName.split(" ")[0] || buyerName;
+    sendEmail({
+      to: buyerEmail,
+      subject: `Tu acceso a "${program.title}" está listo`,
+      html: purchaseAccessEmailHtml({
+        firstName,
+        itemTitle: program.title,
+        tempPassword: resolved.tempPassword,
+      }),
+    }).catch((err) => console.error("[stripe.finalize program] email:", err));
+  }
 
   await db
     .insert(schema.activity)
@@ -406,7 +438,14 @@ async function finalizeBookOrder(session: Stripe.Checkout.Session) {
       } as Record<string, unknown>,
       paidAt: new Date(),
     })
+    .onConflictDoNothing()
     .returning();
+
+  if (!order) {
+    const existing = await findOrderBySessionId(session.id);
+    if (existing) return { orderId: existing.id, kind: "book" as const, createdNewAccount: false };
+    throw new Error("order_conflict_unresolved");
+  }
 
   await recomputeUserTier(resolved.userId, {
     reason: "order_paid",
@@ -520,7 +559,14 @@ async function finalizeMembershipOrder(session: Stripe.Checkout.Session) {
       } as Record<string, unknown>,
       paidAt: now,
     })
+    .onConflictDoNothing()
     .returning();
+
+  if (!order) {
+    const existing = await findOrderBySessionId(session.id);
+    if (existing) return { orderId: existing.id, kind: "membership" as const, createdNewAccount: false };
+    throw new Error("order_conflict_unresolved");
+  }
 
   let membershipId: string;
   if (!activeAlready) {
@@ -560,6 +606,20 @@ async function finalizeMembershipOrder(session: Stripe.Checkout.Session) {
     sourceOrderId: order.id,
   }).catch(() => {});
 
+  // Cuenta creada en este checkout → mandar la contraseña temporal por correo.
+  if (resolved.tempPassword) {
+    const firstName = buyerName.split(" ")[0] || buyerName;
+    sendEmail({
+      to: buyerEmail,
+      subject: `Bienvenido a ${plan.label} — tu cuenta está lista`,
+      html: purchaseAccessEmailHtml({
+        firstName,
+        itemTitle: `Membresía ${plan.label}`,
+        tempPassword: resolved.tempPassword,
+      }),
+    }).catch((err) => console.error("[stripe.finalize membership] email:", err));
+  }
+
   await db
     .insert(schema.activity)
     .values({
@@ -577,12 +637,6 @@ async function finalizeMembershipOrder(session: Stripe.Checkout.Session) {
   };
 }
 
-/* ─────────── Helper: abrir sesión web al volver de Stripe ───────────
- * El webhook corre server-to-server (sin user). Si la cuenta se creó en el
- * webhook, la sesión web se abrirá cuando el navegador del comprador vuelva
- * a la página de confirmación y llamemos a `loginUserIfNeeded(userId)`.
- */
-export async function loginUserIfNeeded(userId: string): Promise<void> {
-  // createSession ya escribe la cookie httpOnly de sesión.
-  await createSession(userId).catch(() => {});
-}
+/* La sesión web del comprador se abre en GET /api/checkout/finish (Route
+ * Handler, único contexto donde Next permite escribir cookies). Las páginas
+ * de confirmación NO pueden setear cookies durante el render. */

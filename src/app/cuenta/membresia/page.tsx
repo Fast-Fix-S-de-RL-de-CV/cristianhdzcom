@@ -9,7 +9,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { getActiveMembership, getCreditBalance } from "@/lib/membership";
 import { MembershipManageClient } from "./MembershipManageClient";
-import { getStripe, finalizeCheckoutSession, loginUserIfNeeded, isStripeConfigured } from "@/lib/stripe";
+import { getStripe, finalizeCheckoutSession, isStripeConfigured } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -33,15 +33,10 @@ export default async function MembresiaCuentaPage({
         .where(sql`${schema.orders.metadata}->>'stripeSessionId' = ${sp.session_id}`)
         .limit(1);
       if (!existing && (session.payment_status === "paid" || session.mode === "subscription")) {
-        const result = await finalizeCheckoutSession(session);
-        if (result.createdNewAccount) {
-          const [newOrder] = await db
-            .select({ userId: schema.orders.userId })
-            .from(schema.orders)
-            .where(eq(schema.orders.id, result.orderId))
-            .limit(1);
-          if (newOrder?.userId) await loginUserIfNeeded(newOrder.userId);
-        }
+        // Fallback si ni el webhook ni /api/checkout/finish procesaron aún.
+        // El login del comprador nuevo lo abre /api/checkout/finish (una
+        // página no puede escribir cookies durante el render).
+        await finalizeCheckoutSession(session);
       }
     } catch (e) {
       console.error("[cuenta/membresia] finalize:", e);

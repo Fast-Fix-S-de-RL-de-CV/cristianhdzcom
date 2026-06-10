@@ -9,6 +9,7 @@ import {
   useBulkDelete,
   useBulkSelection,
 } from "@/components/admin/BulkActions";
+import { apiErrorMessage } from "@/lib/apiError";
 
 export type ServiceRow = {
   id: string;
@@ -376,9 +377,7 @@ function ServiceDialog({
         const msg =
           json.error === "slug_taken"
             ? "Ese slug ya está en uso."
-            : json.error === "invalid"
-              ? "Validación falló — revisa los campos."
-              : "No se pudo guardar.";
+            : apiErrorMessage(json, "No se pudo guardar.");
         setErr(msg);
         return;
       }
@@ -543,6 +542,7 @@ function ServiceDialog({
                   onChange={(e) => setForm({ ...form, tagline: e.target.value })}
                   style={inputStyle()}
                   placeholder="PUNTO DE VENTA, E-COMMERCE, etc."
+                  maxLength={80}
                 />
               </Field>
             </div>
@@ -628,6 +628,7 @@ function ServiceDialog({
                   onChange={(e) => setForm({ ...form, metricLabel: e.target.value })}
                   style={inputStyle()}
                   placeholder="+ 2.400 negocios"
+                  maxLength={80}
                 />
               </Field>
             </div>
@@ -641,6 +642,7 @@ function ServiceDialog({
                   onChange={(e) => setForm({ ...form, priceLabel: e.target.value })}
                   style={inputStyle()}
                   placeholder="Desde $29/mes, Comisión 8%, Hablemos…"
+                  maxLength={60}
                 />
               </Field>
             </div>
@@ -651,6 +653,7 @@ function ServiceDialog({
                   onChange={(e) => setForm({ ...form, ctaLabel: e.target.value })}
                   style={inputStyle()}
                   placeholder="Ver SaaS →, Cotizar →"
+                  maxLength={60}
                 />
               </Field>
             </div>

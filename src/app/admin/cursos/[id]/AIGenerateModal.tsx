@@ -1,6 +1,10 @@
 "use client";
 import { useRef, useState } from "react";
 import { useToast } from "@/components/ui/ConfirmProvider";
+import { apiErrorMessage } from "@/lib/apiError";
+
+/** El API limita sourceText a 60,000 chars (z.max en ai-generate). */
+const MAX_SOURCE_CHARS = 60_000;
 
 /**
  * AIGenerateModal — Estructura un curso completo con Claude.
@@ -51,11 +55,14 @@ export function AIGenerateModal({
       const res = await fetch("/api/admin/extract-text", { method: "POST", body: fd });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(j.message || j.error || "No se pudo extraer texto del archivo");
+        toast.error(j.message || apiErrorMessage(j, "No se pudo extraer texto del archivo"));
         return;
       }
-      setSourceText(j.text || "");
-      setFileMeta({ name: file.name, chars: j.chars ?? (j.text?.length ?? 0) });
+      const text = (j.text || "").slice(0, MAX_SOURCE_CHARS);
+      setSourceText(text);
+      setFileMeta({ name: file.name, chars: text.length });
+    } catch {
+      toast.error("No se pudo procesar el archivo — revisa tu conexión");
     } finally {
       setExtracting(false);
     }
@@ -87,8 +94,7 @@ export function AIGenerateModal({
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = j.message || j.error || "Falló la generación";
-        toast.error(msg);
+        toast.error(j.message || apiErrorMessage(j, "Falló la generación"));
         return;
       }
       toast.success(`Generados ${j.modulesCreated} módulos y ${j.lessonsCreated} lecciones`);
@@ -231,7 +237,8 @@ export function AIGenerateModal({
             <div style={{ position: "relative", marginTop: 12 }}>
               <textarea
                 value={sourceText}
-                onChange={(e) => setSourceText(e.target.value)}
+                maxLength={MAX_SOURCE_CHARS}
+                onChange={(e) => setSourceText(e.target.value.slice(0, MAX_SOURCE_CHARS))}
                 placeholder="…o pega aquí directamente el texto (libro, manual, transcripción, lo que tengas)"
                 style={{
                   width: "100%",
@@ -254,13 +261,14 @@ export function AIGenerateModal({
                   bottom: 8,
                   right: 12,
                   fontSize: 10,
-                  color: "var(--muted)",
+                  color: sourceText.length >= MAX_SOURCE_CHARS ? "#b32f1a" : "var(--muted)",
                   background: "rgba(255,255,255,0.85)",
                   padding: "2px 6px",
                   borderRadius: 4,
                 }}
               >
-                {sourceText.length.toLocaleString("es-MX")} chars
+                {sourceText.length.toLocaleString("es-MX")} / {MAX_SOURCE_CHARS.toLocaleString("es-MX")} chars
+                {sourceText.length >= MAX_SOURCE_CHARS && " · límite alcanzado, el texto se truncó"}
               </div>
             </div>
           </section>

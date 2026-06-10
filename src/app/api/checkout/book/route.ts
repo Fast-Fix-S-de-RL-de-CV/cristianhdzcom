@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { eq, inArray } from "drizzle-orm";
-import { basePrice } from "@/lib/book-bumps";
+import { eq } from "drizzle-orm";
+import { basePrice, computeBumps } from "@/lib/book-bumps";
 import {
   getStripe,
   siteUrl,
@@ -24,7 +24,9 @@ export const runtime = "nodejs";
 const BumpItem = z.object({
   productSlug: z.string().min(2).max(80),
   variant: z.enum(["digital", "physical", "bundle"]),
-  priceUsd: z.number().int().min(0).max(99999),
+  // Aceptado por compatibilidad pero IGNORADO: el precio se recalcula
+  // server-side con computeBumps (nunca se confía en el del cliente).
+  priceUsd: z.number().int().min(0).max(99999).optional(),
 });
 
 const ShippingAddress = z.object({
@@ -91,27 +93,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "out_of_stock" }, { status: 409 });
   }
 
-  // 5. Validar y enriquecer bumps con título (un solo query por slugs)
-  const bumpSlugs = data.bumps.map((b) => b.productSlug);
-  const bumpProducts = bumpSlugs.length > 0
-    ? await db.select().from(schema.books).where(inArray(schema.books.slug, bumpSlugs))
-    : [];
-
-  const validatedBumps: { slug: string; variant: "digital" | "physical" | "bundle"; priceUsd: number; title: string }[] = [];
-  for (const b of data.bumps) {
-    const prod = bumpProducts.find((p) => p.slug === b.productSlug);
-    if (!prod || !prod.isActive) continue;
-    const variantOk =
-      (b.variant === "digital" && prod.hasDigital) ||
-      (b.variant === "physical" && prod.hasPhysical) ||
-      (b.variant === "bundle" && prod.isBundle);
-    if (!variantOk) continue;
-    validatedBumps.push({
-      slug: prod.slug,
-      variant: b.variant,
-      priceUsd: b.priceUsd,
-      title: `${prod.title} (${b.variant})`,
-    });
+  // 5. Validar bumps contra el motor server-side: solo se aceptan bumps que
+  // computeBumps realmente ofrece para este producto/formato, y el precio
+  // SIEMPRE sale del cálculo del servidor (el del cliente se ignora).
+  let validatedBumps: { slug: string; variant: "digital" | "physical" | "bundle"; priceUsd: number; title: string }[] = [];
+  if (data.bumps.length > 0) {
+    const catalog = await db
+      .select()
+      .from(schema.books)
+      .where(eq(schema.books.isActive, true));
+    const offered = computeBumps({ product, format: data.format, catalog });
+    const collected: typeof validatedBumps = [];
+    for (const b of data.bumps) {
+      const match = offered.find((o) => o.productSlug === b.productSlug && o.variant === b.variant);
+      const prod = catalog.find((p) => p.slug === b.productSlug);
+      if (!match || !prod) {
+        return NextResponse.json({ error: "invalid_bump" }, { status: 400 });
+      }
+      collected.push({
+        slug: prod.slug,
+        variant: b.variant,
+        priceUsd: match.priceUsd,
+        title: `${prod.title} (${b.variant})`,
+      });
+    }
+    validatedBumps = collected;
   }
 
   const baseUsd = basePrice(product, data.format);
@@ -182,7 +188,9 @@ export async function POST(req: Request) {
     shipping_address_collection: needsShipping
       ? { allowed_countries: ["MX", "US", "CA", "ES", "AR", "CO", "PE", "CL", "BR", "EC", "GT", "DO", "BO", "UY", "VE", "PA", "CR", "HN", "SV", "NI", "PY"] }
       : undefined,
-    success_url: `${siteUrl()}/checkout/libro/${product.slug}/confirmacion?session_id={CHECKOUT_SESSION_ID}`,
+    // Pasamos por /api/checkout/finish (Route Handler): finaliza la orden
+    // y abre la sesión web del comprador antes de mostrar la confirmación.
+    success_url: `${siteUrl()}/api/checkout/finish?session_id={CHECKOUT_SESSION_ID}&next=${encodeURIComponent(`/checkout/libro/${product.slug}/confirmacion`)}`,
     cancel_url: `${siteUrl()}/checkout/libro/${product.slug}?cancelled=1`,
     metadata: {
       kind: "book",

@@ -88,6 +88,18 @@ export async function POST(req: Request) {
     .from(schema.orders)
     .where(inArray(schema.orders.userId, eligible));
 
+  // Posts where these users commented or liked: the cascade wipes those rows,
+  // so the denormalized counters must be recomputed afterwards.
+  const commentPosts = await db
+    .select({ postId: schema.comments.postId })
+    .from(schema.comments)
+    .where(inArray(schema.comments.authorId, eligible));
+  const likePosts = await db
+    .select({ postId: schema.postLikes.postId })
+    .from(schema.postLikes)
+    .where(inArray(schema.postLikes.userId, eligible));
+  const affectedPostIds = [...new Set([...commentPosts, ...likePosts].map((r) => r.postId))];
+
   // DELETE — Postgres handles all the cascades from schema.ts.
   await db
     .delete(schema.users)
@@ -98,6 +110,18 @@ export async function POST(req: Request) {
         ne(schema.users.id, me.id),
       ),
     );
+
+  // Recompute commentsCount / likesCount on the surviving affected posts
+  // (posts authored by the deleted users were cascaded away — no-op for them).
+  if (affectedPostIds.length > 0) {
+    await db
+      .update(schema.posts)
+      .set({
+        commentsCount: sql<number>`(SELECT count(*)::int FROM comments c WHERE c.post_id = ${schema.posts.id})`,
+        likesCount: sql<number>`(SELECT count(*)::int FROM post_likes l WHERE l.post_id = ${schema.posts.id})`,
+      })
+      .where(inArray(schema.posts.id, affectedPostIds));
+  }
 
   return NextResponse.json({
     ok: true,

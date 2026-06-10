@@ -48,12 +48,27 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const json = await req.json().catch(() => ({}));
   const parsed = postBody.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
+    return NextResponse.json({ error: "invalid", details: parsed.error.issues }, { status: 400 });
   }
 
   // Verify lesson exists
   const [lesson] = await db.select().from(schema.lessons).where(eq(schema.lessons.id, lessonId)).limit(1);
   if (!lesson) return NextResponse.json({ error: "lesson_not_found" }, { status: 404 });
+
+  // If replying, the parent must exist and belong to this same lesson.
+  if (parsed.data.parentId) {
+    const [parent] = await db
+      .select()
+      .from(schema.lessonComments)
+      .where(
+        and(
+          eq(schema.lessonComments.id, parsed.data.parentId),
+          eq(schema.lessonComments.lessonId, lessonId),
+        ),
+      )
+      .limit(1);
+    if (!parent) return NextResponse.json({ error: "parent_not_found" }, { status: 400 });
+  }
 
   const [inserted] = await db
     .insert(schema.lessonComments)

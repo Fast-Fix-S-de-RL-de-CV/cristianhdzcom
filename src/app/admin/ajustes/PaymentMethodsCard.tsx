@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { SelectField } from "@/components/ui/SelectField";
+import { apiErrorMessage } from "@/lib/apiError";
 
 /**
  * Tarjeta de configuración de métodos de pago para /admin/ajustes.
@@ -66,17 +68,25 @@ export function PaymentMethodsCard() {
   const confirm = useConfirm();
   const [state, setState] = useState<Settings>(EMPTY);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [show, setShow] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
+  function load() {
+    setLoading(true);
+    setLoadFailed(false);
     fetch("/api/admin/payment-settings")
       .then((r) => r.json())
       .then((j) => {
         if (j.settings) setState({ ...EMPTY, ...j.settings, bankAccounts: j.settings.bankAccounts ?? [] });
+        else setLoadFailed(true);
       })
-      .catch(() => {})
+      .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    load();
   }, []);
 
   function set<K extends keyof Settings>(key: K, value: Settings[K]) {
@@ -115,21 +125,21 @@ export function PaymentMethodsCard() {
       const res = await fetch("/api/admin/payment-settings", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(state),
+        body: JSON.stringify({
+          ...state,
+          // La API exige banco y titular: descarta cuentas a medio llenar
+          bankAccounts: state.bankAccounts.filter((b) => b.bankName.trim() && b.accountHolder.trim()),
+        }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg =
-          j?.details?.[0]
-            ? `${j.details[0].path?.join(".") ?? "campo"}: ${j.details[0].message}`
-            : j.error || "No se pudo guardar";
-        toast.error(msg);
+        toast.error(apiErrorMessage(j, "No se pudo guardar"));
         return;
       }
       if (j.settings) setState({ ...EMPTY, ...j.settings, bankAccounts: j.settings.bankAccounts ?? [] });
       toast.success("Métodos de pago guardados");
-    } catch (e) {
-      toast.error((e as Error).message);
+    } catch {
+      toast.error("Error de red — intenta de nuevo");
     } finally {
       setSaving(false);
     }
@@ -145,6 +155,35 @@ export function PaymentMethodsCard() {
 
   return (
     <div className="col" style={{ gap: 16 }}>
+      {loadFailed && (
+        <div
+          style={{
+            padding: "12px 16px",
+            borderRadius: 10,
+            border: "1px solid color-mix(in srgb, var(--red) 35%, white)",
+            background: "color-mix(in srgb, var(--red) 8%, white)",
+            color: "var(--red)",
+            fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <span>
+            No se pudo cargar la configuración de pagos. El guardado está deshabilitado para no
+            sobrescribir tus credenciales con valores vacíos.
+          </span>
+          <button
+            type="button"
+            onClick={load}
+            className="btn btn-ghost"
+            style={{ padding: "6px 12px", fontSize: 12, flexShrink: 0 }}
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
       {/* Stripe */}
       <MethodCard
         title="Stripe"
@@ -155,16 +194,17 @@ export function PaymentMethodsCard() {
         color="#635BFF"
       >
         <div className="row" style={{ gap: 12, alignItems: "flex-end" }}>
-          <div style={{ width: 140 }}>
-            <Label>Modo</Label>
-            <select
+          <div style={{ width: 170 }}>
+            <SelectField
+              label="Modo"
+              size="md"
               value={state.stripeMode || "test"}
-              onChange={(e) => set("stripeMode", e.target.value as "test" | "live")}
-              style={inputStyle()}
-            >
-              <option value="test">Test</option>
-              <option value="live">Live (producción)</option>
-            </select>
+              onChange={(v) => set("stripeMode", v as "test" | "live")}
+              options={[
+                { value: "test", label: "Test" },
+                { value: "live", label: "Live (producción)" },
+              ]}
+            />
           </div>
           <div style={{ flex: 1 }}>
             <Label>Publishable key</Label>
@@ -204,16 +244,17 @@ export function PaymentMethodsCard() {
         color="#003087"
       >
         <div className="row" style={{ gap: 12, alignItems: "flex-end" }}>
-          <div style={{ width: 140 }}>
-            <Label>Modo</Label>
-            <select
+          <div style={{ width: 170 }}>
+            <SelectField
+              label="Modo"
+              size="md"
               value={state.paypalMode || "sandbox"}
-              onChange={(e) => set("paypalMode", e.target.value as "sandbox" | "live")}
-              style={inputStyle()}
-            >
-              <option value="sandbox">Sandbox</option>
-              <option value="live">Live</option>
-            </select>
+              onChange={(v) => set("paypalMode", v as "sandbox" | "live")}
+              options={[
+                { value: "sandbox", label: "Sandbox" },
+                { value: "live", label: "Live" },
+              ]}
+            />
           </div>
           <div style={{ flex: 1 }}>
             <Label>Client ID</Label>
@@ -338,16 +379,13 @@ export function PaymentMethodsCard() {
                 />
               </div>
               <div style={{ width: 110 }}>
-                <Label>Moneda</Label>
-                <select
+                <SelectField
+                  label="Moneda"
+                  size="md"
                   value={b.currency || "MXN"}
-                  onChange={(e) => updateBank(i, { currency: e.target.value })}
-                  style={inputStyle()}
-                >
-                  <option value="MXN">MXN</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                </select>
+                  onChange={(v) => updateBank(i, { currency: v })}
+                  options={["MXN", "USD", "EUR"]}
+                />
               </div>
             </div>
             <div className="row" style={{ gap: 10 }}>
@@ -433,7 +471,7 @@ export function PaymentMethodsCard() {
         <button
           type="button"
           onClick={save}
-          disabled={saving}
+          disabled={saving || loadFailed}
           className="btn btn-primary"
           style={{ padding: "10px 18px", fontSize: 13 }}
         >

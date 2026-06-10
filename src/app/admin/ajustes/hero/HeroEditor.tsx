@@ -2,6 +2,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/ConfirmProvider";
+import { apiErrorMessage } from "@/lib/apiError";
 
 type Stat = { value: string; label: string };
 
@@ -50,10 +51,15 @@ export function HeroEditor({ initial }: { initial: Settings }) {
         const res = await fetch("/api/admin/site-settings", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            ...form,
+            // La API rechaza stats con value/label vacíos: descarta filas a medio llenar
+            heroStats: form.heroStats.filter((s) => s.value.trim() && s.label.trim()),
+          }),
         });
         if (!res.ok) {
-          toast.error("No se pudo guardar.");
+          const j = await res.json().catch(() => null);
+          toast.error(apiErrorMessage(j, "No se pudo guardar."));
           return;
         }
         toast.success("Hero actualizado.");
@@ -122,10 +128,10 @@ export function HeroEditor({ initial }: { initial: Settings }) {
 
           <Section title="Título y subtítulo">
             <Field label="Eyebrow (texto pequeño arriba del título)">
-              <input value={form.heroEyebrow} onChange={(e) => update("heroEyebrow", e.target.value)} style={inputStyle()} />
+              <input value={form.heroEyebrow} onChange={(e) => update("heroEyebrow", e.target.value)} maxLength={40} style={inputStyle()} />
             </Field>
             <Field label="Título grande (h1)">
-              <input value={form.heroTitle} onChange={(e) => update("heroTitle", e.target.value)} style={inputStyle()} />
+              <input value={form.heroTitle} onChange={(e) => update("heroTitle", e.target.value)} maxLength={120} style={inputStyle()} />
             </Field>
             <div className="row" style={{ gap: 12 }}>
               <div style={{ flex: 1 }}>
@@ -178,6 +184,7 @@ export function HeroEditor({ initial }: { initial: Settings }) {
                   <input
                     value={form.heroCtaPrimaryLabel}
                     onChange={(e) => update("heroCtaPrimaryLabel", e.target.value)}
+                    maxLength={40}
                     style={inputStyle()}
                   />
                 </Field>
@@ -187,6 +194,7 @@ export function HeroEditor({ initial }: { initial: Settings }) {
                   <input
                     value={form.heroCtaSecondaryLabel}
                     onChange={(e) => update("heroCtaSecondaryLabel", e.target.value)}
+                    maxLength={40}
                     style={inputStyle()}
                   />
                 </Field>
@@ -301,12 +309,14 @@ export function HeroEditor({ initial }: { initial: Settings }) {
                     value={s.value}
                     onChange={(e) => updateStat(i, { value: e.target.value })}
                     placeholder="14"
+                    maxLength={20}
                     style={{ ...inputStyle(), width: 90 }}
                   />
                   <input
                     value={s.label}
                     onChange={(e) => updateStat(i, { label: e.target.value })}
                     placeholder="MARCAS SAAS"
+                    maxLength={40}
                     style={{ ...inputStyle(), flex: 1 }}
                   />
                   <button

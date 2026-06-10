@@ -268,6 +268,51 @@ export function bookPurchaseEmailHtml(opts: {
   return shell(`Tu copia de "${bookTitle}" está lista`, body);
 }
 
+/** Email de acceso tras comprar un PROGRAMA o MEMBRESÍA. Mismo patrón que
+ *  bookPurchaseEmailHtml: incluye la contraseña temporal cuando la cuenta
+ *  se creó durante el checkout. */
+export function purchaseAccessEmailHtml(opts: {
+  firstName: string;
+  itemTitle: string;
+  tempPassword: string | null;
+}): string {
+  const { firstName, itemTitle, tempPassword } = opts;
+  const accountBlock = tempPassword
+    ? `<div style="margin:24px 0;padding:18px 20px;background:#F4EDD9;border-radius:10px;border:1px solid ${GOLD};">
+        <p style="font-size:13px;color:#1A3458;margin:0 0 10px;font-weight:600;">
+          🔑 Te creamos una cuenta para ti
+        </p>
+        <p style="font-size:13px;color:#1A3458;margin:0 0 6px;line-height:1.5;">
+          Tu contraseña temporal:
+        </p>
+        <code style="display:inline-block;background:white;border:1px solid #D9D2BF;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:14px;color:#1A3458;letter-spacing:0.04em;">${escapeHtml(tempPassword)}</code>
+        <p style="font-size:12px;color:#6E7A91;margin:10px 0 0;line-height:1.5;">
+          Úsala para entrar en <a href="https://cristianhdz.com/login" style="color:${GOLD};font-weight:600;">cristianhdz.com/login</a> y cámbiala desde "Mi cuenta".
+        </p>
+      </div>`
+    : "";
+
+  const body = `
+    <p style="font-size:15px;line-height:1.6;color:#1A3458;margin:0 0 16px;">
+      ${escapeHtml(firstName) || "Hola"}, ¡gracias por tu compra!
+    </p>
+    <p style="font-size:15px;line-height:1.6;color:#1A3458;margin:0 0 16px;">
+      Tu acceso a <strong>${escapeHtml(itemTitle)}</strong> ya está listo.
+    </p>
+    ${accountBlock}
+    <div style="text-align:center;margin:24px 0;">
+      <a href="https://cristianhdz.com/plataforma"
+         style="display:inline-block;background:${BRAND_COLOR};color:#FAF3DC;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
+        Ir a mi plataforma →
+      </a>
+    </div>
+    <p style="font-size:13px;color:#6E7A91;line-height:1.6;margin:16px 0 0;">
+      ¿Algún problema? Escríbeme a <a href="mailto:info@cristianhdz.com" style="color:${GOLD};font-weight:600;">info@cristianhdz.com</a> y te respondo personalmente.
+    </p>
+  `;
+  return shell(`Tu acceso a ${itemTitle} está listo`, body);
+}
+
 function escapeHtml(s: string): string {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
