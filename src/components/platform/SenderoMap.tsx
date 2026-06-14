@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -121,12 +121,8 @@ export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
   }
 
   function toggleExpand(id: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    // Acordeón de uno solo: abrir un módulo cierra los demás (no se enciman).
+    setExpanded((prev) => (prev.has(id) ? new Set<string>() : new Set<string>([id])));
   }
 
   return (
@@ -319,6 +315,7 @@ export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
               isLocked={isLocked}
               isDone={isDone}
               side={cardOnLeft ? "left" : "right"}
+              vAlign={i === 0 ? "top" : i === modules.length - 1 ? "bottom" : "center"}
               size={size}
               onContinue={() => onActiveClick(m)}
               onToggle={() => toggleExpand(m.id)}
@@ -346,6 +343,7 @@ function ModuleCard({
   isLocked,
   isDone,
   side,
+  vAlign,
   size,
   onContinue,
   onToggle,
@@ -358,6 +356,7 @@ function ModuleCard({
   isLocked: boolean;
   isDone: boolean;
   side: "left" | "right";
+  vAlign: "top" | "center" | "bottom";
   size: number;
   onContinue: () => void;
   onToggle: () => void;
@@ -366,6 +365,14 @@ function ModuleCard({
   router: ReturnType<typeof useRouter>;
 }) {
   const offset = size / 2 + 22;
+  // Al expandir, anclar según la posición para no salir del mapa: la primera
+  // card crece hacia abajo, la última hacia arriba, las de en medio centradas.
+  const vPos: CSSProperties =
+    isExpanded && vAlign === "top"
+      ? { top: 0 }
+      : isExpanded && vAlign === "bottom"
+        ? { bottom: 0 }
+        : { top: "50%", transform: "translateY(-50%)" };
   const isProject = mod.isBig;
   const stateLabel: { text: string; bg: string; color: string; icon?: string } = isActive
     ? { text: "ACTUAL", bg: "#F2C65A", color: "#5d3d0a", icon: "●" }
@@ -388,8 +395,7 @@ function ModuleCard({
     <div
       style={{
         position: "absolute",
-        top: "50%",
-        transform: "translateY(-50%)",
+        ...vPos,
         [side]: offset,
         width: 300,
         background: "#FFFDF8",
@@ -520,6 +526,13 @@ function ModuleCard({
             display: "flex",
             flexDirection: "column",
             gap: 6,
+            // Acotado con scroll interno para que la card no crezca de más ni
+            // se salga del mapa cuando el módulo tiene muchas lecciones.
+            maxHeight: 260,
+            overflowY: "auto",
+            overflowX: "hidden",
+            marginRight: -4,
+            paddingRight: 4,
           }}
         >
           {mod.lessons.map((l, idx) => {
