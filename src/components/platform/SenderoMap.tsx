@@ -235,7 +235,11 @@ export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
         const isActive = m.state === "current" || m.state === "in_progress";
         const isDone = m.state === "done";
         const isLocked = m.state === "locked";
-        const cardOnLeft = pt.xPct > 50;
+        // La card va SIEMPRE hacia el centro del mapa (si no, se sale por el
+        // borde). Nota: por cómo se ancla, side="left" la dibuja a la derecha
+        // del nodo y side="right" a la izquierda → nodo a la izquierda usa
+        // "left" (apunta a la derecha) y viceversa.
+        const cardOnLeft = pt.xPct < 50;
         const pending = pendingId === m.id;
         const kind = pickNodeAsset(m);
         const isExpanded = expanded.has(m.id);
