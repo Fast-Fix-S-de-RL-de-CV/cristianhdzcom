@@ -111,6 +111,11 @@ export function OutlineEditor({
       return;
     }
     const next = applyDrop(tree, dragInfo, dropTarget);
+    // Si movimos una lección a otro módulo, expándelo para ver el resultado.
+    if (dragInfo.type === "lesson" && "moduleId" in dropTarget && dropTarget.moduleId) {
+      const destMod = dropTarget.moduleId;
+      setExpanded((prev) => new Set(prev).add(destMod));
+    }
     setDragInfo(null);
     setDropTarget(null);
     if (!next) return;
@@ -297,6 +302,9 @@ export function OutlineEditor({
           const isExpanded = expanded.has(m.id);
           const dragTargetHere =
             dropTarget?.kind === "module" && dropTarget.moduleId === m.id;
+          // Una lección se está soltando dentro de este módulo (header o zona final).
+          const lessonDropHere =
+            dragInfo?.type === "lesson" && dropTarget?.kind === "module-end" && dropTarget.moduleId === m.id;
           return (
             <div key={m.id} style={{ position: "relative" }}>
               {/* Drop guide above module */}
@@ -309,6 +317,11 @@ export function OutlineEditor({
                 onDragOver={(e) => {
                   e.preventDefault();
                   if (!dragInfo) return;
+                  // Arrastrar una lección sobre el módulo = moverla a ese módulo.
+                  if (dragInfo.type === "lesson") {
+                    onDragOver(e, { kind: "module-end", moduleId: m.id });
+                    return;
+                  }
                   const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
                   const pos: "before" | "after" =
                     e.clientY < rect.top + rect.height / 2 ? "before" : "after";
@@ -322,8 +335,10 @@ export function OutlineEditor({
                   alignItems: "center",
                   gap: 10,
                   padding: "10px 12px",
-                  background: "white",
-                  border: `1.5px solid ${isExpanded ? "rgba(216,168,63,0.35)" : "var(--line)"}`,
+                  background: lessonDropHere ? "color-mix(in srgb, var(--gold) 12%, white)" : "white",
+                  border: `1.5px solid ${
+                    lessonDropHere ? "var(--gold)" : isExpanded ? "rgba(216,168,63,0.35)" : "var(--line)"
+                  }`,
                   borderRadius: 12,
                   cursor: dragInfo?.type === "module" && dragInfo.moduleId === m.id ? "grabbing" : "grab",
                   boxShadow:
@@ -528,22 +543,30 @@ export function OutlineEditor({
                   })}
 
                   {/* Drop zone "module-end" so you can drop a lesson at the bottom of an empty/short module */}
-                  <div
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      if (!dragInfo || dragInfo.type !== "lesson") return;
-                      onDragOver(e, { kind: "module-end", moduleId: m.id });
-                    }}
-                    onDrop={onDrop}
-                    style={{
-                      minHeight: 6,
-                      borderRadius: 4,
-                      background:
-                        dropTarget?.kind === "module-end" && dropTarget.moduleId === m.id
-                          ? "color-mix(in srgb, var(--gold) 20%, white)"
-                          : "transparent",
-                    }}
-                  />
+                  {dragInfo?.type === "lesson" ? (
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        onDragOver(e, { kind: "module-end", moduleId: m.id });
+                      }}
+                      onDrop={onDrop}
+                      style={{
+                        minHeight: 32,
+                        borderRadius: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: lessonDropHere ? "var(--gold-deep)" : "var(--muted)",
+                        border: `1.5px dashed ${lessonDropHere ? "var(--gold)" : "rgba(216,168,63,0.35)"}`,
+                        background: lessonDropHere ? "color-mix(in srgb, var(--gold) 14%, white)" : "transparent",
+                        transition: "all 0.12s",
+                      }}
+                    >
+                      Soltar aquí para mover a este módulo
+                    </div>
+                  ) : null}
 
                   {/* Quick add lesson */}
                   <div className="row" style={{ gap: 8, marginTop: 2, padding: "4px 0" }}>
