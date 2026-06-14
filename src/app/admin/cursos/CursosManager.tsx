@@ -139,7 +139,8 @@ export function CursosManager({ rows }: { rows: Row[] }) {
       body: JSON.stringify({ isActive: next }),
     });
     if (!res.ok) {
-      toast.error("No se pudo cambiar el estado");
+      const j = await res.json().catch(() => null);
+      toast.error(apiErrorMessage(j, "No se pudo cambiar el estado"));
       throw new Error("toggle_failed");
     }
     router.refresh();

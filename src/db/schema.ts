@@ -207,6 +207,10 @@ export const lessons = pgTable("lessons", {
   // Video support — Vimeo today, YouTube reserved for later.
   videoProvider: varchar("video_provider", { length: 20 }), // "vimeo" | "youtube" | null
   videoId: varchar("video_id", { length: 60 }),             // numeric id for Vimeo
+  // URL cruda tal como la pegó el admin (incluso si aún no es válida): permite
+  // editar el curso como borrador sin perder lo escrito. El video se considera
+  // "completo" solo cuando videoProvider + videoId están resueltos.
+  videoUrl: varchar("video_url", { length: 500 }),
   videoDurationSeconds: integer("video_duration_seconds"),
   xpReward: integer("xp_reward").notNull().default(15),
   sortOrder: integer("sort_order").notNull().default(0),

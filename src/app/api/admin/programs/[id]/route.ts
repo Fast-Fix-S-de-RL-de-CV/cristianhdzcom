@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { incompleteVideoLessons } from "@/lib/courseReadiness";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,26 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const { id } = await ctx.params;
   try {
     const data = body.parse(await req.json());
+
+    // Gate de activación: un curso solo puede ponerse ACTIVO si todas sus
+    // lecciones de video tienen un link válido. Como borrador no se exige.
+    if (data.isActive === true) {
+      const pending = await incompleteVideoLessons(id);
+      if (pending.length > 0) {
+        return NextResponse.json(
+          {
+            error: "incomplete_videos",
+            message: `No puedes activar el curso: ${pending.length} ${
+              pending.length === 1 ? "lección de video no tiene" : "lecciones de video no tienen"
+            } su link completo.`,
+            count: pending.length,
+            lessons: pending,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     const [row] = await db
       .update(schema.programs)
       .set(data)

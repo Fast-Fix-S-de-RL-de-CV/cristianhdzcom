@@ -38,8 +38,9 @@ const body = z
     explanation: z.string().max(5000).optional().nullable(),
     xpReward: z.number().int().min(0).max(10000).optional(),
     sortOrder: z.number().int().optional(),
-    // Video — admin posts the full URL, we parse it.
-    videoUrl: z.string().url().max(500).optional().nullable(),
+    // Video — la URL NO es obligatoria ni se valida el formato al crear: se
+    // guarda cruda y se resuelve provider/id si parsea (curso como borrador).
+    videoUrl: z.string().max(500).optional().nullable(),
     videoDurationSeconds: z.number().int().min(1).max(60 * 60 * 12).optional().nullable(),
   })
   .superRefine((data, ctx) => {
@@ -60,17 +61,6 @@ const body = z
         }
         if (new Set(keys).size !== keys.length) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: "option keys must be unique", path: ["options"] });
-        }
-      }
-    }
-    if (data.kind === "video") {
-      // videoUrl es opcional al CREAR: permite crear el placeholder y luego
-      // pegar la URL desde el editor de detalles (flujo quick-add y AI-gen).
-      // Solo validamos el formato si vino algún valor.
-      if (data.videoUrl) {
-        const parsed = parseVideoUrl(data.videoUrl);
-        if (!parsed) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "URL no es de Vimeo o YouTube válida", path: ["videoUrl"] });
         }
       }
     }
@@ -100,10 +90,13 @@ export async function POST(req: Request) {
 
     let videoProvider: string | null = null;
     let videoId: string | null = null;
-    if (data.kind === "video" && data.videoUrl) {
-      const parsed = parseVideoUrl(data.videoUrl)!;
-      videoProvider = parsed.provider;
-      videoId = parsed.id;
+    const rawVideoUrl = data.kind === "video" && data.videoUrl ? data.videoUrl.trim() : null;
+    if (rawVideoUrl) {
+      const parsed = parseVideoUrl(rawVideoUrl);
+      if (parsed) {
+        videoProvider = parsed.provider;
+        videoId = parsed.id;
+      }
     }
 
     const [row] = await db
@@ -126,6 +119,7 @@ export async function POST(req: Request) {
         explanation: data.explanation ?? null,
         videoProvider,
         videoId,
+        videoUrl: rawVideoUrl,
         videoDurationSeconds: data.videoDurationSeconds ?? null,
         xpReward: data.xpReward ?? (data.kind === "video" ? 20 : 15),
         sortOrder: data.sortOrder ?? 0,

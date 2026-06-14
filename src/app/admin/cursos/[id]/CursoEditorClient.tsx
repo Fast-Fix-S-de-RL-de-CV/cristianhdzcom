@@ -6,6 +6,7 @@ import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { SelectField } from "@/components/ui/SelectField";
 import { apiErrorMessage } from "@/lib/apiError";
+import { parseVideoUrl } from "@/lib/video";
 import { isValidSlug, sanitizeSlugInput } from "@/lib/slug";
 import { AIGenerateModal } from "./AIGenerateModal";
 import { OutlineEditor } from "./OutlineEditor";
@@ -63,6 +64,7 @@ export type LessonRow = {
   sortOrder: number;
   videoProvider?: string | null;
   videoId?: string | null;
+  videoUrl?: string | null;
 };
 
 export type CohortRow = {
@@ -124,6 +126,11 @@ export function CursoEditorClient({
   const startTab = (TABS.find(([k]) => k === normalizedInitial)?.[0] ?? "info") as TabKey;
   const [tab, setTab] = useState<TabKey>(startTab);
 
+  // Lecciones de video sin link válido: bloquean activar el curso.
+  const incompleteVideos = lessons.filter(
+    (l) => l.kind === "video" && (!l.videoProvider || !l.videoId),
+  ).length;
+
   function changeTab(t: TabKey) {
     setTab(t);
     const url = new URL(window.location.href);
@@ -175,6 +182,22 @@ export function CursoEditorClient({
           >
             {program.isActive ? "ACTIVE" : "DRAFT"}
           </span>
+          {incompleteVideos > 0 && (
+            <span
+              className="mono"
+              title="El curso no puede activarse hasta que todas las lecciones de video tengan su link."
+              style={{
+                fontSize: 10,
+                padding: "3px 8px",
+                borderRadius: 4,
+                background: "color-mix(in srgb, #d97706 16%, white)",
+                color: "#b45309",
+                fontWeight: 700,
+              }}
+            >
+              ⚠️ {incompleteVideos} {incompleteVideos === 1 ? "VIDEO PENDIENTE" : "VIDEOS PENDIENTES"}
+            </span>
+          )}
           {program.isFeatured && (
             <span
               className="mono"
@@ -1432,11 +1455,13 @@ function LessonDialog({
 }) {
   const [form, setForm] = useState<LessonForm>(() => {
     if (lesson) {
-      const existingVideoUrl = lesson.videoProvider === "vimeo" && lesson.videoId
-        ? `https://vimeo.com/${lesson.videoId}`
-        : lesson.videoProvider === "youtube" && lesson.videoId
-          ? `https://youtu.be/${lesson.videoId}`
-          : "";
+      const existingVideoUrl = lesson.videoUrl
+        ? lesson.videoUrl
+        : lesson.videoProvider === "vimeo" && lesson.videoId
+          ? `https://vimeo.com/${lesson.videoId}`
+          : lesson.videoProvider === "youtube" && lesson.videoId
+            ? `https://youtu.be/${lesson.videoId}`
+            : "";
       return {
         code: lesson.code,
         title: lesson.title,
@@ -1536,8 +1561,13 @@ function LessonDialog({
   }
 
   const isVideo = form.kind === "video";
+  // El video NO es obligatorio para guardar (borrador). Pero avisamos si la URL
+  // tecleada todavía no se reconoce: el curso no podrá activarse hasta tenerla.
+  const videoUrlTyped = form.videoUrl.trim();
+  const videoUrlInvalid = isVideo && videoUrlTyped.length > 0 && !parseVideoUrl(videoUrlTyped);
+  const videoMissing = isVideo && videoUrlTyped.length === 0;
   const canSave = isVideo
-    ? !!form.code && !!form.title && !!form.videoUrl
+    ? !!form.code && !!form.title
     : !!form.code &&
       !!form.title &&
       !!form.question &&
@@ -1593,8 +1623,31 @@ function LessonDialog({
                 placeholder="https://vimeo.com/123456789  ó  https://youtu.be/xyz"
               />
               <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>
-                Pega la URL completa de Vimeo o YouTube. Nosotros extraemos el ID.
+                Pega la URL completa de Vimeo o YouTube. Nosotros extraemos el ID. Puedes dejarlo
+                vacío y completarlo después — el curso no podrá activarse hasta que todos los videos
+                estén listos.
               </div>
+              {videoUrlInvalid ? (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: "8px 11px",
+                    borderRadius: 8,
+                    background: "color-mix(in srgb, #d97706 12%, white)",
+                    border: "1px solid color-mix(in srgb, #d97706 35%, white)",
+                    color: "#b45309",
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  ⚠️ Esta URL aún no se reconoce como Vimeo o YouTube. Se guarda como borrador, pero
+                  el curso no podrá activarse hasta tener un link válido.
+                </div>
+              ) : videoMissing ? (
+                <div style={{ marginTop: 6, fontSize: 11.5, color: "var(--muted)" }}>
+                  Sin video todavía · quedará como borrador.
+                </div>
+              ) : null}
             </Field>
             <Field label="Descripción (texto que aparece debajo del video)">
               <textarea

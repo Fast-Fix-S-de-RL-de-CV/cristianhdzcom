@@ -4,7 +4,7 @@
  */
 
 type ZodIssueLite = { path?: (string | number)[]; message?: string; code?: string };
-type ApiErrorBody = { error?: string; details?: ZodIssueLite[] };
+type ApiErrorBody = { error?: string; message?: string; details?: ZodIssueLite[] };
 
 /** Nombres bonitos para los campos más comunes de la plataforma. */
 const FIELD_LABELS: Record<string, string> = {
@@ -66,6 +66,8 @@ const GENERIC: Record<string, string> = {
 /** Mensaje legible a partir del body de error de la API. */
 export function apiErrorMessage(j: ApiErrorBody | null | undefined, fallback = "No se pudo guardar"): string {
   if (!j) return fallback;
+  // Mensaje amigable explícito de la API (ya viene en español).
+  if (typeof j.message === "string" && j.message.trim()) return j.message;
   if (Array.isArray(j.details) && j.details.length > 0) {
     const issue = j.details[0];
     const rawField = issue.path && issue.path.length > 0 ? String(issue.path[0]) : "";

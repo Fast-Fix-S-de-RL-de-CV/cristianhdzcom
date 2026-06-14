@@ -237,6 +237,17 @@ export function OutlineEditor({
   /* ─────────── Render ─────────── */
   const totalLessons = tree.reduce((acc, m) => acc + m.lessons.length, 0);
 
+  // Lecciones de video que aún no pueden activarse (link incompleto).
+  // El backend bloquea poner el curso ACTIVO mientras alguna exista.
+  const incompleteVideos = tree.flatMap((m) =>
+    m.lessons
+      .filter((l) => l.kind === "video" && (!l.videoProvider || !l.videoId))
+      .map((l) => ({ lesson: l, module: m })),
+  );
+  const hasReadyVideos = tree.some((m) =>
+    m.lessons.some((l) => l.kind === "video" && l.videoProvider && l.videoId),
+  );
+
   return (
     <div style={{ padding: "20px 24px" }}>
       {/* Header */}
@@ -296,6 +307,115 @@ export function OutlineEditor({
           >
             Tu curso está vacío. Agrega el primer módulo abajo o usa los botones ✨ de generación con IA.
           </div>
+        )}
+
+        {/* Banner: videos sin link → el curso no puede activarse */}
+        {incompleteVideos.length > 0 ? (
+          <div
+            style={{
+              padding: "14px 16px",
+              border: "1.5px solid color-mix(in srgb, var(--gold) 55%, white)",
+              borderRadius: 12,
+              background: "color-mix(in srgb, var(--gold) 10%, white)",
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 800, color: "var(--gold-deep)" }}>
+              ⚠️ El curso no puede activarse todavía
+            </div>
+            <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 4, lineHeight: 1.45 }}>
+              {incompleteVideos.length === 1
+                ? "1 lección de video no tiene su link completo."
+                : `${incompleteVideos.length} lecciones de video no tienen su link completo.`}{" "}
+              Como borrador puedes seguir editando; para poner el curso ACTIVO, completa todos los videos.
+            </div>
+            <ul
+              style={{
+                listStyle: "none",
+                margin: "10px 0 0",
+                padding: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+              }}
+            >
+              {incompleteVideos.slice(0, 6).map(({ lesson, module }) => (
+                <li key={lesson.id}>
+                  <button
+                    type="button"
+                    onClick={() => onEditLesson(lesson)}
+                    title="Completar el link de video"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "5px 8px",
+                      background: "white",
+                      border: "1px solid color-mix(in srgb, var(--gold) 30%, white)",
+                      borderRadius: 7,
+                      cursor: "pointer",
+                      fontFamily: "var(--font-sans)",
+                    }}
+                  >
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 800,
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        background: "color-mix(in srgb, var(--gold) 18%, white)",
+                        color: "var(--gold-deep)",
+                        letterSpacing: "0.04em",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {lesson.code}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "var(--navy)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {lesson.title}
+                    </span>
+                    <span className="mono" style={{ fontSize: 10, color: "var(--muted)", flexShrink: 0 }}>
+                      {module.code} · {module.title}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {incompleteVideos.length > 6 && (
+              <div className="mono" style={{ fontSize: 11, color: "var(--gold-deep)", marginTop: 6, fontWeight: 700 }}>
+                y {incompleteVideos.length - 6} más…
+              </div>
+            )}
+          </div>
+        ) : (
+          hasReadyVideos && (
+            <div
+              className="mono"
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#0f766e",
+                padding: "6px 10px",
+                borderRadius: 8,
+                background: "color-mix(in srgb, #2BB8A7 10%, white)",
+                border: "1px solid color-mix(in srgb, #2BB8A7 25%, white)",
+                alignSelf: "flex-start",
+              }}
+            >
+              ✓ Todos los videos están listos
+            </div>
+          )
         )}
 
         {tree.map((m, mi) => {
@@ -501,9 +621,34 @@ export function OutlineEditor({
                           </span>
                           <span
                             className="mono"
-                            style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.04em" }}
+                            style={{
+                              fontSize: 9,
+                              color: "var(--muted)",
+                              fontWeight: 700,
+                              letterSpacing: "0.04em",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 5,
+                            }}
                           >
                             {l.code}
+                            {l.kind === "video" && (!l.videoProvider || !l.videoId) && (
+                              <span
+                                title="Esta lección de video aún no tiene su link"
+                                style={{
+                                  fontSize: 8,
+                                  fontWeight: 800,
+                                  padding: "2px 5px",
+                                  borderRadius: 4,
+                                  background: "color-mix(in srgb, var(--gold) 22%, white)",
+                                  color: "var(--gold-deep)",
+                                  letterSpacing: "0.06em",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                SIN VIDEO
+                              </span>
+                            )}
                           </span>
                           <button
                             type="button"

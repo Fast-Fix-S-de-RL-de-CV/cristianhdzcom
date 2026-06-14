@@ -31,7 +31,9 @@ const body = z
     explanation: z.string().max(5000).optional().nullable(),
     xpReward: z.number().int().min(0).max(10000).optional(),
     sortOrder: z.number().int().optional(),
-    videoUrl: z.string().url().max(500).optional().nullable(),
+    // URL de video NO obligatoria ni validada al guardar: se permite editar el
+    // curso como borrador. Se guarda cruda; el provider/id se resuelve si parsea.
+    videoUrl: z.string().max(500).optional().nullable(),
     videoDurationSeconds: z.number().int().min(1).max(60 * 60 * 12).optional().nullable(),
   })
   .superRefine((data, ctx) => {
@@ -42,12 +44,6 @@ const body = z
       }
       if (new Set(keys).size !== keys.length) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "option keys must be unique", path: ["options"] });
-      }
-    }
-    if (data.kind === "video" && data.videoUrl !== undefined && data.videoUrl !== null) {
-      const parsed = parseVideoUrl(data.videoUrl);
-      if (!parsed) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "URL no es de Vimeo o YouTube válida", path: ["videoUrl"] });
       }
     }
   });
@@ -89,36 +85,19 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
       update.options = normalizeOptions(data.options, ck);
     }
 
-    // Handle video URL if present.
+    // Video: se guarda la URL cruda y se resuelve provider/id si parsea. Una
+    // URL inválida NO bloquea el guardado (el curso puede quedar como borrador);
+    // el gate de activación exige que todos los videos estén completos.
     if (videoUrl !== undefined) {
-      if (videoUrl === null || videoUrl === "") {
+      if (videoUrl === null || videoUrl.trim() === "") {
+        update.videoUrl = null;
         update.videoProvider = null;
         update.videoId = null;
       } else {
+        update.videoUrl = videoUrl.trim();
         const parsed = parseVideoUrl(videoUrl);
-        if (parsed) {
-          update.videoProvider = parsed.provider;
-          update.videoId = parsed.id;
-        } else {
-          // El superRefine solo valida cuando el body trae kind="video". En
-          // payloads parciales (sin kind) consultamos el kind actual de la
-          // lección para no tragar silenciosamente una URL inválida.
-          const [current] = await db
-            .select({ kind: schema.lessons.kind })
-            .from(schema.lessons)
-            .where(eq(schema.lessons.id, id))
-            .limit(1);
-          if (!current) return NextResponse.json({ error: "not_found" }, { status: 404 });
-          if ((data.kind ?? current.kind) === "video") {
-            return NextResponse.json(
-              {
-                error: "invalid",
-                details: [{ path: ["videoUrl"], message: "URL no es de Vimeo o YouTube válida" }],
-              },
-              { status: 400 },
-            );
-          }
-        }
+        update.videoProvider = parsed ? parsed.provider : null;
+        update.videoId = parsed ? parsed.id : null;
       }
     }
 
