@@ -6,13 +6,19 @@
 export type ParsedVideo = { provider: "vimeo" | "youtube"; id: string };
 
 const VIMEO_RE = [
-  /vimeo\.com\/(?:video\/)?(\d+)/i,
   /player\.vimeo\.com\/video\/(\d+)/i,
+  // URLs de gestión / canales / grupos del dashboard de Vimeo.
+  /vimeo\.com\/(?:manage\/videos|channels\/[\w-]+|groups\/[\w-]+\/videos|album\/\d+\/video|video)\/(\d+)/i,
+  // URL pública normal (incluye unlisted con hash: vimeo.com/123456/abcdef).
+  /vimeo\.com\/(\d+)/i,
 ];
 const YT_RE = [
   /youtube\.com\/watch\?v=([\w-]{6,})/i,
   /youtu\.be\/([\w-]{6,})/i,
   /youtube\.com\/embed\/([\w-]{6,})/i,
+  /youtube\.com\/shorts\/([\w-]{6,})/i,
+  /youtube\.com\/live\/([\w-]{6,})/i,
+  /youtube\.com\/v\/([\w-]{6,})/i,
 ];
 
 export function parseVideoUrl(input: string): ParsedVideo | null {
