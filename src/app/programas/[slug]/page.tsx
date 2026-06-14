@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { eq, asc, and } from "drizzle-orm";
+import { eq, asc, and, inArray } from "drizzle-orm";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Card } from "@/components/ui/Card";
@@ -9,7 +9,7 @@ import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { FAQAccordion } from "@/components/marketing/FAQAccordion";
-import { CurriculumAccordion } from "@/components/marketing/CurriculumAccordion";
+import { CourseOutline } from "@/components/marketing/CourseOutline";
 import { CourseCover } from "@/components/marketing/CourseCover";
 import { FreeEnrollButton } from "./FreeEnrollButton";
 import { getSiteSettings } from "@/lib/site-settings";
@@ -52,20 +52,35 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
       .limit(1),
     getSiteSettings(),
   ]);
+  // Lecciones de todos los módulos → temario público (estructura del curso).
+  const modIds = mods.map((m) => m.id);
+  const allLessons = modIds.length
+    ? await db
+        .select({
+          moduleId: schema.lessons.moduleId,
+          code: schema.lessons.code,
+          title: schema.lessons.title,
+          kind: schema.lessons.kind,
+        })
+        .from(schema.lessons)
+        .where(inArray(schema.lessons.moduleId, modIds))
+        .orderBy(asc(schema.lessons.sortOrder))
+    : [];
+  const outline = mods.map((m) => ({
+    code: m.code,
+    title: m.title,
+    lessons: allLessons
+      .filter((l) => l.moduleId === m.id)
+      .map((l) => ({ code: l.code, title: l.title, kind: l.kind })),
+  }));
+  const totalLessons = allLessons.length;
+
   const nextCohort = openCohorts[0];
   const seatsLeft = nextCohort ? Math.max(0, nextCohort.seatsTotal - nextCohort.seatsTaken) : null;
   const cohortRange = nextCohort
     ? formatCohortRange(new Date(nextCohort.startsOn), new Date(nextCohort.endsOn))
     : null;
 
-  // Group modules into 4 weeks of 3
-  const weeks: { label: string; mods: typeof mods }[] = [];
-  for (let i = 0; i < Math.min(mods.length, 12); i += 3) {
-    weeks.push({
-      label: `Semana 0${Math.floor(i / 3) + 1} · ${["Fundamentos", "Construcción", "Agentes", "Producto y venta"][Math.floor(i / 3)] || ""}`,
-      mods: mods.slice(i, i + 3),
-    });
-  }
 
   // Hero stat row derived ONLY from real program data — no invented claims.
   // We show what we can actually verify: real module count, the program's
@@ -184,6 +199,40 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
                 </>
               )}
 
+              {/* Stats del curso fusionados en la card de inscripción */}
+              {programStats.length > 0 && (
+                <>
+                  <div className="rule" style={{ margin: "22px 0 16px" }} />
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: `repeat(${programStats.length}, 1fr)`,
+                      gap: 12,
+                    }}
+                  >
+                    {programStats.map(([n, l]) => (
+                      <div key={l}>
+                        <div className="serif" style={{ fontSize: 26, lineHeight: 1.05 }}>
+                          {n}
+                        </div>
+                        <div
+                          className="mono"
+                          style={{
+                            fontSize: 9,
+                            color: "var(--muted)",
+                            letterSpacing: "0.06em",
+                            textTransform: "uppercase",
+                            marginTop: 3,
+                          }}
+                        >
+                          {l}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
               <div className="rule" style={{ margin: "24px 0" }} />
               <div className="col" style={{ gap: 12 }}>
                 {(program.bullets?.length
@@ -244,42 +293,28 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
               </div>
             )}
 
-            {programStats.length > 0 && (
-              <div
-                className="sales-stats-row"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: `repeat(${programStats.length}, 1fr)`,
-                  gap: 16,
-                  marginTop: 28,
-                  paddingTop: 24,
-                  borderTop: "1px solid var(--line)",
-                }}
-              >
-                {programStats.map(([n, l]) => (
-                  <div key={l}>
-                    <div className="serif" style={{ fontSize: 40, lineHeight: 1.05 }}>
-                      {n}
-                    </div>
-                    <div
-                      className="mono"
-                      style={{
-                        fontSize: 10,
-                        color: "var(--muted)",
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        marginTop: 4,
-                      }}
-                    >
-                      {l}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </section>
+
+      {/* CONTENIDO DEL CURSO — estructura real (módulos + lecciones) */}
+      {outline.length > 0 && (
+        <section className="sec bdr-t">
+          <div className="between" style={{ marginBottom: 32, alignItems: "flex-end", flexWrap: "wrap", gap: 16 }}>
+            <div>
+              <Eyebrow>Contenido del curso</Eyebrow>
+              <h2 style={{ fontSize: 48, marginTop: 14 }}>
+                {mods.length} {mods.length === 1 ? "módulo" : "módulos"}
+                {totalLessons > 0 ? ` · ${totalLessons} ${totalLessons === 1 ? "lección" : "lecciones"}` : ""}
+              </h2>
+            </div>
+            <p style={{ color: "var(--muted)", fontSize: 14, maxWidth: 360 }}>
+              Así está armado el curso. Abre cada módulo para ver sus lecciones.
+            </p>
+          </div>
+          <CourseOutline modules={outline} />
+        </section>
+      )}
 
       {/* WHO FOR */}
       <section className="sec bdr-t">
@@ -299,24 +334,6 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
           ))}
         </div>
       </section>
-
-      {/* CURRICULUM */}
-      {weeks.length > 0 && (
-        <section className="sec bdr-t">
-          <div className="between" style={{ marginBottom: 40, alignItems: "flex-end" }}>
-            <div>
-              <Eyebrow>Currículo</Eyebrow>
-              <h2 style={{ fontSize: 56, marginTop: 16 }}>
-                {mods.length} {mods.length === 1 ? "módulo" : "módulos"}
-                {program.durationLabel && program.durationLabel.trim() !== ""
-                  ? ` · ${program.durationLabel}`
-                  : ""}
-              </h2>
-            </div>
-          </div>
-          <CurriculumAccordion weeks={weeks.map((w) => ({ label: w.label, mods: w.mods.map((m) => `${m.code} — ${m.title}`) }))} />
-        </section>
-      )}
 
       {/* INSTRUCTOR */}
       <section className="sec bdr-t" style={{ background: "var(--bg-2)" }}>
