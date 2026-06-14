@@ -50,12 +50,14 @@ export function LessonView({
   lessonCode,
   user,
   alreadyCompleted,
+  backHref = "/plataforma",
 }: {
   lesson: LessonData;
   moduleCode: string;
   lessonCode: string;
   user: { id: string; name: string; hearts: number; streakDays: number; xp: number };
   alreadyCompleted: boolean;
+  backHref?: string;
 }) {
   const router = useRouter();
   const isVideo = lesson.kind === "video";
@@ -78,7 +80,7 @@ export function LessonView({
           zIndex: 10,
         }}
       >
-        <Link href="/plataforma" aria-label="Salir" style={{ textDecoration: "none" }}>
+        <Link href={backHref} aria-label="Volver al curso" style={{ textDecoration: "none" }}>
           <button
             style={{
               width: 36,
@@ -420,7 +422,7 @@ function QuizLesson({
   }
 
   function onContinue() {
-    router.push("/plataforma");
+    router.push(backHref);
   }
 
   return (

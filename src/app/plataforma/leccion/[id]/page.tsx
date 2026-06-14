@@ -16,6 +16,17 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
 
   const [mod] = await db.select().from(schema.modules).where(eq(schema.modules.id, lesson.moduleId)).limit(1);
 
+  // Slug del curso para volver a su sendero al cerrar la lección.
+  let backHref = "/plataforma";
+  if (mod?.programId) {
+    const [program] = await db
+      .select({ slug: schema.programs.slug })
+      .from(schema.programs)
+      .where(eq(schema.programs.id, mod.programId))
+      .limit(1);
+    if (program?.slug) backHref = `/plataforma/curso/${program.slug}`;
+  }
+
   // Has the user completed this lesson already (for video kind)?
   const [completedRow] = await db
     .select()
@@ -41,6 +52,7 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
       }}
       moduleCode={mod?.code || ""}
       lessonCode={lesson.code}
+      backHref={backHref}
       user={{
         id: user.id,
         name: user.name,
