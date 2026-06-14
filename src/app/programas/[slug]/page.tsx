@@ -106,7 +106,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
           className="sales-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1.1fr",
+            gridTemplateColumns: "1.05fr 0.95fr",
             gap: 56,
             position: "relative",
             alignItems: "flex-start",
@@ -142,7 +142,46 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
               {program.subtitle}
             </p>
 
-            <Card className="sales-pricing-sticky" style={{ padding: 28, boxShadow: "0 12px 40px rgba(15,17,21,0.08)" }}>
+            {/* TEMARIO — debajo del título, en la columna izquierda */}
+            {outline.length > 0 && (
+              <div>
+                <div
+                  className="row"
+                  style={{ justifyContent: "space-between", alignItems: "baseline", marginBottom: 14, flexWrap: "wrap", gap: 8 }}
+                >
+                  <h2 style={{ fontSize: 28 }}>Contenido del curso</h2>
+                  <span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
+                    {mods.length} {mods.length === 1 ? "módulo" : "módulos"}
+                    {totalLessons > 0 ? ` · ${totalLessons} ${totalLessons === 1 ? "lección" : "lecciones"}` : ""}
+                  </span>
+                </div>
+                <CourseOutline modules={outline} />
+              </div>
+            )}
+          </div>
+
+          {/* ─── DERECHA: foto del curso + CARD DE INSCRIPCIÓN ─── */}
+          <div style={{ position: "sticky", top: 100 }}>
+            {program.coverUrl && program.coverUrl.trim() !== "" ? (
+              <CourseCover
+                coverUrl={program.coverUrl}
+                coverKind={program.coverKind}
+                radius={18}
+                aspectRatio="16/9"
+                zoomable
+                galleryId={`programa-${program.slug}`}
+                style={{ boxShadow: "0 18px 50px rgba(15,17,21,0.12)" }}
+              />
+            ) : (
+              <div
+                className="ph"
+                style={{ aspectRatio: "16/9", borderRadius: 18, boxShadow: "0 18px 50px rgba(15,17,21,0.12)" }}
+              >
+                PORTADA · {program.title.toUpperCase()}
+              </div>
+            )}
+
+            <Card className="sales-pricing-sticky" style={{ padding: 28, marginTop: 24, boxShadow: "0 12px 40px rgba(15,17,21,0.08)" }}>
               <div className="between" style={{ marginBottom: 16 }}>
                 <Chip variant="ink">{program.type.toUpperCase()} · GENERACIÓN</Chip>
                 <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
@@ -271,50 +310,8 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
               </div>
             </Card>
           </div>
-
-          {/* ─── DERECHA: foto del curso + KPIs ─── */}
-          <div style={{ position: "sticky", top: 100 }}>
-            {program.coverUrl && program.coverUrl.trim() !== "" ? (
-              <CourseCover
-                coverUrl={program.coverUrl}
-                coverKind={program.coverKind}
-                radius={18}
-                aspectRatio="16/9"
-                zoomable
-                galleryId={`programa-${program.slug}`}
-                style={{ boxShadow: "0 18px 50px rgba(15,17,21,0.12)" }}
-              />
-            ) : (
-              <div
-                className="ph"
-                style={{ aspectRatio: "16/9", borderRadius: 18, boxShadow: "0 18px 50px rgba(15,17,21,0.12)" }}
-              >
-                PORTADA · {program.title.toUpperCase()}
-              </div>
-            )}
-
-          </div>
         </div>
       </section>
-
-      {/* CONTENIDO DEL CURSO — estructura real (módulos + lecciones) */}
-      {outline.length > 0 && (
-        <section className="sec bdr-t">
-          <div className="between" style={{ marginBottom: 32, alignItems: "flex-end", flexWrap: "wrap", gap: 16 }}>
-            <div>
-              <Eyebrow>Contenido del curso</Eyebrow>
-              <h2 style={{ fontSize: 48, marginTop: 14 }}>
-                {mods.length} {mods.length === 1 ? "módulo" : "módulos"}
-                {totalLessons > 0 ? ` · ${totalLessons} ${totalLessons === 1 ? "lección" : "lecciones"}` : ""}
-              </h2>
-            </div>
-            <p style={{ color: "var(--muted)", fontSize: 14, maxWidth: 360 }}>
-              Así está armado el curso. Abre cada módulo para ver sus lecciones.
-            </p>
-          </div>
-          <CourseOutline modules={outline} />
-        </section>
-      )}
 
       {/* WHO FOR */}
       <section className="sec bdr-t">
