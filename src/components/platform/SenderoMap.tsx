@@ -253,6 +253,9 @@ export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
               left: `calc(${pt.xPct}% - ${size / 2}px)`,
               width: size,
               height: size,
+              // El módulo expandido va por delante de todo (nodos y cards de
+              // los demás), para que su card no quede escondida detrás.
+              zIndex: isExpanded ? 50 : 1,
             }}
           >
             {/* Halo for the active node */}
