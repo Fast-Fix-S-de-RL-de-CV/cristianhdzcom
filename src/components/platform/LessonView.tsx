@@ -152,7 +152,7 @@ export function LessonView({
               }}
             />
           ) : (
-            <QuizLesson lesson={lesson} user={user} />
+            <QuizLesson lesson={lesson} user={user} backHref={backHref} />
           )}
 
           {/* Body / description (also shown for quizzes if filled) */}
@@ -392,9 +392,11 @@ function VideoLesson({
 function QuizLesson({
   lesson,
   user,
+  backHref,
 }: {
   lesson: LessonData;
   user: { hearts: number; streakDays: number; xp: number };
+  backHref: string;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string | null>(null);
