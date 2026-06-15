@@ -399,7 +399,16 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
         </button>
       </div>
 
-      <div className="col" style={{ gap: 14, maxWidth: 760 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "16px 24px",
+          alignItems: "start",
+          maxWidth: 1180,
+        }}
+      >
+        {/* Fila: Título | Slug */}
         <Field label="Título">
           <input
             value={form.title}
@@ -422,146 +431,106 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
             </div>
           )}
         </Field>
-        <Field label="Subtítulo (max 240)">
-          <textarea
-            value={form.subtitle}
-            maxLength={240}
-            onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
-            style={{ ...input(), minHeight: 60 }}
-          />
-        </Field>
-        <div className="row" style={{ gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <SelectField
-              label="Tipo"
-              size="md"
-              value={form.type}
-              onChange={(v) => setForm({ ...form, type: v })}
-              options={TYPES}
+
+        {/* Subtítulo a todo lo ancho */}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <Field label="Subtítulo (max 240)">
+            <textarea
+              value={form.subtitle}
+              maxLength={240}
+              onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
+              style={{ ...input(), minHeight: 56 }}
             />
-          </div>
-          <div style={{ flex: 1 }}>
-            <Field label="Duración">
-              <input
-                value={form.durationLabel}
-                onChange={(e) => setForm({ ...form, durationLabel: e.target.value })}
-                placeholder="6 semanas"
-                style={input()}
-              />
-            </Field>
-          </div>
-          <div style={{ width: 160 }}>
-            <SelectField
-              label="Color acento"
-              size="md"
-              value={form.accent}
-              onChange={(v) => setForm({ ...form, accent: v as Accent })}
-              options={ACCENTS}
-            />
-          </div>
-        </div>
-        <div className="row" style={{ gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <Field label="Precio (USD)">
-              <input
-                type="number"
-                value={form.priceUsd}
-                onChange={(e) => setForm({ ...form, priceUsd: parseInt(e.target.value || "0", 10) })}
-                style={input()}
-              />
-            </Field>
-          </div>
-          <div style={{ flex: 1 }}>
-            <Field label="Precio comparativo (USD)">
-              <input
-                type="number"
-                value={form.priceCompareUsd ?? ""}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    priceCompareUsd: e.target.value ? parseInt(e.target.value, 10) : null,
-                  })
-                }
-                placeholder="opcional"
-                style={input()}
-              />
-            </Field>
-          </div>
-        </div>
-        <div className="row" style={{ gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <Field label="Precio mensualidad (USD)">
-              <input
-                type="number"
-                value={form.installmentPriceUsd ?? ""}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    installmentPriceUsd: e.target.value ? parseInt(e.target.value, 10) : null,
-                  })
-                }
-                placeholder="opcional"
-                style={input()}
-              />
-            </Field>
-          </div>
-          <div style={{ flex: 1 }}>
-            <Field label="N° mensualidades">
-              <input
-                type="number"
-                value={form.installmentCount ?? ""}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    installmentCount: e.target.value ? parseInt(e.target.value, 10) : null,
-                  })
-                }
-                placeholder="opcional"
-                style={input()}
-              />
-            </Field>
-          </div>
-        </div>
-        <Field label="Descripción larga (max 5000)">
-          <textarea
-            value={form.description}
-            maxLength={5000}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            style={{ ...input(), minHeight: 140 }}
-          />
-        </Field>
-        <BulletsEditor
-          bullets={form.bullets}
-          onChange={(b) => setForm({ ...form, bullets: b })}
-        />
-        <WhoForEditor
-          items={form.whoFor}
-          onChange={(w) => setForm({ ...form, whoFor: w })}
-        />
-        <FaqsEditor
-          items={form.faqs}
-          onChange={(f) => setForm({ ...form, faqs: f })}
-        />
-        <div className="row" style={{ gap: 18 }}>
-          <label className="row" style={{ gap: 6, fontSize: 13, cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-            />
-            Activo
-          </label>
-          <label className="row" style={{ gap: 6, fontSize: 13, cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={form.isFeatured}
-              onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })}
-            />
-            Destacado (featured)
-          </label>
+          </Field>
         </div>
 
-        {err && <ErrorBanner msg={err} />}
+        {/* Tipo | Duración */}
+        <SelectField label="Tipo" size="md" value={form.type} onChange={(v) => setForm({ ...form, type: v })} options={TYPES} />
+        <Field label="Duración">
+          <input
+            value={form.durationLabel}
+            onChange={(e) => setForm({ ...form, durationLabel: e.target.value })}
+            placeholder="6 semanas"
+            style={input()}
+          />
+        </Field>
+
+        {/* Color acento | Visibilidad */}
+        <SelectField label="Color acento" size="md" value={form.accent} onChange={(v) => setForm({ ...form, accent: v as Accent })} options={ACCENTS} />
+        <Field label="Visibilidad">
+          <div className="row" style={{ gap: 18, paddingTop: 8, flexWrap: "wrap" }}>
+            <label className="row" style={{ gap: 6, fontSize: 13, cursor: "pointer" }}>
+              <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+              Activo
+            </label>
+            <label className="row" style={{ gap: 6, fontSize: 13, cursor: "pointer" }}>
+              <input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} />
+              Destacado
+            </label>
+          </div>
+        </Field>
+
+        {/* Precios en 2 columnas */}
+        <Field label="Precio (USD)">
+          <input
+            type="number"
+            value={form.priceUsd}
+            onChange={(e) => setForm({ ...form, priceUsd: parseInt(e.target.value || "0", 10) })}
+            style={input()}
+          />
+        </Field>
+        <Field label="Precio comparativo (USD)">
+          <input
+            type="number"
+            value={form.priceCompareUsd ?? ""}
+            onChange={(e) => setForm({ ...form, priceCompareUsd: e.target.value ? parseInt(e.target.value, 10) : null })}
+            placeholder="opcional"
+            style={input()}
+          />
+        </Field>
+        <Field label="Precio mensualidad (USD)">
+          <input
+            type="number"
+            value={form.installmentPriceUsd ?? ""}
+            onChange={(e) => setForm({ ...form, installmentPriceUsd: e.target.value ? parseInt(e.target.value, 10) : null })}
+            placeholder="opcional"
+            style={input()}
+          />
+        </Field>
+        <Field label="N° mensualidades">
+          <input
+            type="number"
+            value={form.installmentCount ?? ""}
+            onChange={(e) => setForm({ ...form, installmentCount: e.target.value ? parseInt(e.target.value, 10) : null })}
+            placeholder="opcional"
+            style={input()}
+          />
+        </Field>
+
+        {/* Descripción larga + bullets a todo lo ancho */}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <Field label="Descripción larga (max 5000)">
+            <textarea
+              value={form.description}
+              maxLength={5000}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              style={{ ...input(), minHeight: 130 }}
+            />
+          </Field>
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <BulletsEditor bullets={form.bullets} onChange={(b) => setForm({ ...form, bullets: b })} />
+        </div>
+
+        {/* Para quién | FAQ — lado a lado */}
+        <WhoForEditor items={form.whoFor} onChange={(w) => setForm({ ...form, whoFor: w })} />
+        <FaqsEditor items={form.faqs} onChange={(f) => setForm({ ...form, faqs: f })} />
+
+        {err && (
+          <div style={{ gridColumn: "1 / -1" }}>
+            <ErrorBanner msg={err} />
+          </div>
+        )}
       </div>
     </div>
   );
