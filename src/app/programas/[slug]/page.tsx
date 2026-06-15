@@ -75,6 +75,10 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
   }));
   const totalLessons = allLessons.length;
 
+  // Secciones editables por curso (con fallback a los textos por defecto).
+  const whoFor = program.whoFor && program.whoFor.length > 0 ? program.whoFor : WHO_FOR;
+  const faqs = program.faqs && program.faqs.length > 0 ? program.faqs : FAQS;
+
   const nextCohort = openCohorts[0];
   const seatsLeft = nextCohort ? Math.max(0, nextCohort.seatsTotal - nextCohort.seatsTaken) : null;
   const cohortRange = nextCohort
@@ -318,7 +322,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
         <Eyebrow>¿Para quién es?</Eyebrow>
         <h2 style={{ fontSize: 56, marginTop: 16, marginBottom: 40, maxWidth: 900 }}>Este curso es para ti si...</h2>
         <div className="grid-3">
-          {WHO_FOR.map((c, i) => (
+          {whoFor.map((c, i) => (
             <Card key={i} style={{ padding: 28 }}>
               <div className="serif" style={{ fontSize: 72, lineHeight: 1, color: "var(--accent)", opacity: 0.4 }}>
                 0{i + 1}
@@ -387,7 +391,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
               antes de cobrar.
             </h2>
           </div>
-          <FAQAccordion faqs={FAQS} />
+          <FAQAccordion faqs={faqs} />
         </div>
       </section>
 

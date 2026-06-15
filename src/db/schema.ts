@@ -130,6 +130,9 @@ export const programs = pgTable(
     accent: varchar("accent", { length: 20 }).default("accent"),
     description: text("description"),
     bullets: jsonb("bullets").$type<string[]>().default([]),
+    // Secciones editables por curso para la página pública.
+    whoFor: jsonb("who_for").$type<{ t: string; d: string }[]>().default([]),
+    faqs: jsonb("faqs").$type<{ q: string; a: string }[]>().default([]),
     coverUrl: text("cover_url"),
     coverKind: varchar("cover_kind", { length: 12 }), // "image" | "video"
     modulesCount: integer("modules_count").default(0),

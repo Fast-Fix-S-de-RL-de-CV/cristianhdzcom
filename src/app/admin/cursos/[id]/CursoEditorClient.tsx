@@ -29,6 +29,8 @@ export type Program = {
   accent: Accent;
   description: string;
   bullets: string[];
+  whoFor?: { t: string; d: string }[];
+  faqs?: { q: string; a: string }[];
   modulesCount: number;
   isFeatured: boolean;
   isActive: boolean;
@@ -281,13 +283,22 @@ export function CursoEditorClient({
 /* ───────────────── INFO TAB ───────────────── */
 
 function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }) {
-  const [form, setForm] = useState({ ...program });
+  const [form, setForm] = useState({
+    ...program,
+    whoFor: program.whoFor ?? [],
+    faqs: program.faqs ?? [],
+  });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
   const dirty = useMemo(() => {
-    return JSON.stringify(form) !== JSON.stringify(program);
+    const normalizedProgram = {
+      ...program,
+      whoFor: program.whoFor ?? [],
+      faqs: program.faqs ?? [],
+    };
+    return JSON.stringify(form) !== JSON.stringify(normalizedProgram);
   }, [form, program]);
   const slugValid = form.slug.length === 0 || isValidSlug(form.slug);
 
@@ -308,6 +319,12 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
         accent: form.accent,
         description: form.description || null,
         bullets: form.bullets.filter((b) => b.trim().length > 0),
+        whoFor: (form.whoFor ?? [])
+          .map((w) => ({ t: w.t.trim(), d: w.d.trim() }))
+          .filter((w) => w.t.length > 0 || w.d.length > 0),
+        faqs: (form.faqs ?? [])
+          .map((f) => ({ q: f.q.trim(), a: f.a.trim() }))
+          .filter((f) => f.q.length > 0 || f.a.length > 0),
         isFeatured: form.isFeatured,
         isActive: form.isActive,
       };
@@ -512,6 +529,14 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
           bullets={form.bullets}
           onChange={(b) => setForm({ ...form, bullets: b })}
         />
+        <WhoForEditor
+          items={form.whoFor}
+          onChange={(w) => setForm({ ...form, whoFor: w })}
+        />
+        <FaqsEditor
+          items={form.faqs}
+          onChange={(f) => setForm({ ...form, faqs: f })}
+        />
         <div className="row" style={{ gap: 18 }}>
           <label className="row" style={{ gap: 6, fontSize: 13, cursor: "pointer" }}>
             <input
@@ -601,6 +626,194 @@ function BulletsEditor({
           }}
         >
           + Agregar bullet
+        </button>
+      </div>
+    </Field>
+  );
+}
+
+/* ───────────────── WHO-FOR ("Este curso es para ti si…") ───────────────── */
+
+function WhoForEditor({
+  items,
+  onChange,
+}: {
+  items: { t: string; d: string }[];
+  onChange: (w: { t: string; d: string }[]) => void;
+}) {
+  return (
+    <Field label="¿Para quién es? — Este curso es para ti si…">
+      <div className="col" style={{ gap: 10 }}>
+        {items.map((w, i) => (
+          <div
+            key={i}
+            className="col"
+            style={{
+              gap: 6,
+              padding: 12,
+              borderRadius: 8,
+              border: "1px solid var(--line)",
+              background: "var(--bg-2)",
+            }}
+          >
+            <div className="row" style={{ gap: 6, alignItems: "center" }}>
+              <input
+                value={w.t}
+                maxLength={120}
+                onChange={(e) => {
+                  const next = [...items];
+                  next[i] = { ...next[i], t: e.target.value };
+                  onChange(next);
+                }}
+                style={{ ...input(), flex: 1 }}
+                placeholder="Título corto (ej: Eres emprendedor)"
+              />
+              <button
+                type="button"
+                onClick={() => onChange(items.filter((_, j) => j !== i))}
+                className="mono"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "0 12px",
+                  height: 36,
+                  borderRadius: 6,
+                  background: "white",
+                  color: "var(--red)",
+                  border: "1px solid var(--line)",
+                  cursor: "pointer",
+                }}
+                aria-label="Quitar item"
+              >
+                ×
+              </button>
+            </div>
+            <textarea
+              value={w.d}
+              maxLength={300}
+              onChange={(e) => {
+                const next = [...items];
+                next[i] = { ...next[i], d: e.target.value };
+                onChange(next);
+              }}
+              style={{ ...input(), minHeight: 56 }}
+              placeholder="Descripción de por qué este curso es para ese perfil…"
+            />
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => onChange([...items, { t: "", d: "" }])}
+          disabled={items.length >= 8}
+          className="mono"
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            padding: "6px 12px",
+            borderRadius: 6,
+            background: "var(--bg-2)",
+            color: "var(--ink-2)",
+            border: "1px dashed var(--line-2)",
+            cursor: items.length >= 8 ? "not-allowed" : "pointer",
+            alignSelf: "flex-start",
+            marginTop: 2,
+          }}
+        >
+          + Agregar
+        </button>
+      </div>
+    </Field>
+  );
+}
+
+/* ───────────────── FAQS ("Preguntas frecuentes") ───────────────── */
+
+function FaqsEditor({
+  items,
+  onChange,
+}: {
+  items: { q: string; a: string }[];
+  onChange: (f: { q: string; a: string }[]) => void;
+}) {
+  return (
+    <Field label="Preguntas frecuentes">
+      <div className="col" style={{ gap: 10 }}>
+        {items.map((f, i) => (
+          <div
+            key={i}
+            className="col"
+            style={{
+              gap: 6,
+              padding: 12,
+              borderRadius: 8,
+              border: "1px solid var(--line)",
+              background: "var(--bg-2)",
+            }}
+          >
+            <div className="row" style={{ gap: 6, alignItems: "center" }}>
+              <input
+                value={f.q}
+                maxLength={200}
+                onChange={(e) => {
+                  const next = [...items];
+                  next[i] = { ...next[i], q: e.target.value };
+                  onChange(next);
+                }}
+                style={{ ...input(), flex: 1 }}
+                placeholder="Pregunta"
+              />
+              <button
+                type="button"
+                onClick={() => onChange(items.filter((_, j) => j !== i))}
+                className="mono"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "0 12px",
+                  height: 36,
+                  borderRadius: 6,
+                  background: "white",
+                  color: "var(--red)",
+                  border: "1px solid var(--line)",
+                  cursor: "pointer",
+                }}
+                aria-label="Quitar pregunta"
+              >
+                ×
+              </button>
+            </div>
+            <textarea
+              value={f.a}
+              maxLength={800}
+              onChange={(e) => {
+                const next = [...items];
+                next[i] = { ...next[i], a: e.target.value };
+                onChange(next);
+              }}
+              style={{ ...input(), minHeight: 70 }}
+              placeholder="Respuesta"
+            />
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => onChange([...items, { q: "", a: "" }])}
+          disabled={items.length >= 15}
+          className="mono"
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            padding: "6px 12px",
+            borderRadius: 6,
+            background: "var(--bg-2)",
+            color: "var(--ink-2)",
+            border: "1px dashed var(--line-2)",
+            cursor: items.length >= 15 ? "not-allowed" : "pointer",
+            alignSelf: "flex-start",
+            marginTop: 2,
+          }}
+        >
+          + Agregar pregunta
         </button>
       </div>
     </Field>
@@ -2047,8 +2260,8 @@ function CohortDialog({
     form.seatsTotal > 0;
 
   return (
-    <Modal title={cohort ? "Editar generación" : "Nueva generación"} onClose={onClose}>
-      <div className="col" style={{ gap: 14 }}>
+    <Modal title={cohort ? "Editar generación" : "Nueva generación"} onClose={onClose} maxWidth={640} overflowVisible>
+      <div className="col" style={{ gap: 16 }}>
         <Field label="Código (opcional)">
           <input
             value={form.code}
@@ -2257,11 +2470,14 @@ function Modal({
   onClose,
   children,
   maxWidth = 600,
+  overflowVisible = false,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   maxWidth?: number;
+  // Para modales cortos con popovers (ej. DatePicker): no recortar el calendario.
+  overflowVisible?: boolean;
 }) {
   return (
     <div
@@ -2285,8 +2501,8 @@ function Modal({
           padding: 28,
           maxWidth,
           width: "100%",
-          maxHeight: "90vh",
-          overflow: "auto",
+          maxHeight: overflowVisible ? undefined : "90vh",
+          overflow: overflowVisible ? "visible" : "auto",
         }}
       >
         <h2 className="serif" style={{ fontSize: 24, marginBottom: 18 }}>

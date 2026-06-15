@@ -30,6 +30,8 @@ const body = z
     accent: z.enum(["accent", "warm", "green", "navy", "gold"]).optional(),
     description: z.string().max(5000).optional().nullable(),
     bullets: z.array(z.string().min(1).max(140)).max(20).optional(),
+    whoFor: z.array(z.object({ t: z.string().max(160), d: z.string().max(600) })).max(8).optional(),
+    faqs: z.array(z.object({ q: z.string().max(240), a: z.string().max(1500) })).max(15).optional(),
     coverUrl: z
       .string()
       .max(500)
@@ -102,6 +104,8 @@ export async function POST(req: Request) {
         accent: data.accent ?? "accent",
         description: data.description ?? null,
         bullets: data.bullets ?? [],
+        whoFor: data.whoFor ?? [],
+        faqs: data.faqs ?? [],
         coverUrl: data.coverUrl ?? null,
         coverKind: data.coverKind ?? null,
         isActive: data.isActive ?? true,

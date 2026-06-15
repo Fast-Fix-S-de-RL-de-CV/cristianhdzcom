@@ -100,6 +100,8 @@ export default async function CursoEditorPage({
               | "gold",
             description: program.description ?? "",
             bullets: program.bullets ?? [],
+            whoFor: program.whoFor ?? [],
+            faqs: program.faqs ?? [],
             modulesCount: program.modulesCount ?? 0,
             isFeatured: program.isFeatured,
             isActive: program.isActive,
