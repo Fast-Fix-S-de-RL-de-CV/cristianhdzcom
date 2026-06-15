@@ -10,6 +10,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { FAQAccordion } from "@/components/marketing/FAQAccordion";
 import { CourseOutline } from "@/components/marketing/CourseOutline";
+import { DEFAULT_WHO_FOR, DEFAULT_FAQS } from "@/lib/courseDefaults";
 import { CourseCover } from "@/components/marketing/CourseCover";
 import { FreeEnrollButton } from "./FreeEnrollButton";
 import { getSiteSettings } from "@/lib/site-settings";
@@ -23,19 +24,6 @@ function formatCohortRange(starts: Date, ends: Date) {
   ).padStart(2, "0")} ${MONTHS[ends.getUTCMonth()]}`;
 }
 
-const FAQS = [
-  { q: "¿Necesito saber programar?", a: "No. Aceptamos profesionales sin código. Damos un onboarding de 5 días antes del kickoff." },
-  { q: "¿Cuánto tiempo necesito por semana?", a: "Entre 6 y 8 horas. Las sesiones en vivo son 2 por semana de 2h." },
-  { q: "¿Puedo pagar a plazos?", a: "Sí. 3 cuotas sin intereses con tarjeta. Para empresas emitimos factura." },
-  { q: "¿Qué pasa si no me gusta?", a: "14 días de garantía, sin preguntas, devolución íntegra." },
-  { q: "¿Recibo certificado?", a: "Sí, al completar los 4 proyectos. Es el sello CH · IA, no decorativo." },
-];
-
-const WHO_FOR = [
-  { t: "Eres profesional o empleado", d: "Quieres dar el salto a usar IA en serio, no solo ChatGPT casual." },
-  { t: "Tienes un negocio", d: "Buscas internalizar software y dejar de depender de freelancers caros." },
-  { t: "Vienes del lado de negocio", d: "No programas hoy pero entiendes producto. Te volverás peligroso." },
-];
 
 export default async function SalesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -76,8 +64,8 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
   const totalLessons = allLessons.length;
 
   // Secciones editables por curso (con fallback a los textos por defecto).
-  const whoFor = program.whoFor && program.whoFor.length > 0 ? program.whoFor : WHO_FOR;
-  const faqs = program.faqs && program.faqs.length > 0 ? program.faqs : FAQS;
+  const whoFor = program.whoFor && program.whoFor.length > 0 ? program.whoFor : DEFAULT_WHO_FOR;
+  const faqs = program.faqs && program.faqs.length > 0 ? program.faqs : DEFAULT_FAQS;
 
   const nextCohort = openCohorts[0];
   const seatsLeft = nextCohort ? Math.max(0, nextCohort.seatsTotal - nextCohort.seatsTaken) : null;

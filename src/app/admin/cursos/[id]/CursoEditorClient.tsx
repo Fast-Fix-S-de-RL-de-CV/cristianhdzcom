@@ -7,6 +7,7 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { SelectField } from "@/components/ui/SelectField";
 import { apiErrorMessage } from "@/lib/apiError";
 import { parseVideoUrl } from "@/lib/video";
+import { DEFAULT_WHO_FOR, DEFAULT_FAQS } from "@/lib/courseDefaults";
 import { isValidSlug, sanitizeSlugInput } from "@/lib/slug";
 import { AIGenerateModal } from "./AIGenerateModal";
 import { OutlineEditor } from "./OutlineEditor";
@@ -283,10 +284,14 @@ export function CursoEditorClient({
 /* ───────────────── INFO TAB ───────────────── */
 
 function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }) {
+  // Precarga con los mismos textos por defecto que muestra la página pública
+  // cuando el curso aún no tiene los suyos, para que admin y web coincidan.
+  const initWhoFor = program.whoFor && program.whoFor.length > 0 ? program.whoFor : DEFAULT_WHO_FOR;
+  const initFaqs = program.faqs && program.faqs.length > 0 ? program.faqs : DEFAULT_FAQS;
   const [form, setForm] = useState({
     ...program,
-    whoFor: program.whoFor ?? [],
-    faqs: program.faqs ?? [],
+    whoFor: initWhoFor,
+    faqs: initFaqs,
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -295,8 +300,8 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
   const dirty = useMemo(() => {
     const normalizedProgram = {
       ...program,
-      whoFor: program.whoFor ?? [],
-      faqs: program.faqs ?? [],
+      whoFor: program.whoFor && program.whoFor.length > 0 ? program.whoFor : DEFAULT_WHO_FOR,
+      faqs: program.faqs && program.faqs.length > 0 ? program.faqs : DEFAULT_FAQS,
     };
     return JSON.stringify(form) !== JSON.stringify(normalizedProgram);
   }, [form, program]);
