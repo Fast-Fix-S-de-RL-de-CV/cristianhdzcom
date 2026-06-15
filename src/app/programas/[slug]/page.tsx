@@ -342,10 +342,24 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
           </div>
           <div>
             <Eyebrow>Tu instructor</Eyebrow>
-            <h2 style={{ fontSize: 64, marginTop: 16 }}>{hero.heroTitle}</h2>
-            <p className="serif" style={{ fontSize: 26, marginTop: 16, color: "var(--ink-2)", lineHeight: 1.3 }}>
-              Autor, fundador de agencia, programador profesional con IA. Más de una década enseñando negocios sin dinero a
-              empresarios reales.
+            <h2 style={{ fontSize: 60, marginTop: 14, lineHeight: 1.04 }}>{hero.heroTitle}</h2>
+            <p className="serif" style={{ fontSize: 22, marginTop: 8, color: "var(--accent)", fontWeight: 600 }}>
+              Arquitecto de Software
+            </p>
+            <p className="serif" style={{ fontSize: 22, marginTop: 18, color: "var(--ink-2)", lineHeight: 1.4 }}>
+              Delegado mexicano en la Cumbre del G20, representante de México en Brasil 2024 y Sudáfrica 2025.
+              Empresario y líder, director de empresas del sector restaurantero y arquitecto de software.
+            </p>
+            <p style={{ fontSize: 16, marginTop: 16, color: "var(--ink-2)", lineHeight: 1.65 }}>
+              Director de Fast Fix, agencia especializada en desarrollo de software personalizado a la medida, y de
+              Click Thunder, empresa propietaria de 14 marcas de software SaaS, en las cuales también funge como
+              director.
+            </p>
+            <p style={{ fontSize: 15, marginTop: 14, color: "var(--muted)", lineHeight: 1.65 }}>
+              Ha colaborado con marcas internacionales reconocidas y fue ganador del premio Huawei Spark 2023 por su
+              expansión en el sector informático. Ha participado en foros junto a empresarios como Marcus Dantus y
+              Ernesto Coppel, y mantiene relación directa con los consulados de Brasil y México. Trabajar con Cristian
+              Hernández es sinónimo de confianza, compromiso y resultados.
             </p>
             {hero.heroStats && hero.heroStats.length > 0 && (
               <>
