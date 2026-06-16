@@ -56,12 +56,12 @@ export default async function EmpresasPage() {
         <h1 style={{ fontSize: "clamp(48px, 7vw, 88px)", marginTop: 16, maxWidth: 1000, lineHeight: 0.98 }}>
           Las empresas que construí
           <br />
-          con <span style={{ color: "var(--accent)" }}>IA + negocios</span>.
+          como <span style={{ color: "var(--accent)" }}>arquitecto de software</span>.
         </h1>
         <p style={{ fontSize: 20, color: "var(--ink-2)", maxWidth: 720, marginTop: 22, lineHeight: 1.5 }}>
           {realCount > 0
-            ? `${realCount} ${realCount === 1 ? "marca en operación" : "marcas en operación"}: SaaS productizados, software a medida, consultoría y agencia. Cada una es un caso real de cómo aplicamos inteligencia artificial al negocio. Puedes usarlas en tu empresa hoy.`
-            : "SaaS productizados, software a medida, consultoría y agencia — casos reales de IA aplicada al negocio."}
+            ? `${realCount} ${realCount === 1 ? "marca en operación" : "marcas en operación"}: SaaS productizados, software a la medida, consultoría y agencia. Soy empresario y experto en negocios y programación — consultor de IA y arquitecto de software. Puedes usarlas en tu empresa hoy.`
+            : "SaaS productizados, software a la medida, consultoría y agencia. Empresario, experto en negocios y programación, consultor de IA y arquitecto de software."}
         </p>
       </section>
 
