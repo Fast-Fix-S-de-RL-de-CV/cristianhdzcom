@@ -482,6 +482,8 @@ export function OutlineEditor({
                       : "0 2px 6px rgba(10,30,58,0.04)",
                   opacity: dragInfo?.type === "module" && dragInfo.moduleId === m.id ? 0.6 : 1,
                   transition: "border-color 0.12s",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
                 }}
               >
                 <DragHandle />
@@ -508,13 +510,14 @@ export function OutlineEditor({
                 >
                   {m.code}
                 </span>
-                <button
-                  type="button"
+                <span
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onEditModule(m)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") onEditModule(m);
+                  }}
                   style={{
-                    background: "transparent",
-                    border: "none",
-                    padding: 0,
                     fontSize: 15,
                     fontWeight: 700,
                     color: "var(--navy)",
@@ -527,7 +530,7 @@ export function OutlineEditor({
                   title="Editar módulo"
                 >
                   {m.title}
-                </button>
+                </span>
                 <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
                   {m.lessons.length} {m.lessons.length === 1 ? "lección" : "lecciones"}
                   {m.weekLabel ? ` · ${m.weekLabel}` : ""}
@@ -604,6 +607,8 @@ export function OutlineEditor({
                             border: "1px solid transparent",
                             cursor: isThisDragged ? "grabbing" : "grab",
                             opacity: isThisDragged ? 0.4 : 1,
+                            userSelect: "none",
+                            WebkitUserSelect: "none",
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.borderColor = "rgba(216,168,63,0.40)";
@@ -665,13 +670,14 @@ export function OutlineEditor({
                               </span>
                             )}
                           </span>
-                          <button
-                            type="button"
+                          <span
+                            role="button"
+                            tabIndex={0}
                             onClick={() => onEditLesson(l)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") onEditLesson(l);
+                            }}
                             style={{
-                              background: "transparent",
-                              border: "none",
-                              padding: 0,
                               fontSize: 13,
                               fontWeight: 600,
                               color: "var(--ink)",
@@ -684,7 +690,7 @@ export function OutlineEditor({
                             title="Editar lección"
                           >
                             {l.title}
-                          </button>
+                          </span>
                           <span className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>
                             +{l.xpReward} XP
                           </span>
