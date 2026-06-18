@@ -1954,6 +1954,15 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
   padding: 10px; border-radius: 9px; border: 1px solid color-mix(in srgb, var(--red) 30%, white);
   background: color-mix(in srgb, var(--red) 8%, white); color: var(--red); font-weight: 600; font-size: 13px; cursor: pointer;
 }
+/* Fila de acciones del editor: Duplicar + Eliminar lado a lado */
+.mk-ed-actions { display: flex; gap: 10px; margin-top: 22px; }
+.mk-ed-actions .mk-delete { margin-top: 0; width: auto; flex: 1; }
+.mk-dup {
+  display: flex; align-items: center; justify-content: center; gap: 7px; flex: 1;
+  padding: 10px; border-radius: 9px; border: 1px solid var(--line);
+  background: var(--bg-2); color: var(--ink-2); font-weight: 600; font-size: 13px; cursor: pointer;
+}
+.mk-dup:hover { border-color: var(--accent); color: var(--accent); background: #fff; }
 
 /* ── Vista imprimible ── */
 .mk-print { display: none; }

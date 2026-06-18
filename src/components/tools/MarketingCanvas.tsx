@@ -40,7 +40,7 @@ import { apiErrorMessage } from "@/lib/apiError";
 import { MarketingNode } from "./MarketingNode";
 import { TimeNode } from "./TimeNode";
 import { VideoThumb } from "./VideoThumb";
-import { Plus, Trash2, X, Download, Printer, ArrowLeft, Check, Upload, Clock, Hand, BoxSelect } from "lucide-react";
+import { Plus, Trash2, X, Download, Printer, ArrowLeft, Check, Upload, Clock, Hand, BoxSelect, Copy } from "lucide-react";
 
 const nodeTypes = { marketing: MarketingNode, tiempo: TimeNode };
 
@@ -214,6 +214,30 @@ function Inner({ plan }: { plan: Plan }) {
     setEdges((eds) => eds.filter((e) => e.source !== selectedId && e.target !== selectedId));
     setSelectedId(null);
   }, [selectedId, setNodes, setEdges]);
+
+  // Duplicar la card/tiempo seleccionada (mismo contenido, junto a la original).
+  const duplicateSelected = useCallback(() => {
+    if (!selectedId) return;
+    setNodes((nds) => {
+      const src = nds.find((n) => n.id === selectedId);
+      if (!src) return nds;
+      const id = crypto.randomUUID();
+      const data = JSON.parse(JSON.stringify(src.data ?? {}));
+      // Regenerar ids del checklist para no duplicarlos.
+      if (Array.isArray(data.checklist)) {
+        data.checklist = data.checklist.map((c: { text: string; done: boolean }) => ({
+          id: crypto.randomUUID(),
+          text: c.text,
+          done: c.done,
+        }));
+      }
+      const position = { x: (src.position?.x ?? 0) + 36, y: (src.position?.y ?? 0) + 36 };
+      const copy = { ...src, id, position, selected: false, data } as Node;
+      // Marcar el nuevo como seleccionado tras crearlo.
+      queueMicrotask(() => setSelectedId(id));
+      return nds.concat(copy);
+    });
+  }, [selectedId, setNodes]);
 
   // ── Auto-guardado (debounced) ──
   const snapshot = JSON.stringify({ title, product, nodes, edges });
@@ -519,9 +543,14 @@ function Inner({ plan }: { plan: Plan }) {
               Se verá: <strong>{td.amount}{timeUnit(td.unit).abbr}</strong> de espera
             </div>
 
-            <button type="button" className="mk-delete" onClick={removeSelected}>
-              <Trash2 size={15} /> Eliminar tiempo
-            </button>
+            <div className="mk-ed-actions">
+              <button type="button" className="mk-dup" onClick={duplicateSelected}>
+                <Copy size={14} /> Duplicar
+              </button>
+              <button type="button" className="mk-delete" onClick={removeSelected}>
+                <Trash2 size={15} /> Eliminar
+              </button>
+            </div>
           </aside>
         ) : null}
 
@@ -743,9 +772,14 @@ function Inner({ plan }: { plan: Plan }) {
               </div>
             ) : null}
 
-            <button type="button" className="mk-delete" onClick={removeSelected}>
-              <Trash2 size={15} /> Eliminar card
-            </button>
+            <div className="mk-ed-actions">
+              <button type="button" className="mk-dup" onClick={duplicateSelected}>
+                <Copy size={14} /> Duplicar card
+              </button>
+              <button type="button" className="mk-delete" onClick={removeSelected}>
+                <Trash2 size={15} /> Eliminar
+              </button>
+            </div>
           </aside>
         ) : null}
       </div>
