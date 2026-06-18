@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import { apiErrorMessage } from "@/lib/apiError";
@@ -66,6 +66,11 @@ export function OutlineEditor({
 
   const [dragInfo, setDragInfo] = useState<DragInfo | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  // Refs espejo para leer el estado de forma síncrona dentro de los handlers
+  // de drag (el estado de React no se actualiza a tiempo entre dragstart y los
+  // primeros dragover).
+  const dragRef = useRef<DragInfo | null>(null);
+  const dropRef = useRef<DropTarget | null>(null);
   const [persisting, setPersisting] = useState(false);
   const [quickModuleTitle, setQuickModuleTitle] = useState("");
   const [quickLessonByModule, setQuickLessonByModule] = useState<Record<string, string>>({});
@@ -88,6 +93,7 @@ export function OutlineEditor({
 
   /* ─────────── Drag & drop ─────────── */
   function onDragStart(e: React.DragEvent, info: DragInfo) {
+    dragRef.current = info;
     setDragInfo(info);
     e.dataTransfer.effectAllowed = "move";
     // Set drag image to be the item itself.
@@ -95,25 +101,31 @@ export function OutlineEditor({
   }
   function onDragOver(e: React.DragEvent, target: DropTarget) {
     e.preventDefault();
-    if (!dragInfo) return;
+    const di = dragRef.current;
+    if (!di) return;
     // Validate: can't drop module on lesson, can't drop lesson on root.
-    if (dragInfo.type === "module" && target.kind !== "module") return;
-    if (dragInfo.type === "lesson" && target.kind !== "lesson" && target.kind !== "module-end") return;
+    if (di.type === "module" && target.kind !== "module") return;
+    if (di.type === "lesson" && target.kind !== "lesson" && target.kind !== "module-end") return;
+    dropRef.current = target;
     setDropTarget(target);
   }
   function onDragLeave() {
     // Don't clear too eagerly; let dragover re-trigger.
   }
   async function onDrop() {
-    if (!dragInfo || !dropTarget) {
+    const di = dragRef.current;
+    const dt = dropRef.current;
+    dragRef.current = null;
+    dropRef.current = null;
+    if (!di || !dt) {
       setDragInfo(null);
       setDropTarget(null);
       return;
     }
-    const next = applyDrop(tree, dragInfo, dropTarget);
+    const next = applyDrop(tree, di, dt);
     // Si movimos una lección a otro módulo, expándelo para ver el resultado.
-    if (dragInfo.type === "lesson" && "moduleId" in dropTarget && dropTarget.moduleId) {
-      const destMod = dropTarget.moduleId;
+    if (di.type === "lesson" && "moduleId" in dt && dt.moduleId) {
+      const destMod = dt.moduleId;
       setExpanded((prev) => new Set(prev).add(destMod));
     }
     setDragInfo(null);
@@ -146,6 +158,8 @@ export function OutlineEditor({
     }
   }
   function onDragEnd() {
+    dragRef.current = null;
+    dropRef.current = null;
     setDragInfo(null);
     setDropTarget(null);
   }
@@ -432,13 +446,14 @@ export function OutlineEditor({
 
               {/* MODULE row */}
               <div
-                draggable={dragInfo?.type !== "lesson"}
+                draggable
                 onDragStart={(e) => onDragStart(e, { type: "module", moduleId: m.id })}
                 onDragOver={(e) => {
                   e.preventDefault();
-                  if (!dragInfo) return;
+                  const di = dragRef.current;
+                  if (!di) return;
                   // Arrastrar una lección sobre el módulo = moverla a ese módulo.
-                  if (dragInfo.type === "lesson") {
+                  if (di.type === "lesson") {
                     onDragOver(e, { kind: "module-end", moduleId: m.id });
                     return;
                   }
@@ -570,7 +585,7 @@ export function OutlineEditor({
                           }
                           onDragOver={(e) => {
                             e.preventDefault();
-                            if (!dragInfo || dragInfo.type !== "lesson") return;
+                            if (!dragRef.current || dragRef.current.type !== "lesson") return;
                             const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
                             const pos: "before" | "after" =
                               e.clientY < rect.top + rect.height / 2 ? "before" : "after";
