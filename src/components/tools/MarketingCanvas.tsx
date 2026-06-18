@@ -725,10 +725,21 @@ function Inner({ plan }: { plan: Plan }) {
               {(d.checklist ?? []).map((c) => (
                 <div key={c.id} className="mk-checkitem">
                   <input type="checkbox" checked={c.done} onChange={(e) => setCheck(c.id, { done: e.target.checked })} />
-                  <input
+                  <textarea
                     className="mk-check-input"
+                    rows={1}
                     value={c.text}
-                    onChange={(e) => setCheck(c.id, { text: e.target.value })}
+                    ref={(el) => {
+                      if (el) {
+                        el.style.height = "auto";
+                        el.style.height = `${el.scrollHeight}px`;
+                      }
+                    }}
+                    onChange={(e) => {
+                      setCheck(c.id, { text: e.target.value });
+                      e.currentTarget.style.height = "auto";
+                      e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                    }}
                     placeholder="Pendiente…"
                     style={c.done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}
                   />
