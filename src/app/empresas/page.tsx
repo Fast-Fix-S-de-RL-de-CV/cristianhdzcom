@@ -52,16 +52,14 @@ export default async function EmpresasPage() {
 
       {/* HERO */}
       <section className="sec" style={{ paddingTop: 64, paddingBottom: 40 }}>
-        <Eyebrow>Estudio · Empresas y Servicios</Eyebrow>
+        <Eyebrow>Estudio · Empresas y proyectos</Eyebrow>
         <h1 style={{ fontSize: "clamp(48px, 7vw, 88px)", marginTop: 16, maxWidth: 1000, lineHeight: 0.98 }}>
-          Las empresas que construí
-          <br />
-          como <span style={{ color: "var(--accent)" }}>arquitecto de software</span>.
+          Empresas y <span style={{ color: "var(--accent)" }}>proyectos</span>.
         </h1>
-        <p style={{ fontSize: 20, color: "var(--ink-2)", maxWidth: 720, marginTop: 22, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 20, color: "var(--ink-2)", maxWidth: 780, marginTop: 22, lineHeight: 1.5 }}>
           {realCount > 0
-            ? `${realCount} ${realCount === 1 ? "marca en operación" : "marcas en operación"}: SaaS productizados, software a la medida, consultoría y agencia. Soy empresario y experto en negocios y programación — consultor de IA y arquitecto de software. Puedes usarlas en tu empresa hoy.`
-            : "SaaS productizados, software a la medida, consultoría y agencia. Empresario, experto en negocios y programación, consultor de IA y arquitecto de software."}
+            ? `Contamos con una red de empresas digitales y físicas —SaaS, servicios y software a la medida— que seguramente pueden ayudarte en tu negocio. ${realCount} ${realCount === 1 ? "marca en operación" : "marcas en operación"}, listas para que las uses hoy.`
+            : "Contamos con una red de empresas digitales y físicas —SaaS, servicios y software a la medida— que seguramente pueden ayudarte en tu negocio."}
         </p>
       </section>
 
@@ -78,14 +76,14 @@ export default async function EmpresasPage() {
       <section className="sec">
         <div className="between" style={{ alignItems: "flex-end", marginBottom: 40, flexWrap: "wrap", gap: 24 }}>
           <div>
-            <Eyebrow>Catálogo completo</Eyebrow>
+            <Eyebrow>La red completa</Eyebrow>
             <h2 style={{ fontSize: "clamp(36px, 5vw, 56px)", marginTop: 14 }}>
-              Todas mis empresas.
+              Todas las empresas y proyectos.
             </h2>
           </div>
           <p style={{ maxWidth: 380, color: "var(--muted)", lineHeight: 1.55, fontSize: 15 }}>
-            ¿Necesitas software a medida o sumarte como cliente de alguno de los SaaS? Escríbeme y lo
-            vemos.
+            ¿Quieres sumarte como cliente de alguna de estas empresas o necesitas software a la
+            medida? Escríbeme y lo vemos.
           </p>
         </div>
         <ServicesGrid services={services} />
@@ -95,11 +93,11 @@ export default async function EmpresasPage() {
       <section className="sec" style={{ paddingTop: 0 }}>
         <Card style={{ padding: 56, textAlign: "center", background: "var(--bg-2)" }}>
           <h2 style={{ fontSize: "clamp(32px, 4vw, 52px)", marginBottom: 16 }}>
-            ¿Quieres una empresa así para tu negocio?
+            ¿Quieres algo así para tu negocio?
           </h2>
           <p style={{ fontSize: 17, color: "var(--ink-2)", maxWidth: 560, margin: "0 auto 28px", lineHeight: 1.5 }}>
-            En la agencia construimos software a medida con IA, o puedes empezar usando uno de los SaaS
-            que ya están en producción.
+            Construimos software a la medida y damos consultoría de negocios y de IA, o puedes empezar
+            hoy usando una de las empresas y SaaS que ya están en operación.
           </p>
           <div className="row" style={{ gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <a href="mailto:info@cristianhdz.com">
