@@ -57,10 +57,11 @@ export function ServiceCardItem({ service: s }: { service: ServiceCard }) {
 
   const cardInner = (
     <Card hover style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Banner superior */}
+      {/* Banner / portada superior — formato cuadrado-ish (4:3) */}
       <div
         style={{
-          height: 200,
+          width: "100%",
+          aspectRatio: "4 / 3",
           background: bannerBg,
           display: "flex",
           alignItems: "center",
@@ -110,15 +111,15 @@ export function ServiceCardItem({ service: s }: { service: ServiceCard }) {
             )}
             <div
               style={{
-                width: 88,
-                height: 88,
-                borderRadius: 22,
+                width: 104,
+                height: 104,
+                borderRadius: 26,
                 background: "rgba(255,255,255,0.95)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontFamily: "var(--font-serif)",
-                fontSize: 40,
+                fontSize: 46,
                 color: accent,
                 boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
                 fontWeight: 600,

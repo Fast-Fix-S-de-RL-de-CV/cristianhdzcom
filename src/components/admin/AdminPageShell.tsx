@@ -13,7 +13,7 @@ const ITEMS = [
   ["Cursos", "/admin/cursos"],
   ["Talleres", "/admin/talleres"],
   ["Libros", "/admin/libros"],
-  ["Servicios", "/admin/servicios"],
+  ["Empresas", "/admin/servicios"],
   ["Blog", "/admin/blog"],
   ["Comunidad", "/admin/comunidad"],
   ["Soporte", "/admin/soporte"],

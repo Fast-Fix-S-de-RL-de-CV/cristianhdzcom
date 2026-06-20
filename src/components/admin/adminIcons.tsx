@@ -42,7 +42,7 @@ const MAP: Record<string, (s: number) => ReactNode> = {
   Cursos: (s) => <BookOpen size={s} />,
   Talleres: (s) => <Radio size={s} />,
   Libros: (s) => <Library size={s} />,
-  Servicios: (s) => <Rocket size={s} />,
+  Empresas: (s) => <Rocket size={s} />,
   Blog: (s) => <Newspaper size={s} />,
   Comunidad: (s) => <MessageSquare size={s} />,
   Marketing: (s) => <Megaphone size={s} />,

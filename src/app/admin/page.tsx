@@ -424,7 +424,7 @@ export default async function AdminDashboard() {
                 [<Megaphone size={16} />, "Marketing y ofertas", "/admin/marketing"],
                 [<GraduationCap size={16} />, "Ver alumnos", "/admin/alumnos"],
                 [<Wallet size={16} />, "Pagos y cobros", "/admin/pagos"],
-                [<Rocket size={16} />, "Servicios / Empresas", "/admin/servicios"],
+                [<Rocket size={16} />, "Empresas y proyectos", "/admin/servicios"],
                 [<Repeat size={16} />, "Suscripciones", "/admin/suscripciones"],
               ] as [React.ReactNode, string, string][]).map(([i, l, href]) => (
                 <a

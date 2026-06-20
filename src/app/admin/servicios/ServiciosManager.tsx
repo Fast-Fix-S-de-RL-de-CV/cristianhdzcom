@@ -67,7 +67,7 @@ export function ServiciosManager({ rows }: { rows: ServiceRow[] }) {
 
   const bulkDelete = useBulkDelete<string>({
     url: "/api/admin/services/bulk-delete",
-    entityLabel: { singular: "servicio", plural: "servicios" },
+    entityLabel: { singular: "empresa", plural: "empresas" },
     description: "Se eliminan del catálogo público. Esta acción no se puede deshacer.",
     onSuccess: bulk.clear,
   });
@@ -138,7 +138,7 @@ export function ServiciosManager({ rows }: { rows: ServiceRow[] }) {
           className="btn btn-primary"
           style={{ padding: "6px 12px", fontSize: 11 }}
         >
-          + Nuevo servicio
+          + Nueva empresa
         </button>
       </div>
 
@@ -166,7 +166,7 @@ export function ServiciosManager({ rows }: { rows: ServiceRow[] }) {
           />
         </span>
         <span style={{ width: 48 }}>Logo</span>
-        <span style={{ flex: 1 }}>Servicio</span>
+        <span style={{ flex: 1 }}>Empresa</span>
         <span style={{ width: 110 }}>Tipo</span>
         <span style={{ width: 100 }}>Badge</span>
         <span style={{ width: 70, textAlign: "right" }}>Orden</span>
@@ -276,13 +276,13 @@ export function ServiciosManager({ rows }: { rows: ServiceRow[] }) {
 
       {filtered.length === 0 && (
         <div style={{ padding: 40, textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
-          Sin servicios en este filtro.
+          Sin empresas en este filtro.
         </div>
       )}
 
       <BulkActionBar
         selectedCount={bulk.size}
-        entityLabel={{ singular: "servicio", plural: "servicios" }}
+        entityLabel={{ singular: "empresa", plural: "empresas" }}
         onCancel={bulk.clear}
         onDelete={() => bulkDelete.run([...bulk.allSelected])}
         pending={bulkDelete.pending}
@@ -382,7 +382,7 @@ function ServiceDialog({
         setErr(msg);
         return;
       }
-      toast.success(service ? "Cambios guardados." : "Servicio creado.");
+      toast.success(service ? "Cambios guardados." : "Empresa creada.");
       onSaved();
     } catch {
       setErr("Error de red.");
@@ -419,10 +419,10 @@ function ServiceDialog({
         }}
       >
         <h2 className="serif" style={{ fontSize: 24, marginBottom: 6 }}>
-          {service ? "Editar" : "Nuevo"} servicio
+          {service ? "Editar" : "Nueva"} empresa
         </h2>
         <p className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.08em", marginBottom: 22 }}>
-          APARECE EN LA SECCIÓN "EMPRESAS Y SERVICIOS" DEL HOME
+          APARECE EN LA SECCIÓN "EMPRESAS Y PROYECTOS" DEL HOME Y EN /EMPRESAS
         </p>
 
         <div className="col" style={{ gap: 14 }}>
@@ -433,7 +433,10 @@ function ServiceDialog({
             </div>
             <div
               style={{
-                height: 130,
+                width: "100%",
+                maxWidth: 280,
+                aspectRatio: "4 / 3",
+                margin: "0 auto",
                 borderRadius: 10,
                 background: form.isCtaCard
                   ? "repeating-linear-gradient(135deg, var(--bg-2) 0 1px, transparent 1px 10px), var(--bg)"
@@ -446,9 +449,9 @@ function ServiceDialog({
             >
               <div
                 style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 14,
+                  width: 64,
+                  height: 64,
+                  borderRadius: 16,
                   background: "rgba(255,255,255,0.95)",
                   display: "flex",
                   alignItems: "center",

@@ -28,7 +28,7 @@ export default async function ServiciosAdminPage() {
     <AdminPageShell
       user={user}
       active="/admin/servicios"
-      title="Empresas y Servicios"
+      title="Empresas y proyectos"
       subtitle={`${total} en total · ${active} en operación${ctaCards ? ` · ${ctaCards} card${ctaCards > 1 ? "s" : ""} CTA` : ""}`}
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
