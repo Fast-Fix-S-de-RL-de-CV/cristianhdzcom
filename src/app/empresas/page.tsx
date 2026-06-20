@@ -6,7 +6,6 @@ import { Footer } from "@/components/marketing/Footer";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { ServicesCarousel } from "@/components/marketing/ServicesCarousel";
 import { ServicesGrid, type ServiceCard } from "@/components/marketing/ServicesGrid";
 
 export const dynamic = "force-dynamic";
@@ -62,13 +61,6 @@ export default async function EmpresasPage() {
             : "Contamos con una red de empresas digitales y físicas —SaaS, servicios y software a la medida— que seguramente pueden ayudarte en tu negocio."}
         </p>
       </section>
-
-      {/* CARRUSEL (dirección inversa) */}
-      {services.length > 0 && (
-        <section className="sec" style={{ paddingTop: 0, paddingBottom: 56 }}>
-          <ServicesCarousel services={services} />
-        </section>
-      )}
 
       <div className="rule" />
 
