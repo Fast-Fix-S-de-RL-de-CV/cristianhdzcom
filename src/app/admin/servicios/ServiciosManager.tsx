@@ -435,7 +435,7 @@ function ServiceDialog({
               style={{
                 width: "100%",
                 maxWidth: 280,
-                aspectRatio: "4 / 3",
+                aspectRatio: "1 / 1",
                 margin: "0 auto",
                 borderRadius: 10,
                 background: form.isCtaCard

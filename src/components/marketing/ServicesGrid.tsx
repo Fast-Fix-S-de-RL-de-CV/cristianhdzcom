@@ -57,11 +57,11 @@ export function ServiceCardItem({ service: s }: { service: ServiceCard }) {
 
   const cardInner = (
     <Card hover style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Banner / portada superior — formato cuadrado-ish (4:3) */}
+      {/* Banner / portada superior — formato cuadrado (1:1), más alto */}
       <div
         style={{
           width: "100%",
-          aspectRatio: "4 / 3",
+          aspectRatio: "1 / 1",
           background: bannerBg,
           display: "flex",
           alignItems: "center",
