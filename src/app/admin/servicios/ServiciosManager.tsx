@@ -444,9 +444,11 @@ function ServiceDialog({
                 aspectRatio: "1 / 1",
                 margin: "0 auto",
                 borderRadius: 10,
-                background: form.isCtaCard
-                  ? "repeating-linear-gradient(135deg, var(--bg-2) 0 1px, transparent 1px 10px), var(--bg)"
-                  : `linear-gradient(135deg, oklch(58% 0.18 ${form.hue}), oklch(42% 0.14 ${form.hue}))`,
+                background: coverPreview
+                  ? "#0b1220"
+                  : form.isCtaCard
+                    ? "repeating-linear-gradient(135deg, var(--bg-2) 0 1px, transparent 1px 10px), var(--bg)"
+                    : `linear-gradient(135deg, oklch(58% 0.18 ${form.hue}), oklch(42% 0.14 ${form.hue}))`,
                 position: "relative",
                 overflow: "hidden",
                 display: "flex",
@@ -459,7 +461,16 @@ function ServiceDialog({
                   src={coverPreview}
                   title="Preview del video de portada"
                   allow="autoplay; fullscreen; picture-in-picture"
-                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, pointerEvents: "none" }}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    width: "177.78%",
+                    height: "100%",
+                    transform: "translate(-50%, -50%) scale(1.06)",
+                    border: 0,
+                    pointerEvents: "none",
+                  }}
                 />
               )}
               {!coverPreview && (

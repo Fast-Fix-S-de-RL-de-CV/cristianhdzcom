@@ -72,7 +72,7 @@ export function ServiceCardItem({
         style={{
           width: "100%",
           aspectRatio: "1 / 1",
-          background: bannerBg,
+          background: coverVideo ? "#0b1220" : bannerBg,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -90,9 +90,14 @@ export function ServiceCardItem({
               allow="autoplay; fullscreen; picture-in-picture"
               style={{
                 position: "absolute",
-                inset: 0,
-                width: "100%",
+                top: "50%",
+                left: "50%",
+                // 16:9 que CUBRE el cuadrado (recorta los lados) en vez de letterbox.
+                // Alto = 100% del cuadrado; ancho = 16/9 de ese alto. scale() = overscan
+                // para que no quede ninguna línea del gradiente arriba/abajo.
+                width: "177.78%",
                 height: "100%",
+                transform: "translate(-50%, -50%) scale(1.06)",
                 border: 0,
                 pointerEvents: "none",
               }}
