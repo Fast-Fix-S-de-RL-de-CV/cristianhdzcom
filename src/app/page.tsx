@@ -347,6 +347,7 @@ export default async function HomePage() {
             ctaUrl: s.ctaUrl,
             isCtaCard: s.isCtaCard,
             showLiveBadge: s.showLiveBadge,
+            coverVideoUrl: s.coverVideoUrl,
           }))}
         />
 

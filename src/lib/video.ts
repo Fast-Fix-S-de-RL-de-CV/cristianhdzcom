@@ -45,3 +45,19 @@ export function embedUrl(provider: string, id: string): string {
   }
   return "";
 }
+
+/**
+ * Build a *background* embed URL for a video used as a card cover: autoplay,
+ * muted, looped, no controls. Returns null when the input doesn't parse to a
+ * known provider (so the caller falls back to the gradient cover).
+ */
+export function coverEmbedUrl(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const v = parseVideoUrl(input);
+  if (!v) return null;
+  if (v.provider === "vimeo") {
+    // background=1 implica autoplay + loop + muted + sin controles.
+    return `https://player.vimeo.com/video/${v.id}?background=1&dnt=1`;
+  }
+  return `https://www.youtube-nocookie.com/embed/${v.id}?autoplay=1&mute=1&loop=1&playlist=${v.id}&controls=0&modestbranding=1&playsinline=1&rel=0&disablekb=1`;
+}

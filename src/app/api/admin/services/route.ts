@@ -39,6 +39,7 @@ export async function POST(req: Request) {
         priceLabel: data.priceLabel ?? null,
         ctaLabel: data.ctaLabel ?? "Ver SaaS →",
         ctaUrl: data.ctaUrl ?? null,
+        coverVideoUrl: data.coverVideoUrl ?? null,
         isCtaCard: data.isCtaCard ?? false,
         showLiveBadge: data.showLiveBadge ?? true,
         isActive: data.isActive ?? true,

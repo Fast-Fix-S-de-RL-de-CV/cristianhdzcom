@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { coverEmbedUrl } from "@/lib/video";
 
 export type ServiceCard = {
   id: string;
@@ -19,6 +20,7 @@ export type ServiceCard = {
   ctaUrl: string | null;
   isCtaCard: boolean;
   showLiveBadge: boolean;
+  coverVideoUrl: string | null;
 };
 
 /**
@@ -48,9 +50,17 @@ export function ServicesGrid({ services }: { services: ServiceCard[] }) {
   );
 }
 
-export function ServiceCardItem({ service: s }: { service: ServiceCard }) {
+export function ServiceCardItem({
+  service: s,
+  staticCover = false,
+}: {
+  service: ServiceCard;
+  /** Si true, ignora el video de portada (lo usa el carrusel para no autoplayear N iframes en movimiento). */
+  staticCover?: boolean;
+}) {
   const isCta = s.isCtaCard;
   const accent = `oklch(42% 0.14 ${s.hue})`;
+  const coverVideo = !isCta && !staticCover ? coverEmbedUrl(s.coverVideoUrl) : null;
   const bannerBg = isCta
     ? "repeating-linear-gradient(135deg, var(--bg-2) 0 1px, transparent 1px 10px), var(--bg)"
     : `linear-gradient(135deg, oklch(58% 0.18 ${s.hue}), oklch(42% 0.14 ${s.hue}))`;
@@ -67,9 +77,39 @@ export function ServiceCardItem({ service: s }: { service: ServiceCard }) {
           alignItems: "center",
           justifyContent: "center",
           position: "relative",
+          overflow: "hidden",
           borderBottom: "1px solid var(--line)",
         }}
       >
+        {coverVideo && (
+          <>
+            <iframe
+              src={coverVideo}
+              title={s.name}
+              loading="lazy"
+              allow="autoplay; fullscreen; picture-in-picture"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                border: 0,
+                pointerEvents: "none",
+              }}
+            />
+            {/* Scrim para legibilidad del badge/dominio sobre cualquier video */}
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                background:
+                  "linear-gradient(180deg, rgba(0,0,0,0.28) 0%, transparent 28%, transparent 62%, rgba(0,0,0,0.42) 100%)",
+              }}
+            />
+          </>
+        )}
         {!isCta && (
           <>
             {s.badge && (
@@ -109,24 +149,26 @@ export function ServiceCardItem({ service: s }: { service: ServiceCard }) {
                 ● EN VIVO
               </span>
             )}
-            <div
-              style={{
-                width: 104,
-                height: 104,
-                borderRadius: 26,
-                background: "rgba(255,255,255,0.95)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "var(--font-serif)",
-                fontSize: 46,
-                color: accent,
-                boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-                fontWeight: 600,
-              }}
-            >
-              {s.glyph ?? s.name.charAt(0)}
-            </div>
+            {!coverVideo && (
+              <div
+                style={{
+                  width: 104,
+                  height: 104,
+                  borderRadius: 26,
+                  background: "rgba(255,255,255,0.95)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "var(--font-serif)",
+                  fontSize: 46,
+                  color: accent,
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+                  fontWeight: 600,
+                }}
+              >
+                {s.glyph ?? s.name.charAt(0)}
+              </div>
+            )}
             {s.domain && (
               <span
                 className="mono"

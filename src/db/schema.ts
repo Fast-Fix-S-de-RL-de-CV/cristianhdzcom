@@ -654,6 +654,8 @@ export const services = pgTable(
     ctaLabel: varchar("cta_label", { length: 60 }).notNull().default("Ver SaaS →"),
     /** URL destino del CTA (puede ser dominio externo). */
     ctaUrl: text("cta_url"),
+    /** Video de portada (Vimeo/YouTube) reproducido en loop mudo sobre el banner. */
+    coverVideoUrl: text("cover_video_url"),
     /**
      * Si true, la card se renderea como "Tu próximo SaaS / cotiza" — patrón
      * cross-hatched, sin gradiente colorido, CTA distinto. Diseñada para

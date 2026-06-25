@@ -11,6 +11,7 @@ import {
   useBulkSelection,
 } from "@/components/admin/BulkActions";
 import { apiErrorMessage } from "@/lib/apiError";
+import { coverEmbedUrl } from "@/lib/video";
 
 export type ServiceRow = {
   id: string;
@@ -27,6 +28,7 @@ export type ServiceRow = {
   priceLabel: string | null;
   ctaLabel: string;
   ctaUrl: string | null;
+  coverVideoUrl: string | null;
   isCtaCard: boolean;
   showLiveBadge: boolean;
   isActive: boolean;
@@ -335,11 +337,14 @@ function ServiceDialog({
     priceLabel: service?.priceLabel || "",
     ctaLabel: service?.ctaLabel || "Ver SaaS →",
     ctaUrl: service?.ctaUrl || "",
+    coverVideoUrl: service?.coverVideoUrl || "",
     isCtaCard: service?.isCtaCard ?? false,
     showLiveBadge: service?.showLiveBadge ?? true,
     isActive: service?.isActive ?? true,
     sortOrder: service?.sortOrder ?? 0,
   });
+
+  const coverPreview = !form.isCtaCard ? coverEmbedUrl(form.coverVideoUrl) : null;
 
   async function save() {
     setBusy(true);
@@ -358,6 +363,7 @@ function ServiceDialog({
       priceLabel: form.priceLabel || null,
       ctaLabel: form.ctaLabel || "Ver SaaS →",
       ctaUrl: form.ctaUrl || null,
+      coverVideoUrl: form.coverVideoUrl || null,
       isCtaCard: form.isCtaCard,
       showLiveBadge: form.showLiveBadge,
       isActive: form.isActive,
@@ -442,28 +448,39 @@ function ServiceDialog({
                   ? "repeating-linear-gradient(135deg, var(--bg-2) 0 1px, transparent 1px 10px), var(--bg)"
                   : `linear-gradient(135deg, oklch(58% 0.18 ${form.hue}), oklch(42% 0.14 ${form.hue}))`,
                 position: "relative",
+                overflow: "hidden",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <div
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 16,
-                  background: "rgba(255,255,255,0.95)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: "var(--font-serif)",
-                  fontSize: 24,
-                  fontWeight: 600,
-                  color: form.isCtaCard ? "var(--ink)" : `oklch(42% 0.14 ${form.hue})`,
-                }}
-              >
-                {form.glyph || form.name.charAt(0) || "?"}
-              </div>
+              {coverPreview && (
+                <iframe
+                  src={coverPreview}
+                  title="Preview del video de portada"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, pointerEvents: "none" }}
+                />
+              )}
+              {!coverPreview && (
+                <div
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 16,
+                    background: "rgba(255,255,255,0.95)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: "var(--font-serif)",
+                    fontSize: 24,
+                    fontWeight: 600,
+                    color: form.isCtaCard ? "var(--ink)" : `oklch(42% 0.14 ${form.hue})`,
+                  }}
+                >
+                  {form.glyph || form.name.charAt(0) || "?"}
+                </div>
+              )}
               {form.badge && !form.isCtaCard && (
                 <span
                   className="mono"
@@ -674,6 +691,18 @@ function ServiceDialog({
               style={inputStyle()}
               placeholder="https://bengalpos.com o mailto:info@cristianhdz.com"
             />
+          </Field>
+
+          <Field label="Video de portada (URL Vimeo o YouTube)">
+            <input
+              value={form.coverVideoUrl}
+              onChange={(e) => setForm({ ...form, coverVideoUrl: e.target.value })}
+              style={inputStyle()}
+              placeholder="https://vimeo.com/1204662764"
+            />
+            <span className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 4, display: "block" }}>
+              Se reproduce en loop, mudo, sobre la portada. Vacío = portada con color + logo.
+            </span>
           </Field>
 
           <div className="row" style={{ gap: 18, paddingTop: 6 }}>
