@@ -440,8 +440,8 @@ function ServiceDialog({
             <div
               style={{
                 width: "100%",
-                maxWidth: 280,
-                aspectRatio: "1 / 1",
+                maxWidth: 320,
+                aspectRatio: "16 / 9",
                 margin: "0 auto",
                 borderRadius: 10,
                 background: coverPreview
@@ -461,16 +461,7 @@ function ServiceDialog({
                   src={coverPreview}
                   title="Preview del video de portada"
                   allow="autoplay; fullscreen; picture-in-picture"
-                  style={{
-                    position: "absolute",
-                    top: "50%",
-                    left: "50%",
-                    width: "177.78%",
-                    height: "100%",
-                    transform: "translate(-50%, -50%) scale(1.06)",
-                    border: 0,
-                    pointerEvents: "none",
-                  }}
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, pointerEvents: "none" }}
                 />
               )}
               {!coverPreview && (

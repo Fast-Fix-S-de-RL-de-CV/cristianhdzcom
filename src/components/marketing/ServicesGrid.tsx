@@ -67,11 +67,11 @@ export function ServiceCardItem({
 
   const cardInner = (
     <Card hover style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Banner / portada superior — formato cuadrado (1:1), más alto */}
+      {/* Banner / portada superior — formato 16:9 (el video encaja sin barras ni recorte) */}
       <div
         style={{
           width: "100%",
-          aspectRatio: "1 / 1",
+          aspectRatio: "16 / 9",
           background: coverVideo ? "#0b1220" : bannerBg,
           display: "flex",
           alignItems: "center",
@@ -90,14 +90,9 @@ export function ServiceCardItem({
               allow="autoplay; fullscreen; picture-in-picture"
               style={{
                 position: "absolute",
-                top: "50%",
-                left: "50%",
-                // 16:9 que CUBRE el cuadrado (recorta los lados) en vez de letterbox.
-                // Alto = 100% del cuadrado; ancho = 16/9 de ese alto. scale() = overscan
-                // para que no quede ninguna línea del gradiente arriba/abajo.
-                width: "177.78%",
+                inset: 0,
+                width: "100%",
                 height: "100%",
-                transform: "translate(-50%, -50%) scale(1.06)",
                 border: 0,
                 pointerEvents: "none",
               }}
