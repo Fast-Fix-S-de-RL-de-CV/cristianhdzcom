@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { and, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
-import { getStripe, isStripeConfigured } from "@/lib/stripe";
+import { getStripeForTenant } from "@/lib/stripe";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,12 +12,15 @@ export const runtime = "nodejs";
  * POST /api/membership/resume
  *
  * Revierte la cancelación programada:
- *   1. En Stripe: subscription.update(cancel_at_period_end=false) — vuelve a
- *      cobrar al siguiente ciclo.
+ *   1. En Stripe (del tenant): subscription.update(cancel_at_period_end=false)
+ *      — vuelve a cobrar al siguiente ciclo.
  *   2. En DB: cancelAtPeriodEnd=false.
  * Solo aplica si la membresía sigue activa (no expiró aún).
  */
 export async function POST() {
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
@@ -28,6 +32,7 @@ export async function POST() {
         eq(schema.memberships.userId, me.id),
         eq(schema.memberships.status, "active"),
         eq(schema.memberships.cancelAtPeriodEnd, true),
+        eq(schema.memberships.tenantId, ctx.tenant.id),
       ),
     )
     .limit(1);
@@ -36,10 +41,11 @@ export async function POST() {
   }
 
   // Resolver subscription id de Stripe y reactivar el cobro recurrente.
-  const subId = await findStripeSubscriptionId(me.id);
-  if (subId && isStripeConfigured()) {
+  const subId = await findStripeSubscriptionId(me.id, ctx.tenant.id);
+  const { stripe } = await getStripeForTenant(ctx.tenant.id);
+  if (subId && stripe) {
     try {
-      await getStripe().subscriptions.update(subId, { cancel_at_period_end: false });
+      await stripe.subscriptions.update(subId, { cancel_at_period_end: false });
     } catch (e) {
       console.error("[membership/resume] stripe update failed:", (e as Error).message);
     }
@@ -52,7 +58,7 @@ export async function POST() {
       canceledAt: null,
       updatedAt: new Date(),
     })
-    .where(eq(schema.memberships.id, active.id));
+    .where(and(eq(schema.memberships.id, active.id), eq(schema.memberships.tenantId, ctx.tenant.id)));
 
   // Crédito ya no caduca mientras la membresía esté activa
   await db
@@ -63,13 +69,14 @@ export async function POST() {
   return NextResponse.json({ ok: true });
 }
 
-async function findStripeSubscriptionId(userId: string): Promise<string | null> {
+async function findStripeSubscriptionId(userId: string, tenantId: string): Promise<string | null> {
   const [row] = await db
     .select({ subId: sql<string | null>`${schema.orders.metadata}->>'stripeSubscriptionId'` })
     .from(schema.orders)
     .where(
       and(
         eq(schema.orders.userId, userId),
+        eq(schema.orders.tenantId, tenantId),
         sql`${schema.orders.metadata}->>'stripeSubscriptionId' IS NOT NULL`,
       ),
     )

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiErrorMessage } from "@/lib/apiError";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 /**
  * Calls /api/certificates/[programId]/issue and navigates to the cert.
@@ -10,6 +11,7 @@ import { apiErrorMessage } from "@/lib/apiError";
  */
 export function IssueCertificateButton({ programId }: { programId: string }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -17,10 +19,10 @@ export function IssueCertificateButton({ programId }: { programId: string }) {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/certificates/${programId}/issue`, { method: "POST" });
+      const res = await fetch(tp(`/api/certificates/${programId}/issue`), { method: "POST" });
       const j = await res.json().catch(() => ({}));
       if (res.ok && j.certificate?.code) {
-        router.push(`/cert/${j.certificate.code}`);
+        router.push(tp(`/cert/${j.certificate.code}`));
       } else {
         const MSGS: Record<string, string> = {
           not_completed:

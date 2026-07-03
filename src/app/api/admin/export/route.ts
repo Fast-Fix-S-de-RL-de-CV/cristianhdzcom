@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,8 @@ export async function GET(req: Request) {
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
 
   const url = new URL(req.url);
   const type = (url.searchParams.get("type") || "orders") as
@@ -59,9 +62,15 @@ export async function GET(req: Request) {
         completedAt: schema.enrollments.completedAt,
       })
       .from(schema.enrollments)
-      .innerJoin(schema.users, eq(schema.users.id, schema.enrollments.userId))
-      .leftJoin(schema.cohorts, eq(schema.cohorts.id, schema.enrollments.cohortId))
-      .where(eq(schema.enrollments.programId, programId))
+      .innerJoin(
+        schema.users,
+        and(eq(schema.users.id, schema.enrollments.userId), eq(schema.users.tenantId, ctx.tenant.id)),
+      )
+      .leftJoin(
+        schema.cohorts,
+        and(eq(schema.cohorts.id, schema.enrollments.cohortId), eq(schema.cohorts.tenantId, ctx.tenant.id)),
+      )
+      .where(and(eq(schema.enrollments.programId, programId), eq(schema.enrollments.tenantId, ctx.tenant.id)))
       .orderBy(desc(schema.enrollments.enrolledAt));
     const headers = [
       "id",
@@ -96,6 +105,7 @@ export async function GET(req: Request) {
         createdAt: schema.users.createdAt,
       })
       .from(schema.users)
+      .where(eq(schema.users.tenantId, ctx.tenant.id))
       .orderBy(desc(schema.users.createdAt));
     const headers = ["id", "email", "name", "role", "level", "xp", "streakDays", "country", "createdAt"];
     csv = toCsv(
@@ -117,6 +127,7 @@ export async function GET(req: Request) {
         streakDays: schema.users.streakDays,
       })
       .from(schema.users)
+      .where(eq(schema.users.tenantId, ctx.tenant.id))
       .orderBy(desc(schema.users.xp))
       .limit(500);
     const headers = ["rank", "id", "name", "email", "level", "xp", "streakDays"];
@@ -144,7 +155,11 @@ export async function GET(req: Request) {
         programTitle: schema.programs.title,
       })
       .from(schema.orders)
-      .leftJoin(schema.programs, eq(schema.programs.id, schema.orders.programId))
+      .leftJoin(
+        schema.programs,
+        and(eq(schema.programs.id, schema.orders.programId), eq(schema.programs.tenantId, ctx.tenant.id)),
+      )
+      .where(eq(schema.orders.tenantId, ctx.tenant.id))
       .orderBy(desc(schema.orders.createdAt));
     const headers = [
       "id",

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,6 +29,8 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_input", details: parsed.error.flatten() }, { status: 400 });
@@ -38,7 +41,7 @@ export async function POST(req: Request) {
   const withOrders = await db
     .select({ id: schema.orders.programId })
     .from(schema.orders)
-    .where(inArray(schema.orders.programId, ids))
+    .where(and(eq(schema.orders.tenantId, ctx.tenant.id), inArray(schema.orders.programId, ids)))
     .groupBy(schema.orders.programId);
   const lockedIds = new Set(withOrders.map((r) => r.id).filter(Boolean) as string[]);
   const eligible = ids.filter((id) => !lockedIds.has(id));
@@ -57,7 +60,7 @@ export async function POST(req: Request) {
   try {
     const result = await db
       .delete(schema.programs)
-      .where(inArray(schema.programs.id, eligible))
+      .where(and(eq(schema.programs.tenantId, ctx.tenant.id), inArray(schema.programs.id, eligible)))
       .returning({ id: schema.programs.id });
     return NextResponse.json({
       ok: true,

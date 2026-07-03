@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { eq, asc, sql } from "drizzle-orm";
+import { and, eq, asc, sql } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -74,6 +75,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -82,8 +85,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     );
   }
 
-  // Load program
-  const [program] = await db.select().from(schema.programs).where(eq(schema.programs.id, id)).limit(1);
+  // Load program (scoped al tenant del request)
+  const [program] = await db
+    .select()
+    .from(schema.programs)
+    .where(and(eq(schema.programs.id, id), eq(schema.programs.tenantId, tctx.tenant.id)))
+    .limit(1);
   if (!program) return NextResponse.json({ error: "program_not_found" }, { status: 404 });
 
   // Parse + validate body
@@ -135,13 +142,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     await db.transaction(async (tx) => {
       // Replace existing if requested
       if (data.replaceExisting) {
-        await tx.delete(schema.modules).where(eq(schema.modules.programId, program.id));
+        await tx
+          .delete(schema.modules)
+          .where(and(eq(schema.modules.programId, program.id), eq(schema.modules.tenantId, tctx.tenant.id)));
       }
 
       // Determine starting sortOrder
       const startOrderRes = (await tx.execute(sql`
         SELECT COALESCE(MAX(sort_order), -1)::int + 1 AS next
-        FROM modules WHERE program_id = ${program.id}
+        FROM modules WHERE program_id = ${program.id} AND tenant_id = ${tctx.tenant.id}
       `)) as unknown as { rows?: Array<{ next: number }> } | Array<{ next: number }>;
       const startOrderRows = Array.isArray(startOrderRes) ? startOrderRes : (startOrderRes.rows ?? []);
       let nextOrder = startOrderRows[0]?.next ?? 0;
@@ -151,6 +160,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         const [insertedMod] = await tx
           .insert(schema.modules)
           .values({
+            tenantId: tctx.tenant.id,
             programId: program.id,
             code: m.code || `M${String(nextOrder + 1).padStart(2, "0")}`,
             title: m.title,
@@ -169,6 +179,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         for (const l of m.lessons) {
           if (l.kind === "video") {
             await tx.insert(schema.lessons).values({
+              tenantId: tctx.tenant.id,
               moduleId: insertedMod.id,
               code: l.code || `L${lessonOrder + 1}`,
               title: l.title,
@@ -191,6 +202,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
             const correctOpt = opts.find((o) => o.correct);
             if (!correctOpt || !l.question) continue; // skip malformed
             await tx.insert(schema.lessons).values({
+              tenantId: tctx.tenant.id,
               moduleId: insertedMod.id,
               code: l.code || `L${lessonOrder + 1}`,
               title: l.title,
@@ -216,7 +228,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         .set({
           modulesCount: sql`(SELECT COUNT(*)::int FROM ${schema.modules} WHERE program_id = ${program.id})`,
         })
-        .where(eq(schema.programs.id, program.id));
+        .where(and(eq(schema.programs.id, program.id), eq(schema.programs.tenantId, tctx.tenant.id)));
     });
   } catch (e) {
     console.error("[ai-generate] insert error:", e);

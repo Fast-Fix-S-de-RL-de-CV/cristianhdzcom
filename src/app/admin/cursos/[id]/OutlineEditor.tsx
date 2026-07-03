@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { apiErrorMessage } from "@/lib/apiError";
 import type { ModuleRow, LessonRow, Program } from "./CursoEditorClient";
 
@@ -49,6 +50,7 @@ export function OutlineEditor({
   onChanged: () => void;
 }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
 
@@ -135,7 +137,7 @@ export function OutlineEditor({
     // Persist
     setPersisting(true);
     try {
-      const res = await fetch(`/api/admin/programs/${program.id}/reorder`, {
+      const res = await fetch(tp(`/api/admin/programs/${program.id}/reorder`), {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -174,7 +176,7 @@ export function OutlineEditor({
     const title = quickModuleTitle.trim();
     if (!title) return;
     try {
-      const res = await fetch("/api/admin/modules", {
+      const res = await fetch(tp("/api/admin/modules"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -201,7 +203,7 @@ export function OutlineEditor({
     const mod = tree.find((m) => m.id === mid);
     const order = mod?.lessons.length ?? 0;
     try {
-      const res = await fetch("/api/admin/lessons", {
+      const res = await fetch(tp("/api/admin/lessons"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -232,7 +234,7 @@ export function OutlineEditor({
       tone: "danger",
     });
     if (!ok) return;
-    const res = await fetch(`/api/admin/modules/${m.id}`, { method: "DELETE" });
+    const res = await fetch(tp(`/api/admin/modules/${m.id}`), { method: "DELETE" });
     if (res.ok) onChanged();
     else toast.error("No se pudo eliminar el módulo");
   }
@@ -243,7 +245,7 @@ export function OutlineEditor({
       tone: "danger",
     });
     if (!ok) return;
-    const res = await fetch(`/api/admin/lessons/${l.id}`, { method: "DELETE" });
+    const res = await fetch(tp(`/api/admin/lessons/${l.id}`), { method: "DELETE" });
     if (res.ok) onChanged();
     else toast.error("No se pudo eliminar la lección");
   }

@@ -3,16 +3,20 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET  /api/admin/payment-settings — devuelve la fila completa (con secretos)
- * PUT  /api/admin/payment-settings — upsert por id=1 (single-row config)
+ * GET  /api/admin/payment-settings — devuelve la fila DEL TENANT (con secretos)
+ * PUT  /api/admin/payment-settings — upsert de la fila del tenant
+ *                                    (UNIQUE(tenant_id) — una por tenant)
  *
- * Endpoint restringido a admins. NUNCA exponer a usuarios anónimos: los
- * secretos viajan en el JSON. El frontend público de checkout sólo recibe
- * las publishable/public keys vía un endpoint separado y filtrado.
+ * Son las llaves de pago DEL TENANT (Stripe/PayPal/MP con las que cobra a sus
+ * miembros). Endpoint restringido a admins del tenant. NUNCA exponer a
+ * usuarios anónimos: los secretos viajan en el JSON (el admin edita el objeto
+ * completo y lo re-envía en el PUT). El frontend público de checkout sólo
+ * recibe las publishable/public keys vía un endpoint separado y filtrado.
  */
 const bankAccountShape = z.object({
   bankName: z.string().min(1).max(80),
@@ -41,10 +45,14 @@ const body = z.object({
   enableTransfer: z.boolean().optional(),
 });
 
-async function loadOrCreate() {
-  const [row] = await db.select().from(schema.paymentSettings).limit(1);
+async function loadOrCreate(tenantId: string) {
+  const [row] = await db
+    .select()
+    .from(schema.paymentSettings)
+    .where(eq(schema.paymentSettings.tenantId, tenantId))
+    .limit(1);
   if (row) return row;
-  const [created] = await db.insert(schema.paymentSettings).values({}).returning();
+  const [created] = await db.insert(schema.paymentSettings).values({ tenantId }).returning();
   return created;
 }
 
@@ -54,7 +62,9 @@ export async function GET() {
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  const row = await loadOrCreate();
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+  const row = await loadOrCreate(ctx.tenant.id);
   return NextResponse.json({ settings: row });
 }
 
@@ -64,6 +74,8 @@ export async function PUT(req: Request) {
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   let data;
   try {
     data = body.parse(await req.json());
@@ -73,7 +85,7 @@ export async function PUT(req: Request) {
     }
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
-  const existing = await loadOrCreate();
+  const existing = await loadOrCreate(ctx.tenant.id);
   // Sanitize bank accounts: drop empty rows + coerce nullable optional fields
   // to undefined so they match the jsonb $type schema (which doesn't allow null).
   const bankAccounts = (data.bankAccounts ?? existing.bankAccounts ?? [])
@@ -94,7 +106,7 @@ export async function PUT(req: Request) {
       bankAccounts,
       updatedAt: new Date(),
     })
-    .where(eq(schema.paymentSettings.id, existing.id))
+    .where(eq(schema.paymentSettings.tenantId, ctx.tenant.id))
     .returning();
   return NextResponse.json({ settings: updated });
 }

@@ -1,6 +1,7 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -46,8 +47,11 @@ const REGLAS = [
 ];
 
 export default async function SobrePage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const tp = ctx.tp;
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/comunidad/sobre");
+  if (!user) redirect(tp("/login?next=/comunidad/sobre"));
 
   return (
     <AlumnoShell user={user} active="sobre">
@@ -172,7 +176,7 @@ export default async function SobrePage() {
               <p style={{ color: "var(--ink-2)", fontSize: 14, marginTop: 8, marginBottom: 20 }}>
                 Vuelve a tu sendero y sigue avanzando.
               </p>
-              <Link href="/plataforma" className="btn btn-primary" style={{ display: "inline-flex" }}>
+              <Link href={tp("/plataforma")} className="btn btn-primary" style={{ display: "inline-flex" }}>
                 Ir a mi sendero →
               </Link>
             </Card>

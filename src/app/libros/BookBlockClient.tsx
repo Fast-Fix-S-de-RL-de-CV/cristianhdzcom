@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 /**
  * Versión animada del bloque de libro. Se activa cuando entra a viewport:
@@ -58,6 +59,7 @@ export function BookBlockClient(props: {
     crossSellSavings,
   } = props;
 
+  const { tp, siteName } = useTenant();
   const accentColor = accent === "warm" ? "var(--warm)" : "var(--accent)";
   const hasCover = coverUrl != null && coverUrl.trim() !== "";
 
@@ -216,7 +218,7 @@ export function BookBlockClient(props: {
                 fontWeight: 500,
               }}
             >
-              Cristian Hernández
+              {siteName}
             </span>
           </div>
         </div>
@@ -353,19 +355,19 @@ export function BookBlockClient(props: {
             flexWrap: "wrap",
           }}
         >
-          <Link href={`/blog`}>
+          <Link href={tp(`/blog`)}>
             <Button size="lg" variant="ghost">
               Leer extracto
             </Button>
           </Link>
-          <Link href={`/checkout/libro/${slug}`}>
+          <Link href={tp(`/checkout/libro/${slug}`)}>
             <Button size="lg">Comprar ahora →</Button>
           </Link>
         </div>
       </div>
       {crossSellBundleSlug && crossSellSavings && crossSellSavings > 0 && (
         <Link
-          href={`/checkout/libro/${crossSellBundleSlug}`}
+          href={tp(`/checkout/libro/${crossSellBundleSlug}`)}
           style={{
             display: "inline-flex",
             alignItems: "center",

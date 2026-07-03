@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Field } from "@/components/ui/Field";
 import { Nav } from "@/components/marketing/Nav";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
+  const { tp } = useTenant();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ function LoginInner() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(tp("/api/auth/login"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
@@ -39,8 +41,9 @@ function LoginInner() {
         }
         return;
       }
+      // `next` viaja SIN prefijo de tenant (convención interna); tp() lo resuelve.
       const next = params.get("next") || "/plataforma";
-      router.push(next);
+      router.push(tp(next));
       router.refresh();
     } catch {
       setLoading(false);
@@ -81,7 +84,7 @@ function LoginInner() {
               />
               <div style={{ textAlign: "right", marginTop: 8 }}>
                 <Link
-                  href="/recuperar"
+                  href={tp("/recuperar")}
                   className="mono"
                   style={{ fontSize: 11, color: "var(--gold-deep)", fontWeight: 600, textDecoration: "none" }}
                 >
@@ -105,7 +108,7 @@ function LoginInner() {
           </form>
           <div style={{ marginTop: 24, fontSize: 13, color: "var(--muted)", textAlign: "center" }}>
             ¿No tienes cuenta?{" "}
-            <Link href="/registro" style={{ color: "var(--accent)", fontWeight: 600 }}>
+            <Link href={tp("/registro")} style={{ color: "var(--accent)", fontWeight: 600 }}>
               Crear cuenta gratis
             </Link>
           </div>

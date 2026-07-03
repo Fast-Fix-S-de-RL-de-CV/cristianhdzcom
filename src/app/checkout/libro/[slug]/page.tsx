@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { computeBumps, type CheckoutFormat } from "@/lib/book-bumps";
@@ -18,11 +19,13 @@ export default async function LibroCheckoutPage({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
 
   const [product] = await db
     .select()
     .from(schema.books)
-    .where(eq(schema.books.slug, slug))
+    .where(and(eq(schema.books.slug, slug), eq(schema.books.tenantId, ctx.tenant.id)))
     .limit(1);
 
   if (!product || !product.isActive) notFound();
@@ -32,7 +35,7 @@ export default async function LibroCheckoutPage({
   const catalog = await db
     .select()
     .from(schema.books)
-    .where(eq(schema.books.isActive, true))
+    .where(and(eq(schema.books.isActive, true), eq(schema.books.tenantId, ctx.tenant.id)))
     .orderBy(asc(schema.books.sortOrder));
 
   // Formato inicial: lo que venga en URL, si es válido. Si no, el primero

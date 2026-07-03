@@ -1,21 +1,29 @@
 /**
- * Cliente Stripe y helpers de finalización idempotente.
+ * Cliente Stripe POR TENANT y helpers de finalización idempotente.
+ *
+ * Multi-tenant (ver ARCHITECTURE_SAAS.md): cada tenant cobra con SUS llaves
+ * guardadas en payment_settings (fila por tenant). `getStripeForTenant`
+ * resuelve el cliente correcto; el tenant seed "cristianhdz" cae a las env
+ * vars de la plataforma (STRIPE_*) si no tiene llaves propias, para
+ * compatibilidad con el sitio actual.
  *
  * Flujo general:
  *  1. Frontend → POST /api/checkout(/book|/membership)
- *  2. Server crea Stripe Checkout Session con metadata { kind, ...payload }
- *     y devuelve { url } al frontend.
+ *  2. Server crea Stripe Checkout Session (con las llaves DEL TENANT) con
+ *     metadata { kind, tenantId, ...payload } y devuelve { url } al frontend.
  *  3. Frontend → window.location = url → user paga en Stripe.
- *  4. Stripe → POST /api/stripe/webhook con `checkout.session.completed`.
+ *  4. Stripe → POST {host-del-tenant}/api/stripe/webhook con
+ *     `checkout.session.completed` (firma verificada con el secret DEL TENANT).
  *  5. Webhook (o la página de confirmación como fallback) llama a
- *     finalizeCheckoutSession(session), que:
+ *     finalizeCheckoutSession(session, tenantId), que:
  *       - Para programas/libros crea/encuentra el Order (idempotente).
  *       - Para membresías crea/encuentra la Membership.
  *       - Crea cuenta si no existe, abre sesión si es el comprador.
  *       - Acumula crédito, recalcula tier, mete actividad y manda email.
  *
  * IDempotencia: la búsqueda usa metadata->>'stripeSessionId' contra el id
- * de la session. Si ya existe un order con ese session id, no se duplica.
+ * de la session (scoped al tenant). Si ya existe un order con ese session id,
+ * no se duplica.
  */
 
 import Stripe from "stripe";
@@ -28,38 +36,83 @@ import { accrueCredit, type PlanSlug } from "@/lib/membership";
 import { basePrice } from "@/lib/book-bumps";
 import { bookPurchaseEmailHtml, purchaseAccessEmailHtml, sendEmail } from "@/lib/email";
 
-const SECRET_KEY = process.env.STRIPE_SECRET_KEY ?? "";
+const ENV_SECRET_KEY = process.env.STRIPE_SECRET_KEY ?? "";
+const STRIPE_API_VERSION = "2025-02-24.acacia" as const;
 
-/**
- * Singleton del cliente. Si la env var no está set, `getStripe` lanza un
- * error claro — el caller decide cómo responder (típicamente 503).
- */
-let _stripe: Stripe | null = null;
-export function getStripe(): Stripe {
-  if (!SECRET_KEY) {
-    throw new Error(
-      "STRIPE_SECRET_KEY no está configurado. Configura .env del servidor.",
-    );
-  }
-  if (!_stripe) {
-    _stripe = new Stripe(SECRET_KEY, {
+/** Único tenant que puede caer a las llaves de la plataforma (.env). */
+const ENV_FALLBACK_TENANT_SLUG = "cristianhdz";
+
+/* Cache de clientes por secret key: rotación de llave → cliente nuevo. */
+const clients = new Map<string, Stripe>();
+function stripeClient(secretKey: string): Stripe {
+  let client = clients.get(secretKey);
+  if (!client) {
+    client = new Stripe(secretKey, {
       // Pin a la versión que el SDK instalado declara como default.
-      apiVersion: "2025-02-24.acacia",
+      apiVersion: STRIPE_API_VERSION,
       typescript: true,
     });
+    clients.set(secretKey, client);
   }
-  return _stripe;
+  return client;
 }
 
-export function isStripeLive(): boolean {
-  return SECRET_KEY.startsWith("sk_live_");
-}
+export type TenantStripe = {
+  /** null = el tenant no tiene Stripe configurado (checkout responde 400). */
+  stripe: Stripe | null;
+  webhookSecret: string | null;
+  publishableKey: string | null;
+  /** "live" | "test" | "unconfigured" (derivado del prefijo de la secret). */
+  mode: string;
+};
 
-export function isStripeConfigured(): boolean {
-  return SECRET_KEY.length > 0;
+/**
+ * Resuelve el cliente Stripe DEL TENANT leyendo payment_settings (fila por
+ * tenant). FALLBACK: si el tenant no tiene llaves y su slug es
+ * "cristianhdz", usa las env vars de la plataforma (compatibilidad con el
+ * sitio actual). Sin llaves → stripe null.
+ */
+export async function getStripeForTenant(tenantId: string): Promise<TenantStripe> {
+  const [row] = await db
+    .select({
+      stripeSecretKey: schema.paymentSettings.stripeSecretKey,
+      stripeWebhookSecret: schema.paymentSettings.stripeWebhookSecret,
+      stripePublishableKey: schema.paymentSettings.stripePublishableKey,
+    })
+    .from(schema.paymentSettings)
+    .where(eq(schema.paymentSettings.tenantId, tenantId))
+    .limit(1);
+
+  let secretKey = row?.stripeSecretKey || null;
+  let webhookSecret = row?.stripeWebhookSecret || null;
+  let publishableKey = row?.stripePublishableKey || null;
+
+  if (!secretKey) {
+    const [tenant] = await db
+      .select({ slug: schema.tenants.slug })
+      .from(schema.tenants)
+      .where(eq(schema.tenants.id, tenantId))
+      .limit(1);
+    if (tenant?.slug === ENV_FALLBACK_TENANT_SLUG && ENV_SECRET_KEY) {
+      secretKey = ENV_SECRET_KEY;
+      webhookSecret = webhookSecret || process.env.STRIPE_WEBHOOK_SECRET || null;
+      publishableKey = publishableKey || process.env.STRIPE_PUBLISHABLE_KEY || null;
+    }
+  }
+
+  if (!secretKey) {
+    return { stripe: null, webhookSecret: null, publishableKey: null, mode: "unconfigured" };
+  }
+  return {
+    stripe: stripeClient(secretKey),
+    webhookSecret,
+    publishableKey,
+    mode: secretKey.startsWith("sk_live_") ? "live" : "test",
+  };
 }
 
 /* ─────────── URLs base para success/cancel ─────────── */
+/** Fallback de plataforma cuando el request no trae host utilizable. */
 export function siteUrl(): string {
   const v =
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -68,9 +121,26 @@ export function siteUrl(): string {
   return v.replace(/\/$/, "");
 }
 
+/**
+ * Origen público (scheme+host) del request actual. Prefiere el host real del
+ * tenant (x-tenant-host del worker CF / x-forwarded-host del proxy) sobre el
+ * Host interno. Los paths deben construirse aparte con ctx.tp() para incluir
+ * el basePath ("/{slug}" en mimarca.app, "" en dominio propio).
+ */
+export function requestOrigin(req: Request): string {
+  const h = req.headers;
+  const raw = h.get("x-tenant-host") || h.get("x-forwarded-host") || h.get("host") || "";
+  const host = raw.split(",")[0].trim();
+  if (!host) return siteUrl();
+  const isLocal = host.startsWith("localhost") || host.startsWith("127.0.0.1");
+  const proto = h.get("x-forwarded-proto")?.split(",")[0].trim() || (isLocal ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
 /* ─────────── Tipos compartidos para metadata ─────────── */
 export type ProgramCheckoutMeta = {
   kind: "program";
+  tenantId: string;
   programId: string;
   buyerName: string;
   buyerEmail: string;
@@ -82,6 +152,7 @@ export type ProgramCheckoutMeta = {
 
 export type BookCheckoutMeta = {
   kind: "book";
+  tenantId: string;
   bookSlug: string;
   bookTitle: string;
   format: "digital" | "physical" | "bundle";
@@ -93,18 +164,24 @@ export type BookCheckoutMeta = {
 
 export type MembershipCheckoutMeta = {
   kind: "membership";
+  tenantId: string;
   planSlug: PlanSlug;
   billingCycle: "monthly" | "yearly";
   buyerName: string;
   buyerEmail: string;
 };
 
-/* ─────────── Resolver / crear user desde un email ─────────── */
+/* ─────────── Resolver / crear user desde un email (scoped al tenant) ─────────── */
 /**
- * Obtiene o crea un user por email. Devuelve { userId, createdNewAccount, tempPassword }.
- * `tempPassword` solo viene set cuando se creó la cuenta en este call.
+ * Obtiene o crea un user por email DENTRO del tenant. Devuelve
+ * { userId, createdNewAccount, tempPassword }. `tempPassword` solo viene set
+ * cuando se creó la cuenta en este call. Email único POR tenant.
  */
-async function resolveUserByEmail(email: string, name: string): Promise<{
+async function resolveUserByEmail(
+  tenantId: string,
+  email: string,
+  name: string,
+): Promise<{
   userId: string;
   createdNewAccount: boolean;
   tempPassword: string | null;
@@ -113,7 +190,7 @@ async function resolveUserByEmail(email: string, name: string): Promise<{
   const [existing] = await db
     .select({ id: schema.users.id })
     .from(schema.users)
-    .where(sql`lower(${schema.users.email}) = ${lower}`)
+    .where(and(sql`lower(${schema.users.email}) = ${lower}`, eq(schema.users.tenantId, tenantId)))
     .limit(1);
   if (existing) return { userId: existing.id, createdNewAccount: false, tempPassword: null };
 
@@ -121,38 +198,31 @@ async function resolveUserByEmail(email: string, name: string): Promise<{
   const passwordHash = await hashPassword(tempPassword);
   const [created] = await db
     .insert(schema.users)
-    .values({ email: lower, name, passwordHash, role: "member" })
+    .values({ tenantId, email: lower, name, passwordHash, role: "member" })
     .returning({ id: schema.users.id });
   return { userId: created.id, createdNewAccount: true, tempPassword };
 }
 
 /* ─────────── Buscar order ya creado por session id (idempotencia) ─────────── */
-async function findOrderBySessionId(sessionId: string) {
+async function findOrderBySessionId(tenantId: string, sessionId: string) {
   const [row] = await db
     .select()
     .from(schema.orders)
-    .where(sql`${schema.orders.metadata}->>'stripeSessionId' = ${sessionId}`)
+    .where(
+      and(
+        sql`${schema.orders.metadata}->>'stripeSessionId' = ${sessionId}`,
+        eq(schema.orders.tenantId, tenantId),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }
 
-async function findMembershipBySessionId(sessionId: string) {
-  // Membresía guarda session id en metadata del order asociado.
-  const order = await findOrderBySessionId(sessionId);
-  if (!order) return null;
-  const [m] = await db
-    .select()
-    .from(schema.memberships)
-    .where(eq(schema.memberships.userId, order.userId!))
-    .orderBy(sql`${schema.memberships.startedAt} DESC`)
-    .limit(1);
-  return m ?? null;
-}
-
 /* ─────────── Finalizar una session (idempotente) ─────────── */
 /**
- * Procesa una Stripe Checkout Session completada. Idempotente: si ya se
- * procesó (existe order con session.id en metadata), retorna lo previo.
+ * Procesa una Stripe Checkout Session completada PARA UN TENANT. Idempotente:
+ * si ya se procesó (existe order del tenant con session.id en metadata),
+ * retorna lo previo.
  *
  * Llamada desde:
  *  - El webhook `/api/stripe/webhook` (canónico, server-to-server).
@@ -160,6 +230,7 @@ async function findMembershipBySessionId(sessionId: string) {
  */
 export async function finalizeCheckoutSession(
   session: Stripe.Checkout.Session,
+  tenantId: string,
 ): Promise<{
   orderId: string;
   kind: "program" | "book" | "membership";
@@ -175,6 +246,13 @@ export async function finalizeCheckoutSession(
     throw new Error(`session_not_paid_${session.payment_status}`);
   }
 
+  // Defensa en profundidad: si la session declara su tenant en metadata
+  // (los checkouts nuevos lo hacen), debe coincidir con el del caller.
+  const declaredTenant = session.metadata?.tenantId;
+  if (declaredTenant && declaredTenant !== tenantId) {
+    throw new Error("session_tenant_mismatch");
+  }
+
   // Serializar webhook vs página de confirmación / finish: ambos pueden
   // llegar en el mismo instante. El advisory lock por session id hace que
   // el segundo espere a que el primero commitee, y el re-check dentro del
@@ -183,7 +261,7 @@ export async function finalizeCheckoutSession(
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${session.id}))`);
 
     // ¿Ya se procesó? (re-check DENTRO del lock)
-    const existing = await findOrderBySessionId(session.id);
+    const existing = await findOrderBySessionId(tenantId, session.id);
     if (existing) {
       const meta = (existing.metadata ?? {}) as { kind?: "program" | "book" | "membership" };
       return {
@@ -197,15 +275,15 @@ export async function finalizeCheckoutSession(
     const kind = meta.kind as "program" | "book" | "membership" | undefined;
     if (!kind) throw new Error("session_missing_metadata_kind");
 
-    if (kind === "program") return finalizeProgramOrder(session);
-    if (kind === "book") return finalizeBookOrder(session);
-    if (kind === "membership") return finalizeMembershipOrder(session);
+    if (kind === "program") return finalizeProgramOrder(session, tenantId);
+    if (kind === "book") return finalizeBookOrder(session, tenantId);
+    if (kind === "membership") return finalizeMembershipOrder(session, tenantId);
     throw new Error(`unknown_kind_${kind}`);
   });
 }
 
 /* ────────────────── PROGRAM ────────────────── */
-async function finalizeProgramOrder(session: Stripe.Checkout.Session) {
+async function finalizeProgramOrder(session: Stripe.Checkout.Session, tenantId: string) {
   const m = (session.metadata ?? {}) as Record<string, string>;
   const programId = m.programId;
   const buyerName = m.buyerName ?? "";
@@ -218,12 +296,12 @@ async function finalizeProgramOrder(session: Stripe.Checkout.Session) {
   const [program] = await db
     .select()
     .from(schema.programs)
-    .where(eq(schema.programs.id, programId))
+    .where(and(eq(schema.programs.id, programId), eq(schema.programs.tenantId, tenantId)))
     .limit(1);
   if (!program) throw new Error("program_not_found");
 
-  // Resolver user.
-  const resolved = await resolveUserByEmail(buyerEmail, buyerName);
+  // Resolver user (dentro del tenant).
+  const resolved = await resolveUserByEmail(tenantId, buyerEmail, buyerName);
 
   // Persistir country/phone si vinieron y la cuenta es nueva (no pisamos datos existentes).
   if (resolved.createdNewAccount && (country || phone)) {
@@ -242,7 +320,7 @@ async function finalizeProgramOrder(session: Stripe.Checkout.Session) {
     const [coupon] = await db
       .select()
       .from(schema.coupons)
-      .where(eq(schema.coupons.code, code))
+      .where(and(eq(schema.coupons.code, code), eq(schema.coupons.tenantId, tenantId)))
       .limit(1);
     if (coupon?.active) {
       // Consumir un uso de forma atómica. Si usesLeft es null → ilimitado
@@ -254,7 +332,13 @@ async function finalizeProgramOrder(session: Stripe.Checkout.Session) {
         const consumed = await db
           .update(schema.coupons)
           .set({ usesLeft: sql`${schema.coupons.usesLeft} - 1` })
-          .where(and(eq(schema.coupons.code, code), sql`${schema.coupons.usesLeft} > 0`))
+          .where(
+            and(
+              eq(schema.coupons.code, code),
+              eq(schema.coupons.tenantId, tenantId),
+              sql`${schema.coupons.usesLeft} > 0`,
+            ),
+          )
           .returning({ id: schema.coupons.id });
         canApply = consumed.length > 0;
       }
@@ -271,6 +355,7 @@ async function finalizeProgramOrder(session: Stripe.Checkout.Session) {
   const [order] = await db
     .insert(schema.orders)
     .values({
+      tenantId,
       userId: resolved.userId,
       email: buyerEmail,
       name: buyerName,
@@ -304,14 +389,14 @@ async function finalizeProgramOrder(session: Stripe.Checkout.Session) {
     .returning();
 
   if (!order) {
-    const existing = await findOrderBySessionId(session.id);
+    const existing = await findOrderBySessionId(tenantId, session.id);
     if (existing) return { orderId: existing.id, kind: "program" as const, createdNewAccount: false };
     throw new Error("order_conflict_unresolved");
   }
 
   await db
     .insert(schema.enrollments)
-    .values({ userId: resolved.userId, programId: program.id, status: "active" })
+    .values({ tenantId, userId: resolved.userId, programId: program.id, status: "active" })
     .onConflictDoNothing();
 
   await recomputeUserTier(resolved.userId, {
@@ -337,6 +422,7 @@ async function finalizeProgramOrder(session: Stripe.Checkout.Session) {
   await db
     .insert(schema.activity)
     .values({
+      tenantId,
       kind: "purchase",
       icon: "💳",
       text: `${buyerName.split(" ")[0]} compró ${program.title} · $${(totalCents / 100).toFixed(0)}`,
@@ -352,7 +438,7 @@ async function finalizeProgramOrder(session: Stripe.Checkout.Session) {
 }
 
 /* ────────────────── BOOK ────────────────── */
-async function finalizeBookOrder(session: Stripe.Checkout.Session) {
+async function finalizeBookOrder(session: Stripe.Checkout.Session, tenantId: string) {
   const m = (session.metadata ?? {}) as Record<string, string>;
   const bookSlug = m.bookSlug;
   const format = (m.format ?? "digital") as "digital" | "physical" | "bundle";
@@ -366,11 +452,11 @@ async function finalizeBookOrder(session: Stripe.Checkout.Session) {
   const [product] = await db
     .select()
     .from(schema.books)
-    .where(eq(schema.books.slug, bookSlug))
+    .where(and(eq(schema.books.slug, bookSlug), eq(schema.books.tenantId, tenantId)))
     .limit(1);
   if (!product) throw new Error("book_not_found");
 
-  const resolved = await resolveUserByEmail(buyerEmail, buyerName);
+  const resolved = await resolveUserByEmail(tenantId, buyerEmail, buyerName);
 
   if (resolved.createdNewAccount && (shipping?.country || shipping?.phone)) {
     await db
@@ -388,20 +474,21 @@ async function finalizeBookOrder(session: Stripe.Checkout.Session) {
     await db
       .update(schema.books)
       .set({ stockPhysical: sql`GREATEST(${schema.books.stockPhysical} - 1, 0)` })
-      .where(eq(schema.books.id, product.id));
+      .where(and(eq(schema.books.id, product.id), eq(schema.books.tenantId, tenantId)));
   }
   for (const bump of bumps) {
     if (bump.variant === "physical") {
       await db
         .update(schema.books)
         .set({ stockPhysical: sql`GREATEST(${schema.books.stockPhysical} - 1, 0)` })
-        .where(eq(schema.books.slug, bump.slug));
+        .where(and(eq(schema.books.slug, bump.slug), eq(schema.books.tenantId, tenantId)));
     }
   }
 
   const [order] = await db
     .insert(schema.orders)
     .values({
+      tenantId,
       userId: resolved.userId,
       email: buyerEmail,
       name: buyerName,
@@ -442,7 +529,7 @@ async function finalizeBookOrder(session: Stripe.Checkout.Session) {
     .returning();
 
   if (!order) {
-    const existing = await findOrderBySessionId(session.id);
+    const existing = await findOrderBySessionId(tenantId, session.id);
     if (existing) return { orderId: existing.id, kind: "book" as const, createdNewAccount: false };
     throw new Error("order_conflict_unresolved");
   }
@@ -470,6 +557,7 @@ async function finalizeBookOrder(session: Stripe.Checkout.Session) {
   await db
     .insert(schema.activity)
     .values({
+      tenantId,
       kind: "purchase",
       icon: "📖",
       text: `${firstName} compró ${product.title} · $${baseUsd + bumpsUsd}`,
@@ -485,7 +573,7 @@ async function finalizeBookOrder(session: Stripe.Checkout.Session) {
 }
 
 /* ────────────────── MEMBERSHIP ────────────────── */
-async function finalizeMembershipOrder(session: Stripe.Checkout.Session) {
+async function finalizeMembershipOrder(session: Stripe.Checkout.Session, tenantId: string) {
   const m = (session.metadata ?? {}) as Record<string, string>;
   const planSlug = m.planSlug as PlanSlug;
   const billingCycle = (m.billingCycle ?? "monthly") as "monthly" | "yearly";
@@ -495,17 +583,29 @@ async function finalizeMembershipOrder(session: Stripe.Checkout.Session) {
   const [plan] = await db
     .select()
     .from(schema.membershipPlans)
-    .where(and(eq(schema.membershipPlans.slug, planSlug), eq(schema.membershipPlans.isActive, true)))
+    .where(
+      and(
+        eq(schema.membershipPlans.slug, planSlug),
+        eq(schema.membershipPlans.isActive, true),
+        eq(schema.membershipPlans.tenantId, tenantId),
+      ),
+    )
     .limit(1);
   if (!plan) throw new Error("plan_not_found");
 
-  const resolved = await resolveUserByEmail(buyerEmail, buyerName);
+  const resolved = await resolveUserByEmail(tenantId, buyerEmail, buyerName);
 
   // Verificar que no haya ya membresía activa para evitar doble cobro.
   const [activeAlready] = await db
     .select()
     .from(schema.memberships)
-    .where(and(eq(schema.memberships.userId, resolved.userId), eq(schema.memberships.status, "active")))
+    .where(
+      and(
+        eq(schema.memberships.userId, resolved.userId),
+        eq(schema.memberships.status, "active"),
+        eq(schema.memberships.tenantId, tenantId),
+      ),
+    )
     .limit(1);
   if (activeAlready) {
     // Stripe ya cobró pero el user ya tenía suscripción. Marcar el order como
@@ -540,6 +640,7 @@ async function finalizeMembershipOrder(session: Stripe.Checkout.Session) {
   const [order] = await db
     .insert(schema.orders)
     .values({
+      tenantId,
       userId: resolved.userId,
       email: buyerEmail,
       name: buyerName,
@@ -563,7 +664,7 @@ async function finalizeMembershipOrder(session: Stripe.Checkout.Session) {
     .returning();
 
   if (!order) {
-    const existing = await findOrderBySessionId(session.id);
+    const existing = await findOrderBySessionId(tenantId, session.id);
     if (existing) return { orderId: existing.id, kind: "membership" as const, createdNewAccount: false };
     throw new Error("order_conflict_unresolved");
   }
@@ -573,6 +674,7 @@ async function finalizeMembershipOrder(session: Stripe.Checkout.Session) {
     const [created] = await db
       .insert(schema.memberships)
       .values({
+        tenantId,
         userId: resolved.userId,
         planSlug,
         status: "active",
@@ -588,7 +690,7 @@ async function finalizeMembershipOrder(session: Stripe.Checkout.Session) {
     await db
       .update(schema.membershipPlans)
       .set({ activeMembers: sql`${schema.membershipPlans.activeMembers} + 1` })
-      .where(eq(schema.membershipPlans.id, plan.id));
+      .where(and(eq(schema.membershipPlans.id, plan.id), eq(schema.membershipPlans.tenantId, tenantId)));
   } else {
     membershipId = activeAlready.id;
   }
@@ -623,6 +725,7 @@ async function finalizeMembershipOrder(session: Stripe.Checkout.Session) {
   await db
     .insert(schema.activity)
     .values({
+      tenantId,
       kind: "membership",
       icon: plan.emoji,
       text: `${buyerName.split(" ")[0]} se unió a ${plan.label} ${billingCycle === "yearly" ? "anual" : ""}`.trim(),

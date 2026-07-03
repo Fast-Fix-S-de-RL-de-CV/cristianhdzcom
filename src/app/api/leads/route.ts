@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { getTenantCtx } from "@/lib/tenant";
 
 const body = z.object({
   email: z.string().email().toLowerCase().trim(),
@@ -11,10 +12,18 @@ const body = z.object({
 
 export async function POST(req: Request) {
   try {
+    const ctx = await getTenantCtx();
+    if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
     const data = body.parse(await req.json());
-    const existing = await db.select().from(schema.leads).where(eq(schema.leads.email, data.email)).limit(1);
+    const existing = await db
+      .select()
+      .from(schema.leads)
+      .where(and(eq(schema.leads.email, data.email), eq(schema.leads.tenantId, ctx.tenant.id)))
+      .limit(1);
     if (existing.length === 0) {
-      await db.insert(schema.leads).values({ email: data.email, source: data.source, tag: data.tag });
+      await db
+        .insert(schema.leads)
+        .values({ tenantId: ctx.tenant.id, email: data.email, source: data.source, tag: data.tag });
     }
     return NextResponse.json({ ok: true });
   } catch (e) {

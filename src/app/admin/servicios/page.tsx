@@ -1,6 +1,8 @@
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { ServiciosManager } from "./ServiciosManager";
@@ -8,11 +10,14 @@ import { ServiciosManager } from "./ServiciosManager";
 export const dynamic = "force-dynamic";
 
 export default async function ServiciosAdminPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = (await getCurrentUser())!;
 
   const rows = await db
     .select()
     .from(schema.services)
+    .where(eq(schema.services.tenantId, ctx.tenant.id))
     .orderBy(asc(schema.services.sortOrder));
 
   const data = rows.map((r) => ({

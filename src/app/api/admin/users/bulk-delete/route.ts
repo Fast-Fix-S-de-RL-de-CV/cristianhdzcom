@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -39,6 +40,8 @@ export async function POST(req: Request) {
   if (!me || (me.role !== "admin" && me.role !== "superadmin")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
 
   const json = await req.json().catch(() => null);
   const parsed = Body.safeParse(json);
@@ -50,11 +53,11 @@ export async function POST(req: Request) {
   }
   const { ids } = parsed.data;
 
-  // Resolve which IDs we are allowed to touch.
+  // Resolve which IDs we are allowed to touch (solo users DEL tenant).
   const rows = await db
     .select({ id: schema.users.id, role: schema.users.role })
     .from(schema.users)
-    .where(inArray(schema.users.id, ids));
+    .where(and(inArray(schema.users.id, ids), eq(schema.users.tenantId, ctx.tenant.id)));
 
   const blocked: { id: string; reason: string }[] = [];
   const eligible: string[] = [];
@@ -86,14 +89,14 @@ export async function POST(req: Request) {
   const [{ orderCount }] = await db
     .select({ orderCount: sql<number>`count(*)::int` })
     .from(schema.orders)
-    .where(inArray(schema.orders.userId, eligible));
+    .where(and(inArray(schema.orders.userId, eligible), eq(schema.orders.tenantId, ctx.tenant.id)));
 
   // Posts where these users commented or liked: the cascade wipes those rows,
   // so the denormalized counters must be recomputed afterwards.
   const commentPosts = await db
     .select({ postId: schema.comments.postId })
     .from(schema.comments)
-    .where(inArray(schema.comments.authorId, eligible));
+    .where(and(inArray(schema.comments.authorId, eligible), eq(schema.comments.tenantId, ctx.tenant.id)));
   const likePosts = await db
     .select({ postId: schema.postLikes.postId })
     .from(schema.postLikes)
@@ -106,6 +109,7 @@ export async function POST(req: Request) {
     .where(
       and(
         inArray(schema.users.id, eligible),
+        eq(schema.users.tenantId, ctx.tenant.id),
         ne(schema.users.role, "superadmin"),
         ne(schema.users.id, me.id),
       ),
@@ -120,7 +124,7 @@ export async function POST(req: Request) {
         commentsCount: sql<number>`(SELECT count(*)::int FROM comments c WHERE c.post_id = ${schema.posts.id})`,
         likesCount: sql<number>`(SELECT count(*)::int FROM post_likes l WHERE l.post_id = ${schema.posts.id})`,
       })
-      .where(inArray(schema.posts.id, affectedPostIds));
+      .where(and(inArray(schema.posts.id, affectedPostIds), eq(schema.posts.tenantId, ctx.tenant.id)));
   }
 
   return NextResponse.json({

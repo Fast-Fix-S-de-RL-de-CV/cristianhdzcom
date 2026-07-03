@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { parseVideoUrl } from "@/lib/video";
 
 export const dynamic = "force-dynamic";
@@ -85,8 +87,18 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   try {
     const data = body.parse(await req.json());
+
+    // El módulo destino debe pertenecer al tenant del request.
+    const [mod] = await db
+      .select({ id: schema.modules.id })
+      .from(schema.modules)
+      .where(and(eq(schema.modules.id, data.moduleId), eq(schema.modules.tenantId, ctx.tenant.id)))
+      .limit(1);
+    if (!mod) return NextResponse.json({ error: "module_not_found" }, { status: 404 });
 
     let videoProvider: string | null = null;
     let videoId: string | null = null;
@@ -102,6 +114,7 @@ export async function POST(req: Request) {
     const [row] = await db
       .insert(schema.lessons)
       .values({
+        tenantId: ctx.tenant.id,
         moduleId: data.moduleId,
         code: data.code,
         title: data.title,

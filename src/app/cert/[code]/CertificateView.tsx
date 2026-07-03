@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type Props = {
   code: string;
@@ -7,6 +8,8 @@ type Props = {
   alumno: { name: string };
   program: { title: string; subtitle: string | null; durationLabel: string | null };
   founder: { name: string } | null;
+  /** URL pública de verificación (dominio del tenant o mimarca.app/{slug}). */
+  verifyUrl: string;
 };
 
 /**
@@ -17,7 +20,8 @@ type Props = {
  * at 96 dpi minus margins) so it looks identical on screen and on paper.
  */
 export function CertificateView(props: Props) {
-  const { code, issuedAt, alumno, program, founder } = props;
+  const { code, issuedAt, alumno, program, founder, verifyUrl } = props;
+  const { tp, siteName, logoUrl } = useTenant();
   const date = new Date(issuedAt);
   const dateLabel = date.toLocaleDateString("es-MX", {
     day: "numeric",
@@ -41,7 +45,7 @@ export function CertificateView(props: Props) {
           flexWrap: "wrap",
         }}
       >
-        <Link href="/plataforma" className="mono" style={{ color: "var(--muted)", textDecoration: "none", fontSize: 12 }}>
+        <Link href={tp("/plataforma")} className="mono" style={{ color: "var(--muted)", textDecoration: "none", fontSize: 12 }}>
           ← VOLVER A LA PLATAFORMA
         </Link>
         <div style={{ display: "flex", gap: 10 }}>
@@ -123,7 +127,7 @@ export function CertificateView(props: Props) {
           {/* Header */}
           <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
             <div className="ch-logo">
-              <img src="/logo.png" alt="Cristian Hernández" style={{ maxWidth: 180 }} />
+              <img src={logoUrl ?? "/logo.png"} alt={siteName} style={{ maxWidth: 180 }} />
             </div>
             <span
               style={{
@@ -229,7 +233,7 @@ export function CertificateView(props: Props) {
                   paddingRight: 24,
                 }}
               >
-                {founder?.name ?? "Cristian Hernández"}
+                {founder?.name ?? siteName}
               </div>
               <div
                 className="mono"
@@ -240,7 +244,7 @@ export function CertificateView(props: Props) {
                   marginTop: 6,
                 }}
               >
-                FUNDADOR · CRISTIANHDZ.COM
+                FUNDADOR · {siteName.toUpperCase()}
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -260,7 +264,7 @@ export function CertificateView(props: Props) {
                 {code}
               </div>
               <div className="mono" style={{ fontSize: 9, color: "var(--muted)", marginTop: 2 }}>
-                cristianhdz.com/cert/{code}
+                {verifyUrl}
               </div>
             </div>
           </div>

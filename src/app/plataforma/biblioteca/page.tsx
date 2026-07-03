@@ -1,5 +1,6 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -39,8 +40,11 @@ export default async function BibliotecaPage({
 }: {
   searchParams: Promise<{ category?: string; q?: string }>;
 }) {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/plataforma/biblioteca");
+  if (!user) redirect(tp("/login?next=/plataforma/biblioteca"));
 
   const sp = (await searchParams) ?? {};
   const categoryParam = typeof sp.category === "string" ? sp.category : undefined;
@@ -53,6 +57,7 @@ export default async function BibliotecaPage({
 
   let whereClause: ReturnType<typeof and> | undefined;
   const conditions: Array<ReturnType<typeof eq>> = [];
+  conditions.push(eq(schema.resources.tenantId, ctx.tenant.id));
   if (activeCategory !== "Todos") {
     conditions.push(eq(schema.resources.category, activeCategory));
   }

@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { hashPassword } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export async function POST(req: Request) {
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+
   let body: { token?: string; password?: string } = {};
   try {
     body = await req.json();
@@ -21,15 +25,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_password" }, { status: 400 });
   }
 
+  // passwordResets no tiene tenantId: el aislamiento viene del user dueño del
+  // token, que DEBE pertenecer al tenant del request (join scoped).
   const now = new Date();
   const [row] = await db
-    .select()
+    .select({ token: schema.passwordResets.token, userId: schema.passwordResets.userId })
     .from(schema.passwordResets)
+    .innerJoin(schema.users, eq(schema.users.id, schema.passwordResets.userId))
     .where(
       and(
         eq(schema.passwordResets.token, token),
         gt(schema.passwordResets.expiresAt, now),
         isNull(schema.passwordResets.usedAt),
+        eq(schema.users.tenantId, ctx.tenant.id),
       ),
     )
     .limit(1);

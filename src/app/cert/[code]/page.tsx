@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { getTenantCtx } from "@/lib/tenant";
 import { CertificateView } from "./CertificateView";
 
 export const dynamic = "force-dynamic";
@@ -17,17 +18,50 @@ export default async function CertificatePage({
 }: {
   params: Promise<{ code: string }>;
 }) {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const { code } = await params;
-  const [cert] = await db.select().from(schema.certificates).where(eq(schema.certificates.code, code.toUpperCase())).limit(1);
+  const [cert] = await db
+    .select()
+    .from(schema.certificates)
+    .where(and(eq(schema.certificates.tenantId, ctx.tenant.id), eq(schema.certificates.code, code.toUpperCase())))
+    .limit(1);
   if (!cert) notFound();
 
-  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, cert.userId)).limit(1);
-  const [program] = await db.select().from(schema.programs).where(eq(schema.programs.id, cert.programId)).limit(1);
+  const [user] = await db
+    .select()
+    .from(schema.users)
+    .where(and(eq(schema.users.id, cert.userId), eq(schema.users.tenantId, ctx.tenant.id)))
+    .limit(1);
+  const [program] = await db
+    .select()
+    .from(schema.programs)
+    .where(and(eq(schema.programs.id, cert.programId), eq(schema.programs.tenantId, ctx.tenant.id)))
+    .limit(1);
   if (!user || !program) notFound();
 
-  // Optional: who is the founder (signed by)
-  const founders = await db.select().from(schema.users).where(eq(schema.users.role, "superadmin")).limit(1);
-  const founder = founders[0];
+  // Optional: who is the founder (signed by) — el dueño del tenant, o su primer admin.
+  let founder = ctx.tenant.ownerUserId
+    ? (
+        await db
+          .select()
+          .from(schema.users)
+          .where(and(eq(schema.users.id, ctx.tenant.ownerUserId), eq(schema.users.tenantId, ctx.tenant.id)))
+          .limit(1)
+      )[0]
+    : undefined;
+  if (!founder) {
+    [founder] = await db
+      .select()
+      .from(schema.users)
+      .where(and(eq(schema.users.tenantId, ctx.tenant.id), eq(schema.users.role, "admin")))
+      .limit(1);
+  }
+
+  // URL pública de verificación impresa en el certificado.
+  const verifyUrl = ctx.tenant.customDomain
+    ? `${ctx.tenant.customDomain}/cert/${cert.code}`
+    : `mimarca.app/${ctx.tenant.slug}/cert/${cert.code}`;
 
   return (
     <CertificateView
@@ -36,6 +70,7 @@ export default async function CertificatePage({
       alumno={{ name: user.name }}
       program={{ title: program.title, subtitle: program.subtitle, durationLabel: program.durationLabel }}
       founder={founder ? { name: founder.name } : null}
+      verifyUrl={verifyUrl}
     />
   );
 }

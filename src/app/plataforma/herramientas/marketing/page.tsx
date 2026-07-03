@@ -1,6 +1,7 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { PlansList } from "@/components/tools/PlansList";
@@ -9,8 +10,11 @@ import { ArrowLeft } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function MarketingPlansPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/plataforma/herramientas/marketing");
+  if (!user) redirect(tp("/login?next=/plataforma/herramientas/marketing"));
 
   return (
     <AlumnoShell
@@ -30,7 +34,7 @@ export default async function MarketingPlansPage() {
     >
       <div style={{ marginBottom: 26 }}>
         <Link
-          href="/plataforma/herramientas"
+          href={tp("/plataforma/herramientas")}
           className="mono"
           style={{ fontSize: 12, color: "var(--muted)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 10 }}
         >

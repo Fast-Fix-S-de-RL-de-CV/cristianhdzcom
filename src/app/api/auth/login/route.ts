@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { comparePassword, createSession } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 const body = z.object({
   email: z.string().email().toLowerCase().trim(),
@@ -11,8 +12,15 @@ const body = z.object({
 
 export async function POST(req: Request) {
   try {
+    const ctx = await getTenantCtx();
+    if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
     const data = body.parse(await req.json());
-    const [user] = await db.select().from(schema.users).where(eq(schema.users.email, data.email)).limit(1);
+    // Login POR TENANT: el mismo email puede existir en varios tenants.
+    const [user] = await db
+      .select()
+      .from(schema.users)
+      .where(and(eq(schema.users.email, data.email), eq(schema.users.tenantId, ctx.tenant.id)))
+      .limit(1);
     if (!user) return NextResponse.json({ error: "invalid_credentials" }, { status: 401 });
     const ok = await comparePassword(data.password, user.passwordHash);
     if (!ok) return NextResponse.json({ error: "invalid_credentials" }, { status: 401 });

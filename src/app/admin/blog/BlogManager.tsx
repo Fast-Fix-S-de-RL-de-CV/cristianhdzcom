@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatRelative } from "@/lib/utils";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import {
   BulkActionBar,
@@ -27,6 +28,7 @@ type Row = {
 
 export function BlogManager({ rows }: { rows: Row[] }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState<Row | null>(null);
@@ -39,7 +41,7 @@ export function BlogManager({ rows }: { rows: Row[] }) {
   const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
 
   const bulkDelete = useBulkDelete<string>({
-    url: "/api/admin/blog-posts/bulk-delete",
+    url: tp("/api/admin/blog-posts/bulk-delete"),
     entityLabel: { singular: "post del blog", plural: "posts del blog" },
     description: "Esta acción no se puede deshacer.",
     onSuccess: bulk.clear,
@@ -82,7 +84,7 @@ export function BlogManager({ rows }: { rows: Row[] }) {
     if (!ok) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/blog-posts/${id}`, { method: "DELETE" });
+      const res = await fetch(tp(`/api/admin/blog-posts/${id}`), { method: "DELETE" });
       if (!res.ok) throw new Error("Error al borrar");
       router.refresh();
     } catch (e) {
@@ -232,8 +234,8 @@ export function BlogManager({ rows }: { rows: Row[] }) {
           }}
           onSave={(data) =>
             editing
-              ? save("PUT", `/api/admin/blog-posts/${editing.id}`, data)
-              : save("POST", `/api/admin/blog-posts`, data)
+              ? save("PUT", tp(`/api/admin/blog-posts/${editing.id}`), data)
+              : save("POST", tp(`/api/admin/blog-posts`), data)
           }
           busy={busy}
           err={err}

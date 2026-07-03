@@ -16,11 +16,59 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
+/* ─────────── TENANTS (SaaS mimarca.app) ───────────
+ * Cada tenant es una plataforma completa (sitio + cursos + comunidad + pagos
+ * propios). Ver ARCHITECTURE_SAAS.md. El tenant seed 'cristianhdz' es dueño
+ * de todo el contenido histórico y usa cristianhdz.com como dominio custom.
+ */
+export type TenantBranding = {
+  siteName?: string;
+  accent?: string; // color principal (botones, acentos) — familia "gold" actual
+  ink?: string; // color de texto/navy
+  bg?: string; // fondo base
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  footerText?: string;
+  footerLinks?: Array<{ label: string; href: string }>;
+  social?: Partial<Record<"instagram" | "facebook" | "youtube" | "tiktok" | "x" | "linkedin", string>>;
+  hideMimarcaBadge?: boolean;
+};
+
+export const tenants = pgTable(
+  "tenants",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    /** Slug público: mimarca.app/{slug}. Sin puntos (discriminador vs dominios). */
+    slug: varchar("slug", { length: 60 }).notNull(),
+    name: varchar("name", { length: 120 }).notNull(),
+    /** Dominio propio (opcional, plan pro). Patrón Cloudflare de rifabase. */
+    customDomain: varchar("custom_domain", { length: 140 }),
+    domainVerified: boolean("domain_verified").notNull().default(false),
+    cloudflareZoneId: varchar("cloudflare_zone_id", { length: 64 }),
+    cloudflareNameservers: jsonb("cloudflare_nameservers").$type<string[]>(),
+    /** 'basico' | 'pro' — ver src/lib/plans.ts */
+    plan: varchar("plan", { length: 20 }).notNull().default("basico"),
+    /** 'trial' | 'active' | 'past_due' | 'suspended' */
+    planStatus: varchar("plan_status", { length: 20 }).notNull().default("trial"),
+    trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+    branding: jsonb("branding").$type<TenantBranding>().notNull().default({}),
+    ownerUserId: uuid("owner_user_id"),
+    /** 'active' | 'suspended' */
+    status: varchar("status", { length: 20 }).notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    slugIdx: uniqueIndex("tenants_slug_idx").on(t.slug),
+    domainIdx: uniqueIndex("tenants_domain_idx").on(t.customDomain).where(sql`custom_domain IS NOT NULL`),
+  }),
+);
+
 /* ─────────── USERS / AUTH ─────────── */
 export const users = pgTable(
   "users",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }), // NULL = usuario de plataforma (superadmin SaaS)
     email: varchar("email", { length: 320 }).notNull(),
     passwordHash: text("password_hash").notNull(),
     name: varchar("name", { length: 120 }).notNull(),
@@ -50,7 +98,10 @@ export const users = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    emailIdx: uniqueIndex("users_email_idx").on(t.email),
+    // Email único POR tenant; usuarios de plataforma (tenant_id NULL) únicos globales.
+    tenantEmailIdx: uniqueIndex("users_tenant_email_idx").on(t.tenantId, t.email).where(sql`tenant_id IS NOT NULL`),
+    platformEmailIdx: uniqueIndex("users_platform_email_idx").on(t.email).where(sql`tenant_id IS NULL`),
+    tenantIdx: index("users_tenant_idx").on(t.tenantId),
     tierIdx: index("users_tier_idx").on(t.tier),
   }),
 );
@@ -111,6 +162,7 @@ export const programs = pgTable(
   "programs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     slug: varchar("slug", { length: 80 }).notNull(),
     title: varchar("title", { length: 200 }).notNull(),
     subtitle: text("subtitle"),
@@ -150,11 +202,12 @@ export const programs = pgTable(
     includedInMembership: varchar("included_in_membership", { length: 20 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ slugIdx: uniqueIndex("programs_slug_idx").on(t.slug) }),
+  (t) => ({ slugIdx: uniqueIndex("programs_tenant_slug_idx").on(t.tenantId, t.slug) }),
 );
 
 export const cohorts = pgTable("cohorts", {
   id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   programId: uuid("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
   startsOn: date("starts_on").notNull(),
   endsOn: date("ends_on").notNull(),
@@ -168,6 +221,7 @@ export const enrollments = pgTable(
   "enrollments",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     programId: uuid("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     cohortId: uuid("cohort_id").references(() => cohorts.id),
@@ -183,6 +237,7 @@ export const enrollments = pgTable(
 /* ─────────── MODULES / LESSONS / PROGRESS ─────────── */
 export const modules = pgTable("modules", {
   id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   programId: uuid("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
   code: varchar("code", { length: 20 }).notNull(),
   title: varchar("title", { length: 200 }).notNull(),
@@ -195,6 +250,7 @@ export const modules = pgTable("modules", {
 
 export const lessons = pgTable("lessons", {
   id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   moduleId: uuid("module_id").notNull().references(() => modules.id, { onDelete: "cascade" }),
   code: varchar("code", { length: 20 }).notNull(),
   title: varchar("title", { length: 200 }).notNull(),
@@ -272,7 +328,8 @@ export const moduleProgress = pgTable(
 /* ─────────── COMMUNITY ─────────── */
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
-  slug: varchar("slug", { length: 40 }).notNull().unique(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  slug: varchar("slug", { length: 40 }).notNull(), // único por tenant (categories_tenant_slug_idx)
   name: varchar("name", { length: 80 }).notNull(),
   emoji: varchar("emoji", { length: 8 }),
   color: varchar("color", { length: 30 }),
@@ -296,6 +353,7 @@ export const posts = pgTable(
   "posts",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     categoryId: integer("category_id").references(() => categories.id),
     title: varchar("title", { length: 240 }).notNull(),
@@ -338,6 +396,7 @@ export const postLikes = pgTable(
 
 export const comments = pgTable("comments", {
   id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   postId: uuid("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
   authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   body: text("body").notNull(),
@@ -347,6 +406,7 @@ export const comments = pgTable("comments", {
 /* ─────────── EVENTS (talleres + livestreams) ─────────── */
 export const events = pgTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description"),
   host: varchar("host", { length: 200 }),
@@ -414,7 +474,8 @@ export const eventRsvps = pgTable(
  */
 export const membershipPlans = pgTable("membership_plans", {
   id: serial("id").primaryKey(),
-  slug: varchar("slug", { length: 20 }).notNull().unique(), // silver | gold | black
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  slug: varchar("slug", { length: 20 }).notNull(), // silver | gold | black — único por tenant
   label: varchar("label", { length: 40 }).notNull(),
   emoji: varchar("emoji", { length: 8 }).notNull(),
   priceUsdMonthly: integer("price_usd_monthly").notNull(),
@@ -441,6 +502,7 @@ export const memberships = pgTable(
   "memberships",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     planSlug: varchar("plan_slug", { length: 20 }).notNull(), // 'silver' | 'gold' | 'black'
     /**
@@ -513,6 +575,7 @@ export const blogPosts = pgTable(
   "blog_posts",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     slug: varchar("slug", { length: 200 }).notNull(),
     title: varchar("title", { length: 240 }).notNull(),
     excerpt: text("excerpt"),
@@ -523,13 +586,14 @@ export const blogPosts = pgTable(
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ slugIdx: uniqueIndex("blog_slug_idx").on(t.slug) }),
+  (t) => ({ slugIdx: uniqueIndex("blog_tenant_slug_idx").on(t.tenantId, t.slug) }),
 );
 
 /* ─────────── ORDERS / PAYMENTS ─────────── */
 export const coupons = pgTable("coupons", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 40 }).notNull().unique(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 40 }).notNull(), // único por tenant (coupons_tenant_code_idx)
   kind: varchar("kind", { length: 20 }).notNull().default("amount"), // amount | percent
   value: integer("value").notNull(), // cents or percent
   active: boolean("active").notNull().default(true),
@@ -546,6 +610,7 @@ export const coupons = pgTable("coupons", {
  */
 export const stripeEvents = pgTable("stripe_events", {
   id: varchar("id", { length: 80 }).primaryKey(), // event.id de Stripe (evt_...)
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   type: varchar("type", { length: 80 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -554,6 +619,7 @@ export const orders = pgTable(
   "orders",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
     email: varchar("email", { length: 320 }).notNull(),
     name: varchar("name", { length: 200 }).notNull(),
@@ -589,7 +655,8 @@ export const orders = pgTable(
 /* ─────────── LEADS / NEWSLETTER ─────────── */
 export const leads = pgTable("leads", {
   id: serial("id").primaryKey(),
-  email: varchar("email", { length: 320 }).notNull().unique(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  email: varchar("email", { length: 320 }).notNull(), // único por tenant (leads_tenant_email_idx)
   source: varchar("source", { length: 60 }),
   tag: varchar("tag", { length: 60 }),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
@@ -601,6 +668,7 @@ export const activity = pgTable(
   "activity",
   {
     id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     kind: varchar("kind", { length: 40 }).notNull(), // purchase | enroll | complete | post | lead | cancel | publish | refund
     icon: varchar("icon", { length: 8 }),
     text: text("text").notNull(),
@@ -631,6 +699,7 @@ export const services = pgTable(
   "services",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     slug: varchar("slug", { length: 80 }).notNull(),
     name: varchar("name", { length: 120 }).notNull(),
     domain: varchar("domain", { length: 120 }),
@@ -668,7 +737,7 @@ export const services = pgTable(
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ slugIdx: uniqueIndex("services_slug_idx").on(t.slug) }),
+  (t) => ({ slugIdx: uniqueIndex("services_tenant_slug_idx").on(t.tenantId, t.slug) }),
 );
 
 /* ─────────── BOOKS + BUNDLES ─────────── */
@@ -689,6 +758,7 @@ export const books = pgTable(
   "books",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     slug: varchar("slug", { length: 80 }).notNull(),
     title: varchar("title", { length: 200 }).notNull(),
     subtitle: varchar("subtitle", { length: 240 }),
@@ -735,12 +805,13 @@ export const books = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ slugIdx: uniqueIndex("books_slug_idx").on(t.slug) }),
+  (t) => ({ slugIdx: uniqueIndex("books_tenant_slug_idx").on(t.tenantId, t.slug) }),
 );
 
 /* ─────────── RESOURCES (biblioteca) ─────────── */
 export const resources = pgTable("resources", {
   id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description"),
   category: varchar("category", { length: 40 }).notNull(), // "PDFs" | "Plantillas" | "Notebooks" | "Cheatsheets"
@@ -757,6 +828,7 @@ export const userProjects = pgTable(
   "user_projects",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 200 }).notNull(),
     description: text("description"),
@@ -782,6 +854,7 @@ export const userProjects = pgTable(
  */
 export const paymentSettings = pgTable("payment_settings", {
   id: serial("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   // Stripe
   stripePublishableKey: text("stripe_publishable_key"),
   stripeSecretKey: text("stripe_secret_key"),
@@ -869,6 +942,7 @@ export const certificates = pgTable(
   "certificates",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     programId: uuid("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     // Short public code used in /cert/[code] for verification.
@@ -929,6 +1003,7 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
  */
 export const siteSettings = pgTable("site_settings", {
   id: serial("id").primaryKey(), // siempre 1
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
 
   // ── Chips superiores del hero ──
   heroChip1Label: varchar("hero_chip_1_label", { length: 80 }),

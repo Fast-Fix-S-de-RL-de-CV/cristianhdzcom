@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { initials } from "@/lib/utils";
+import { getTenantCtx } from "@/lib/tenant";
 
 interface Post {
   id: string;
@@ -38,7 +39,7 @@ interface Stats {
  * Shows: stats hero, locked feed teasers, leaderboard, big "join free" CTAs.
  * Hides: composer, like/comment buttons, full post bodies, the in-community shell.
  */
-export function CommunityPreview({
+export async function CommunityPreview({
   posts,
   leaderboard,
   stats,
@@ -47,6 +48,8 @@ export function CommunityPreview({
   leaderboard: LeaderboardRow[];
   stats: Stats | null;
 }) {
+  const ctx = await getTenantCtx();
+  const tp = ctx?.tp ?? ((p: string) => p);
   return (
     <div style={{ background: "var(--bg)", minHeight: "calc(100vh - 80px)" }}>
       {/* HERO */}
@@ -101,10 +104,10 @@ export function CommunityPreview({
             className="row"
             style={{ gap: 12, justifyContent: "center", marginTop: 36, flexWrap: "wrap" }}
           >
-            <Link href="/registro" className="btn btn-primary" style={{ padding: "14px 28px", fontSize: 15 }}>
+            <Link href={tp("/registro")} className="btn btn-primary" style={{ padding: "14px 28px", fontSize: 15 }}>
               Entrar gratis →
             </Link>
-            <Link href="/login" className="btn btn-ghost" style={{ padding: "14px 28px", fontSize: 15 }}>
+            <Link href={tp("/login")} className="btn btn-ghost" style={{ padding: "14px 28px", fontSize: 15 }}>
               Ya tengo cuenta
             </Link>
           </div>
@@ -161,7 +164,7 @@ export function CommunityPreview({
                   Publicar, comentar, dar likes y subir de nivel es gratis.
                 </div>
               </div>
-              <Link href="/registro" className="btn btn-primary">
+              <Link href={tp("/registro")} className="btn btn-primary">
                 Crear cuenta gratis →
               </Link>
             </Card>
@@ -174,7 +177,7 @@ export function CommunityPreview({
 
             <div className="col" style={{ gap: 14 }}>
               {posts.slice(0, 6).map((p, i) => (
-                <PostPreviewCard key={p.id} post={p} locked={i >= 2} />
+                <PostPreviewCard key={p.id} post={p} locked={i >= 2} tp={tp} />
               ))}
             </div>
 
@@ -199,7 +202,7 @@ export function CommunityPreview({
                   Únete a la conversación.
                 </h3>
                 <Link
-                  href="/registro"
+                  href={tp("/registro")}
                   className="btn btn-gold"
                   style={{ padding: "12px 24px" }}
                 >
@@ -270,7 +273,7 @@ export function CommunityPreview({
                   ))}
                 </div>
                 <Link
-                  href="/registro"
+                  href={tp("/registro")}
                   className="mono"
                   style={{
                     display: "block",
@@ -307,7 +310,7 @@ export function CommunityPreview({
                 Sin tarjeta. Sin compromisos. Cancela cuando quieras.
               </p>
               <Link
-                href="/registro"
+                href={tp("/registro")}
                 className="btn btn-gold"
                 style={{ width: "100%", justifyContent: "center", padding: 12 }}
               >
@@ -340,7 +343,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-function PostPreviewCard({ post, locked }: { post: Post; locked: boolean }) {
+function PostPreviewCard({ post, locked, tp }: { post: Post; locked: boolean; tp: (p: string) => string }) {
   const isAdmin = post.authorRole === "admin" || post.authorRole === "superadmin";
   return (
     <Card
@@ -427,7 +430,7 @@ function PostPreviewCard({ post, locked }: { post: Post; locked: boolean }) {
             }}
           >
             <Link
-              href="/registro"
+              href={tp("/registro")}
               className="mono"
               style={{
                 fontSize: 11,

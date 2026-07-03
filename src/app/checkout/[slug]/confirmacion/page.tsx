@@ -1,12 +1,14 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Nav } from "@/components/marketing/Nav";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
-import { getStripe, finalizeCheckoutSession, isStripeConfigured } from "@/lib/stripe";
+import { getStripeForTenant, finalizeCheckoutSession } from "@/lib/stripe";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -30,15 +32,19 @@ export default async function ConfirmationPage({
   searchParams: Promise<{ order?: string; session_id?: string }>;
 }) {
   const { slug } = await params;
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const tp = ctx.tp;
   const { order: orderIdParam, session_id: sessionId } = await searchParams;
 
   let orderId = orderIdParam ?? null;
   let createdNewAccount = false;
 
-  // Fallback al webhook: si vino de Stripe con session_id, finalize aquí.
-  if (!orderId && sessionId && isStripeConfigured()) {
+  // Fallback al webhook: finaliza inline con las llaves DEL TENANT.
+  const { stripe: tenantStripe } = await getStripeForTenant(ctx.tenant.id);
+  if (!orderId && sessionId && tenantStripe) {
     try {
-      const stripe = getStripe();
+      const stripe = tenantStripe;
       const session = await stripe.checkout.sessions.retrieve(sessionId, {
         expand: ["subscription", "payment_intent"],
       });
@@ -46,12 +52,17 @@ export default async function ConfirmationPage({
       const [existing] = await db
         .select({ id: schema.orders.id, userId: schema.orders.userId })
         .from(schema.orders)
-        .where(sql`${schema.orders.metadata}->>'stripeSessionId' = ${sessionId}`)
+        .where(
+          and(
+            eq(schema.orders.tenantId, ctx.tenant.id),
+            sql`${schema.orders.metadata}->>'stripeSessionId' = ${sessionId}`,
+          ),
+        )
         .limit(1);
       if (existing) {
         orderId = existing.id;
       } else if (session.payment_status === "paid") {
-        const result = await finalizeCheckoutSession(session);
+        const result = await finalizeCheckoutSession(session, ctx.tenant.id);
         orderId = result.orderId;
         createdNewAccount = result.createdNewAccount;
       }
@@ -66,14 +77,26 @@ export default async function ConfirmationPage({
   let order: typeof schema.orders.$inferSelect | null = null;
   let program: typeof schema.programs.$inferSelect | null = null;
   if (orderId) {
-    const [o] = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).limit(1);
+    const [o] = await db
+      .select()
+      .from(schema.orders)
+      .where(and(eq(schema.orders.id, orderId), eq(schema.orders.tenantId, ctx.tenant.id)))
+      .limit(1);
     order = o ?? null;
     if (o?.programId) {
-      const [p] = await db.select().from(schema.programs).where(eq(schema.programs.id, o.programId)).limit(1);
+      const [p] = await db
+        .select()
+        .from(schema.programs)
+        .where(and(eq(schema.programs.id, o.programId), eq(schema.programs.tenantId, ctx.tenant.id)))
+        .limit(1);
       program = p ?? null;
     }
   } else {
-    const [p] = await db.select().from(schema.programs).where(eq(schema.programs.slug, slug)).limit(1);
+    const [p] = await db
+      .select()
+      .from(schema.programs)
+      .where(and(eq(schema.programs.slug, slug), eq(schema.programs.tenantId, ctx.tenant.id)))
+      .limit(1);
     program = p ?? null;
   }
 
@@ -110,10 +133,10 @@ export default async function ConfirmationPage({
             </p>
           )}
           <div className="row" style={{ gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/plataforma">
+            <Link href={tp("/plataforma")}>
               <Button size="lg">Ir a mi sendero →</Button>
             </Link>
-            <Link href="/comunidad">
+            <Link href={tp("/comunidad")}>
               <Button size="lg" variant="ghost">
                 Entrar a la comunidad
               </Button>

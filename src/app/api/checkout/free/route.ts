@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +11,9 @@ export const dynamic = "force-dynamic";
  * POST /api/checkout/free
  * Body: { slug: string }
  *
- * Inscribe al usuario logueado en un curso gratuito (priceUsd === 0) sin
- * pasar por la pasarela de pago. Para que un curso pueda inscribirse
- * gratis necesita:
+ * Inscribe al usuario logueado en un curso gratuito (priceUsd === 0) DEL
+ * TENANT sin pasar por la pasarela de pago. Para que un curso pueda
+ * inscribirse gratis necesita:
  *   1. priceUsd === 0 (la guardia principal — no se puede inscribir gratis
  *      a un curso de paga)
  *   2. isActive === true
@@ -29,6 +30,9 @@ export const dynamic = "force-dynamic";
 const body = z.object({ slug: z.string().min(2).max(80) });
 
 export async function POST(req: Request) {
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "unauthorized", message: "Necesitas iniciar sesión" }, { status: 401 });
@@ -42,7 +46,7 @@ export async function POST(req: Request) {
   const [program] = await db
     .select()
     .from(schema.programs)
-    .where(eq(schema.programs.slug, data.slug))
+    .where(and(eq(schema.programs.slug, data.slug), eq(schema.programs.tenantId, ctx.tenant.id)))
     .limit(1);
   if (!program) {
     return NextResponse.json({ error: "program_not_found" }, { status: 404 });
@@ -68,11 +72,13 @@ export async function POST(req: Request) {
       and(
         eq(schema.enrollments.userId, user.id),
         eq(schema.enrollments.programId, program.id),
+        eq(schema.enrollments.tenantId, ctx.tenant.id),
       ),
     )
     .limit(1);
   if (!existing) {
     await db.insert(schema.enrollments).values({
+      tenantId: ctx.tenant.id,
       userId: user.id,
       programId: program.id,
       status: "active",
@@ -83,7 +89,7 @@ export async function POST(req: Request) {
   const [firstMod] = await db
     .select()
     .from(schema.modules)
-    .where(eq(schema.modules.programId, program.id))
+    .where(and(eq(schema.modules.programId, program.id), eq(schema.modules.tenantId, ctx.tenant.id)))
     .orderBy(schema.modules.sortOrder)
     .limit(1);
   if (firstMod) {

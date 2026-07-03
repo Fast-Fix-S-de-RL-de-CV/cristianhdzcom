@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { asc, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
+import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveMembership } from "@/lib/membership";
+import { getTenantCtx } from "@/lib/tenant";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -23,11 +25,14 @@ export const dynamic = "force-dynamic";
  *   - FAQ al final.
  */
 export default async function MembresiaPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const user = await getCurrentUser();
   const plans = await db
     .select()
     .from(schema.membershipPlans)
-    .where(eq(schema.membershipPlans.isActive, true))
+    .where(and(eq(schema.membershipPlans.tenantId, ctx.tenant.id), eq(schema.membershipPlans.isActive, true)))
     .orderBy(asc(schema.membershipPlans.sortOrder));
 
   const currentMembership = user ? await getActiveMembership(user.id) : null;
@@ -80,7 +85,7 @@ export default async function MembresiaPage() {
               </div>
             </div>
             <Link
-              href="/cuenta/membresia"
+              href={tp("/cuenta/membresia")}
               style={{
                 padding: "10px 18px",
                 background: "var(--ink)",

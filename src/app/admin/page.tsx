@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { desc, sql, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { adminIcon, activityIcon } from "@/components/admin/adminIcons";
 import { PenLine, BookOpen, Radio, Megaphone, GraduationCap, Wallet, Rocket, Repeat } from "lucide-react";
@@ -16,9 +17,13 @@ export const dynamic = "force-dynamic";
 const MONTHLY_GOAL_CENTS = 3_000_000; // $30K USD/month
 
 export default async function AdminDashboard() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const tp = ctx.tp;
+  const tenantId = ctx.tenant.id;
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/admin");
-  if (user.role !== "admin" && user.role !== "superadmin") redirect("/comunidad");
+  if (!user) redirect(tp("/login?next=/admin"));
+  if (user.role !== "admin" && user.role !== "superadmin") redirect(tp("/comunidad"));
 
   const now = new Date();
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -28,24 +33,25 @@ export default async function AdminDashboard() {
 
   const [counts] = await db
     .select({
-      users: sql<number>`(SELECT COUNT(*)::int FROM ${schema.users})`,
-      orders: sql<number>`(SELECT COUNT(*)::int FROM ${schema.orders} WHERE status = 'succeeded')`,
-      revenueCents: sql<number>`(SELECT COALESCE(SUM(total_cents), 0)::int FROM ${schema.orders} WHERE status = 'succeeded')`,
+      users: sql<number>`(SELECT COUNT(*)::int FROM ${schema.users} WHERE tenant_id = ${tenantId})`,
+      orders: sql<number>`(SELECT COUNT(*)::int FROM ${schema.orders} WHERE status = 'succeeded' AND tenant_id = ${tenantId})`,
+      revenueCents: sql<number>`(SELECT COALESCE(SUM(total_cents), 0)::int FROM ${schema.orders} WHERE status = 'succeeded' AND tenant_id = ${tenantId})`,
       revenueThisMonthCents: sql<number>`(
         SELECT COALESCE(SUM(total_cents), 0)::int FROM ${schema.orders}
-        WHERE status = 'succeeded' AND created_at >= ${startOfMonth.toISOString()}
+        WHERE status = 'succeeded' AND tenant_id = ${tenantId} AND created_at >= ${startOfMonth.toISOString()}
       )`,
       revenueLastMonthCents: sql<number>`(
         SELECT COALESCE(SUM(total_cents), 0)::int FROM ${schema.orders}
         WHERE status = 'succeeded'
+          AND tenant_id = ${tenantId}
           AND created_at >= ${startOfPrevMonth.toISOString()}
           AND created_at <= ${endOfPrevMonth.toISOString()}
       )`,
-      leads: sql<number>`(SELECT COUNT(*)::int FROM ${schema.leads})`,
-      posts: sql<number>`(SELECT COUNT(*)::int FROM ${schema.posts})`,
-      programs: sql<number>`(SELECT COUNT(*)::int FROM ${schema.programs})`,
-      events: sql<number>`(SELECT COUNT(*)::int FROM ${schema.events})`.as("events_count"),
-      blog: sql<number>`(SELECT COUNT(*)::int FROM ${schema.blogPosts})`.as("blog"),
+      leads: sql<number>`(SELECT COUNT(*)::int FROM ${schema.leads} WHERE tenant_id = ${tenantId})`,
+      posts: sql<number>`(SELECT COUNT(*)::int FROM ${schema.posts} WHERE tenant_id = ${tenantId})`,
+      programs: sql<number>`(SELECT COUNT(*)::int FROM ${schema.programs} WHERE tenant_id = ${tenantId})`,
+      events: sql<number>`(SELECT COUNT(*)::int FROM ${schema.events} WHERE tenant_id = ${tenantId})`.as("events_count"),
+      blog: sql<number>`(SELECT COUNT(*)::int FROM ${schema.blogPosts} WHERE tenant_id = ${tenantId})`.as("blog"),
     })
     .from(sql`(SELECT 1) AS t`);
 
@@ -61,6 +67,7 @@ export default async function AdminDashboard() {
     })
     .from(schema.orders)
     .leftJoin(schema.programs, eq(schema.programs.id, schema.orders.programId))
+    .where(eq(schema.orders.tenantId, tenantId))
     .orderBy(desc(schema.orders.createdAt))
     .limit(8);
 
@@ -79,16 +86,22 @@ export default async function AdminDashboard() {
       )`,
     })
     .from(schema.programs)
+    .where(eq(schema.programs.tenantId, tenantId))
     .limit(4);
 
-  const activity = await db.select().from(schema.activity).orderBy(desc(schema.activity.createdAt)).limit(6);
+  const activity = await db
+    .select()
+    .from(schema.activity)
+    .where(eq(schema.activity.tenantId, tenantId))
+    .orderBy(desc(schema.activity.createdAt))
+    .limit(6);
 
   // Daily orders for last 30 days (sparkline data, real).
   const dailyRows = await db.execute<{ day: string; total: number }>(sql`
     SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS day,
            COALESCE(SUM(total_cents), 0)::int AS total
     FROM ${schema.orders}
-    WHERE status = 'succeeded' AND created_at >= ${thirtyDaysAgo.toISOString()}
+    WHERE status = 'succeeded' AND tenant_id = ${tenantId} AND created_at >= ${thirtyDaysAgo.toISOString()}
     GROUP BY 1
     ORDER BY 1
   `);
@@ -99,7 +112,7 @@ export default async function AdminDashboard() {
     SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS ym,
            COALESCE(SUM(total_cents), 0)::int AS total
     FROM ${schema.orders}
-    WHERE status = 'succeeded' AND created_at >= (CURRENT_DATE - INTERVAL '11 months')
+    WHERE status = 'succeeded' AND tenant_id = ${tenantId} AND created_at >= (CURRENT_DATE - INTERVAL '11 months')
     GROUP BY 1
     ORDER BY 1
   `);
@@ -147,7 +160,7 @@ export default async function AdminDashboard() {
             {sidebarItems.map(([label, active, href, count]) => (
               <a
                 key={String(label)}
-                href={String(href)}
+                href={tp(String(href))}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -208,7 +221,7 @@ export default async function AdminDashboard() {
             <div className="row" style={{ gap: 8 }}>
               <a
                 className="btn btn-ghost"
-                href="/api/admin/export?type=orders"
+                href={tp("/api/admin/export?type=orders")}
                 style={{ padding: "8px 14px", fontSize: 12, textDecoration: "none" }}
               >
                 Exportar CSV
@@ -293,7 +306,7 @@ export default async function AdminDashboard() {
                 </div>
                 <p style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>
                   Eventos automáticos: posts, RSVPs, lecciones completadas.{" "}
-                  <a href="/admin/comunidad" style={{ color: "var(--accent)", fontWeight: 600 }}>
+                  <a href={tp("/admin/comunidad")} style={{ color: "var(--accent)", fontWeight: 600 }}>
                     Moderar →
                   </a>
                 </p>
@@ -429,7 +442,7 @@ export default async function AdminDashboard() {
               ] as [React.ReactNode, string, string][]).map(([i, l, href]) => (
                 <a
                   key={l}
-                  href={href}
+                  href={tp(href)}
                   className="row"
                   style={{
                     padding: 12,

@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { initials, formatRelative } from "@/lib/utils";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import {
   BulkActionBar,
   BulkCheckbox,
@@ -19,6 +20,7 @@ type Row = {
 };
 
 export function ClientesTable({ rows, currentUserId }: { rows: Row[]; currentUserId: string }) {
+  const { tp } = useTenant();
   const [q, setQ] = useState("");
   const bulk = useBulkSelection<string>();
 
@@ -48,7 +50,7 @@ export function ClientesTable({ rows, currentUserId }: { rows: Row[]; currentUse
     !allVisibleSelected && selectableIds.some((id) => bulk.isSelected(id));
 
   const bulkDelete = useBulkDelete<string>({
-    url: "/api/admin/users/bulk-delete",
+    url: tp("/api/admin/users/bulk-delete"),
     entityLabel: { singular: "cliente", plural: "clientes" },
     description:
       "Se borra TODA su data personal (sesiones, inscripciones, posts, mensajes). " +

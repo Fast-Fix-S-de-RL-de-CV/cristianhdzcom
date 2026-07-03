@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +15,18 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string; commentId: string }> },
 ) {
   const { id: lessonId, commentId } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  // La lección debe ser del tenant del request.
+  const [lesson] = await db
+    .select({ id: schema.lessons.id })
+    .from(schema.lessons)
+    .where(and(eq(schema.lessons.id, lessonId), eq(schema.lessons.tenantId, tctx.tenant.id)))
+    .limit(1);
+  if (!lesson) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const [comment] = await db
     .select()

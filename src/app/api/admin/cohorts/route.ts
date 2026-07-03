@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +29,21 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   try {
     const data = body.parse(await req.json());
+    // El programa destino debe pertenecer al tenant del request.
+    const [program] = await db
+      .select({ id: schema.programs.id })
+      .from(schema.programs)
+      .where(and(eq(schema.programs.id, data.programId), eq(schema.programs.tenantId, ctx.tenant.id)))
+      .limit(1);
+    if (!program) return NextResponse.json({ error: "program_not_found" }, { status: 404 });
     const [row] = await db
       .insert(schema.cohorts)
       .values({
+        tenantId: ctx.tenant.id,
         programId: data.programId,
         code: data.code ?? null,
         startsOn: data.startsOn,

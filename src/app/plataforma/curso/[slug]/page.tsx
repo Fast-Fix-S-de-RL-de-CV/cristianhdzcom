@@ -3,6 +3,7 @@ import Link from "next/link";
 import { db, schema } from "@/db";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { SenderoMap } from "@/components/platform/SenderoMap";
 import type { SenderoModule, SenderoModuleState } from "@/components/platform/SenderoMap";
@@ -32,27 +33,36 @@ export default async function CursoSendero({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const user = await getCurrentUser();
-  if (!user) redirect(`/login?next=/plataforma/curso/${slug}`);
+  if (!user) redirect(tp(`/login?next=/plataforma/curso/${slug}`));
 
   const [program] = await db
     .select()
     .from(schema.programs)
-    .where(eq(schema.programs.slug, slug))
+    .where(and(eq(schema.programs.slug, slug), eq(schema.programs.tenantId, ctx.tenant.id)))
     .limit(1);
   if (!program) notFound();
 
   const [enrollment] = await db
     .select()
     .from(schema.enrollments)
-    .where(and(eq(schema.enrollments.userId, user.id), eq(schema.enrollments.programId, program.id)))
+    .where(
+      and(
+        eq(schema.enrollments.userId, user.id),
+        eq(schema.enrollments.programId, program.id),
+        eq(schema.enrollments.tenantId, ctx.tenant.id),
+      ),
+    )
     .limit(1);
-  if (!enrollment) redirect(`/programas/${slug}`);
+  if (!enrollment) redirect(tp(`/programas/${slug}`));
 
   const mods = await db
     .select()
     .from(schema.modules)
-    .where(eq(schema.modules.programId, program.id))
+    .where(and(eq(schema.modules.programId, program.id), eq(schema.modules.tenantId, ctx.tenant.id)))
     .orderBy(asc(schema.modules.sortOrder));
 
   // Full lessons per module — with completion flag for the current user.
@@ -83,6 +93,7 @@ export default async function CursoSendero({
       ) AS "completed"
     FROM lessons l
     WHERE l.module_id = ANY(${sql.raw(`ARRAY[${mods.map((m) => `'${m.id}'`).join(",") || "NULL"}]::uuid[]`)})
+      AND l.tenant_id = ${ctx.tenant.id}
     ORDER BY l.sort_order ASC
   `)) as unknown as { rows?: LRow[] } | LRow[];
   const lessonRows: LRow[] = Array.isArray(lessonsRes) ? lessonsRes : (lessonsRes.rows ?? []);
@@ -159,6 +170,7 @@ export default async function CursoSendero({
              l.video_duration_seconds AS "videoDurationSeconds"
       FROM lessons l
       WHERE l.module_id = ${currentMod.id}
+        AND l.tenant_id = ${ctx.tenant.id}
         AND NOT EXISTS (
           SELECT 1 FROM lesson_progress lp
           WHERE lp.lesson_id = l.id AND lp.user_id = ${user.id}
@@ -203,6 +215,7 @@ export default async function CursoSendero({
     union_users AS (
       SELECT u.id AS user_id, COALESCE(w.wxp, 0) AS wxp
       FROM users u LEFT JOIN weekly w ON w.user_id = u.id
+      WHERE u.tenant_id = ${ctx.tenant.id}
     )
     SELECT
       (SELECT COUNT(*)::int FROM union_users) AS total,
@@ -248,6 +261,7 @@ export default async function CursoSendero({
         and(
           eq(schema.certificates.userId, user.id),
           eq(schema.certificates.programId, program.id),
+          eq(schema.certificates.tenantId, ctx.tenant.id),
         ),
       )
       .limit(1);
@@ -281,7 +295,7 @@ export default async function CursoSendero({
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "8px 0" }}>
         {/* Breadcrumb */}
         <Link
-          href="/plataforma"
+          href={tp("/plataforma")}
           className="mono"
           style={{
             fontSize: 12,
@@ -455,7 +469,7 @@ export default async function CursoSendero({
             </div>
             {certificateCode ? (
               <Link
-                href={`/cert/${certificateCode}`}
+                href={tp(`/cert/${certificateCode}`)}
                 style={{
                   padding: "12px 22px",
                   borderRadius: 999,
@@ -542,7 +556,7 @@ export default async function CursoSendero({
                   <JourneyStat label="XP" value={xpInCourse.toLocaleString("es-MX")} unit="acumulados" />
                 </div>
                 <Link
-                  href="/comunidad/ranking"
+                  href={tp("/comunidad/ranking")}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",

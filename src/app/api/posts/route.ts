@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 const body = z.object({
   title: z.string().min(3).max(240),
@@ -11,6 +12,8 @@ const body = z.object({
 });
 
 export async function GET() {
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const rows = await db
     .select({
       id: schema.posts.id,
@@ -31,6 +34,7 @@ export async function GET() {
     .from(schema.posts)
     .leftJoin(schema.users, eq(schema.users.id, schema.posts.authorId))
     .leftJoin(schema.categories, eq(schema.categories.id, schema.posts.categoryId))
+    .where(eq(schema.posts.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.posts.pinned), desc(schema.posts.createdAt))
     .limit(50);
   return NextResponse.json({ posts: rows });
@@ -38,12 +42,29 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const ctx = await getTenantCtx();
+    if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     const data = body.parse(await req.json());
+    // La categoría (si viene) debe ser del tenant.
+    if (data.categoryId != null) {
+      const [cat] = await db
+        .select({ id: schema.categories.id })
+        .from(schema.categories)
+        .where(and(eq(schema.categories.id, data.categoryId), eq(schema.categories.tenantId, ctx.tenant.id)))
+        .limit(1);
+      if (!cat) return NextResponse.json({ error: "invalid_category" }, { status: 400 });
+    }
     const [post] = await db
       .insert(schema.posts)
-      .values({ authorId: user.id, title: data.title, body: data.body, categoryId: data.categoryId })
+      .values({
+        tenantId: ctx.tenant.id,
+        authorId: user.id,
+        title: data.title,
+        body: data.body,
+        categoryId: data.categoryId,
+      })
       .returning();
     // Award XP
     await db
@@ -76,6 +97,7 @@ export async function POST(req: Request) {
       .limit(1);
 
     await db.insert(schema.activity).values({
+      tenantId: ctx.tenant.id,
       kind: "post",
       icon: "💬",
       text: `${user.name} publicó "${data.title}"`,

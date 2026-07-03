@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Field } from "@/components/ui/Field";
 import { Nav } from "@/components/marketing/Nav";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { isValidEmail } from "@/lib/format";
 
 export default function ForgotPasswordPage() {
+  const { tp } = useTenant();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -22,7 +24,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/auth/forgot-password", {
+      const res = await fetch(tp("/api/auth/forgot-password"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email }),
@@ -63,7 +65,7 @@ export default function ForgotPasswordPage() {
                 .
               </p>
               <div style={{ marginTop: 24 }}>
-                <Link href="/login" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                <Link href={tp("/login")} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
                   Volver a iniciar sesión
                 </Link>
               </div>
@@ -94,7 +96,7 @@ export default function ForgotPasswordPage() {
               </form>
               <div style={{ marginTop: 24, fontSize: 13, color: "var(--muted)", textAlign: "center" }}>
                 ¿Recordaste tu contraseña?{" "}
-                <Link href="/login" style={{ color: "var(--accent)", fontWeight: 600 }}>
+                <Link href={tp("/login")} style={{ color: "var(--accent)", fontWeight: 600 }}>
                   Iniciar sesión
                 </Link>
               </div>

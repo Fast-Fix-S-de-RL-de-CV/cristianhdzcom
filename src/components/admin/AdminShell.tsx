@@ -2,9 +2,11 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 function AdminLogoutButton() {
   const router = useRouter();
+  const { tp } = useTenant();
   const [pending, start] = useTransition();
   return (
     <button
@@ -13,9 +15,9 @@ function AdminLogoutButton() {
       onClick={() => {
         start(async () => {
           try {
-            await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+            await fetch(tp("/api/auth/logout"), { method: "POST", credentials: "include" });
           } catch {}
-          router.push("/");
+          router.push(tp("/"));
           router.refresh();
         });
       }}
@@ -52,6 +54,7 @@ export function AdminShell({
   user: { email: string; name: string; role: string };
   children: React.ReactNode;
 }) {
+  const { tp, siteName, logoUrl } = useTenant();
   return (
     <div style={{ background: "var(--bg-2)", minHeight: "100vh" }}>
       <div style={{ background: "var(--navy)", color: "white", borderBottom: "1px solid var(--line)" }}>
@@ -67,25 +70,29 @@ export function AdminShell({
         >
           {/* Logo dorado (mismo asset que el sidebar alumno) */}
           <Link
-            href="/admin"
+            href={tp("/admin")}
             className="ch-logo"
-            aria-label="CH · Panel de administración"
+            aria-label={`${siteName} · Panel de administración`}
             style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
           >
-            <img
-              src="/logo.png"
-              alt="Cristian Hernández"
-              style={{
-                height: 44,
-                width: "auto",
-                display: "block",
-                /* Sombra negra suave + halo dorado para que la firma dorada
-                 * se lea bien sobre el navy oscuro del panel admin (mismo
-                 * filtro que aplicamos al logo del nav público). */
-                filter:
-                  "drop-shadow(0 1px 3px rgba(0,0,0,0.30)) drop-shadow(0 0 8px rgba(216,168,63,0.20))",
-              }}
-            />
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={siteName}
+                style={{
+                  height: 44,
+                  width: "auto",
+                  display: "block",
+                  /* Sombra negra suave + halo dorado para que la firma dorada
+                   * se lea bien sobre el navy oscuro del panel admin (mismo
+                   * filtro que aplicamos al logo del nav público). */
+                  filter:
+                    "drop-shadow(0 1px 3px rgba(0,0,0,0.30)) drop-shadow(0 0 8px rgba(216,168,63,0.20))",
+                }}
+              />
+            ) : (
+              <span style={{ color: "white" }}>{siteName}</span>
+            )}
           </Link>
           <div>
             <div className="row" style={{ gap: 10, alignItems: "center" }}>
@@ -116,7 +123,7 @@ export function AdminShell({
           </div>
           <div className="row" style={{ gap: 10, alignItems: "center" }}>
             <Link
-              href="/plataforma"
+              href={tp("/plataforma")}
               style={{
                 padding: "8px 14px",
                 fontSize: 12,
@@ -136,7 +143,7 @@ export function AdminShell({
             </Link>
             <AdminLogoutButton />
             <Link
-              href="/cuenta"
+              href={tp("/cuenta")}
               aria-label="Mi cuenta"
               style={{
                 padding: "8px 14px",

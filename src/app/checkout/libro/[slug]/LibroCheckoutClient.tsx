@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { computeBumps, basePrice, type Bump, type CheckoutFormat } from "@/lib/book-bumps";
 import { apiErrorMessage } from "@/lib/apiError";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { useToast } from "@/components/ui/ConfirmProvider";
 import { Field } from "@/components/ui/Field";
 import { SelectField } from "@/components/ui/SelectField";
@@ -52,6 +53,7 @@ export function LibroCheckoutClient({
 }) {
   const router = useRouter();
   const toast = useToast();
+  const { tp } = useTenant();
   const [pending, startTransition] = useTransition();
   const [format, setFormat] = useState<CheckoutFormat>(initialFormat);
   const [acceptedBumps, setAcceptedBumps] = useState<Set<string>>(new Set());
@@ -120,7 +122,7 @@ export function LibroCheckoutClient({
 
     startTransition(async () => {
       try {
-        const res = await fetch("/api/checkout/book", {
+        const res = await fetch(tp("/api/checkout/book"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -143,9 +145,9 @@ export function LibroCheckoutClient({
           window.location.href = json.url;
           return;
         }
-        // ── MODO DEMO ──
+        // ── MODO DEMO ── (redirectTo viene SIN prefijo de tenant)
         if (json.redirectTo) {
-          router.push(json.redirectTo);
+          router.push(tp(json.redirectTo));
         }
       } catch {
         toast.error("Error de red al procesar la compra.");
@@ -443,7 +445,7 @@ export function LibroCheckoutClient({
           </div>
 
           <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--line)", textAlign: "center" }}>
-            <Link href="/libros" style={{ fontSize: 11, color: "var(--muted)", textDecoration: "none" }}>
+            <Link href={tp("/libros")} style={{ fontSize: 11, color: "var(--muted)", textDecoration: "none" }}>
               ← Volver al catálogo
             </Link>
           </div>

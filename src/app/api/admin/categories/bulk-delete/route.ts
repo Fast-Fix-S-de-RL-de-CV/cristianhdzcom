@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,6 +20,8 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_input", details: parsed.error.flatten() }, { status: 400 });
@@ -27,7 +30,7 @@ export async function POST(req: Request) {
   try {
     const result = await db
       .delete(schema.categories)
-      .where(inArray(schema.categories.id, ids))
+      .where(and(inArray(schema.categories.id, ids), eq(schema.categories.tenantId, ctx.tenant.id)))
       .returning({ id: schema.categories.id });
     return NextResponse.json({ ok: true, deleted: result.length });
   } catch (e: unknown) {

@@ -1,6 +1,8 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { AlumnosTable } from "./AlumnosTable";
@@ -8,6 +10,8 @@ import { AlumnosTable } from "./AlumnosTable";
 export const dynamic = "force-dynamic";
 
 export default async function AlumnosPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   // layout guarantees user exists with admin role
   const user = (await getCurrentUser())!;
 
@@ -24,6 +28,7 @@ export default async function AlumnosPage() {
       createdAt: schema.users.createdAt,
     })
     .from(schema.users)
+    .where(eq(schema.users.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.users.createdAt));
 
   const data = rows.map((r) => ({

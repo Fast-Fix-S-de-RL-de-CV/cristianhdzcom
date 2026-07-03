@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { SelectField } from "@/components/ui/SelectField";
 import { initials, formatRelative } from "@/lib/utils";
 import { apiErrorMessage } from "@/lib/apiError";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type Post = {
   id: string;
@@ -39,6 +40,7 @@ export function CommunityFeed({
   currentUser: { id: string; name: string; level: number } | null;
 }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const [posts, setPosts] = useState(initialPosts);
   const [filter, setFilter] = useState<string>("todo");
   const [sort, setSort] = useState<"new" | "top" | "trending">("new");
@@ -79,7 +81,7 @@ export function CommunityFeed({
     setPosting(true);
     setPostError(null);
     try {
-      const res = await fetch("/api/posts", {
+      const res = await fetch(tp("/api/posts"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ title: composerTitle, body: composerBody, categoryId: composerCat }),
@@ -104,14 +106,14 @@ export function CommunityFeed({
 
   async function onLike(id: string) {
     if (!currentUser) {
-      router.push("/login?next=/comunidad");
+      router.push(tp("/login?next=/comunidad"));
       return;
     }
     const next = !liked[id];
     setLiked((s) => ({ ...s, [id]: next }));
     setPosts((ps) => ps.map((p) => (p.id === id ? { ...p, likesCount: p.likesCount + (next ? 1 : -1) } : p)));
     try {
-      const res = await fetch(`/api/posts/${id}/like`, { method: next ? "POST" : "DELETE" });
+      const res = await fetch(tp(`/api/posts/${id}/like`), { method: next ? "POST" : "DELETE" });
       if (!res.ok) throw new Error("like_failed");
     } catch {
       // Revertir el optimismo: el server no guardó el cambio.
@@ -134,7 +136,7 @@ export function CommunityFeed({
             </div>
             <button
               type="button"
-              onClick={() => (currentUser ? setComposerOpen(true) : router.push("/login?next=/comunidad"))}
+              onClick={() => (currentUser ? setComposerOpen(true) : router.push(tp("/login?next=/comunidad")))}
               style={{
                 flex: 1,
                 padding: "10px 16px",
@@ -150,7 +152,7 @@ export function CommunityFeed({
               Comparte tu progreso, pregunta o gana puntos…
             </button>
             <Button
-              onClick={() => (currentUser ? setComposerOpen(true) : router.push("/login?next=/comunidad"))}
+              onClick={() => (currentUser ? setComposerOpen(true) : router.push(tp("/login?next=/comunidad")))}
               style={{ padding: "10px 16px", fontSize: 13 }}
             >
               Publicar
@@ -405,7 +407,7 @@ export function CommunityFeed({
                   <span>{p.viewsCount}</span>
                 </div>
                 <Link
-                  href={`/comunidad/posts/${p.id}`}
+                  href={tp(`/comunidad/posts/${p.id}`)}
                   style={{ marginLeft: "auto", color: "var(--accent)", fontSize: 13, fontWeight: 500, textDecoration: "none" }}
                 >
                   Abrir hilo →

@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { db, schema } from "@/db";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { getActiveMembership, getCreditBalance } from "@/lib/membership";
 import { MembershipManageClient } from "./MembershipManageClient";
-import { getStripe, finalizeCheckoutSession, isStripeConfigured } from "@/lib/stripe";
+import { getStripeForTenant, finalizeCheckoutSession } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -19,24 +20,33 @@ export default async function MembresiaCuentaPage({
   searchParams?: Promise<{ session_id?: string; welcome?: string; new?: string }>;
 }) {
   const sp = searchParams ? await searchParams : {};
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const tp = ctx.tp;
 
-  // Fallback al webhook si volvemos de Stripe con session_id.
-  if (sp.session_id && isStripeConfigured()) {
+  // Fallback al webhook si volvemos de Stripe con session_id — llaves DEL TENANT.
+  const { stripe: tenantStripe } = await getStripeForTenant(ctx.tenant.id);
+  if (sp.session_id && tenantStripe) {
     try {
-      const stripe = getStripe();
+      const stripe = tenantStripe;
       const session = await stripe.checkout.sessions.retrieve(sp.session_id, {
         expand: ["subscription"],
       });
       const [existing] = await db
         .select({ id: schema.orders.id, userId: schema.orders.userId })
         .from(schema.orders)
-        .where(sql`${schema.orders.metadata}->>'stripeSessionId' = ${sp.session_id}`)
+        .where(
+          and(
+            eq(schema.orders.tenantId, ctx.tenant.id),
+            sql`${schema.orders.metadata}->>'stripeSessionId' = ${sp.session_id}`,
+          ),
+        )
         .limit(1);
       if (!existing && (session.payment_status === "paid" || session.mode === "subscription")) {
         // Fallback si ni el webhook ni /api/checkout/finish procesaron aún.
         // El login del comprador nuevo lo abre /api/checkout/finish (una
         // página no puede escribir cookies durante el render).
-        await finalizeCheckoutSession(session);
+        await finalizeCheckoutSession(session, ctx.tenant.id);
       }
     } catch (e) {
       console.error("[cuenta/membresia] finalize:", e);
@@ -44,7 +54,7 @@ export default async function MembresiaCuentaPage({
   }
 
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/cuenta/membresia");
+  if (!user) redirect(tp("/login?next=/cuenta/membresia"));
 
   const active = await getActiveMembership(user.id);
   const credit = await getCreditBalance(user.id);
@@ -55,7 +65,12 @@ export default async function MembresiaCuentaPage({
         await db
           .select()
           .from(schema.membershipPlans)
-          .where(eq(schema.membershipPlans.slug, active.planSlug))
+          .where(
+            and(
+              eq(schema.membershipPlans.slug, active.planSlug),
+              eq(schema.membershipPlans.tenantId, ctx.tenant.id),
+            ),
+          )
           .limit(1)
       )[0] ?? null
     : null;
@@ -69,7 +84,7 @@ export default async function MembresiaCuentaPage({
       metadata: schema.orders.metadata,
     })
     .from(schema.orders)
-    .where(eq(schema.orders.userId, user.id))
+    .where(and(eq(schema.orders.userId, user.id), eq(schema.orders.tenantId, ctx.tenant.id)))
     .orderBy(desc(schema.orders.createdAt))
     .limit(20);
   const membershipPayments = history.filter(
@@ -80,7 +95,7 @@ export default async function MembresiaCuentaPage({
     <AlumnoShell user={user} active="cuenta">
       <div style={{ maxWidth: 760, margin: "0 auto" }}>
         <Link
-          href="/cuenta"
+          href={tp("/cuenta")}
           className="mono"
           style={{ fontSize: 12, color: "var(--muted)", textDecoration: "none", letterSpacing: "0.06em" }}
         >
@@ -105,7 +120,7 @@ export default async function MembresiaCuentaPage({
               Únete a la comunidad activa. El 50% de cada pago se acumula como crédito aplicable a
               cualquier curso o consultoría.
             </p>
-            <Link href="/membresia">
+            <Link href={tp("/membresia")}>
               <Button size="lg">Ver planes →</Button>
             </Link>
           </Card>

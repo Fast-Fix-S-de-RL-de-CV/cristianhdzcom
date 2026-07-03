@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { and, asc, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,17 @@ const postBody = z.object({
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: lessonId } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+
+  // La lección debe ser del tenant del request (los comments se aíslan por su padre).
+  const [lesson] = await db
+    .select({ id: schema.lessons.id })
+    .from(schema.lessons)
+    .where(and(eq(schema.lessons.id, lessonId), eq(schema.lessons.tenantId, tctx.tenant.id)))
+    .limit(1);
+  if (!lesson) return NextResponse.json({ error: "lesson_not_found" }, { status: 404 });
+
   const rows = await db
     .select({
       id: schema.lessonComments.id,
@@ -42,6 +54,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: lessonId } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
@@ -51,8 +65,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ error: "invalid", details: parsed.error.issues }, { status: 400 });
   }
 
-  // Verify lesson exists
-  const [lesson] = await db.select().from(schema.lessons).where(eq(schema.lessons.id, lessonId)).limit(1);
+  // Verify lesson exists (dentro del tenant)
+  const [lesson] = await db
+    .select()
+    .from(schema.lessons)
+    .where(and(eq(schema.lessons.id, lessonId), eq(schema.lessons.tenantId, tctx.tenant.id)))
+    .limit(1);
   if (!lesson) return NextResponse.json({ error: "lesson_not_found" }, { status: 404 });
 
   // If replying, the parent must exist and belong to this same lesson.

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { initials } from "@/lib/utils";
 import { apiErrorMessage } from "@/lib/apiError";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type Message = {
   id: string;
@@ -24,6 +25,7 @@ export function ChatRoom({
   currentUser: { id: string; name: string };
   peer: { id: string; name: string; role: string; level: number };
 }) {
+  const { tp } = useTenant();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
@@ -32,13 +34,13 @@ export function ChatRoom({
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/dm/conversations/${conversationId}/messages`);
+    const res = await fetch(tp(`/api/dm/conversations/${conversationId}/messages`));
     if (res.ok) {
       const j = await res.json();
       setMessages(j.messages ?? []);
     }
     setLoading(false);
-  }, [conversationId]);
+  }, [conversationId, tp]);
 
   useEffect(() => {
     load();
@@ -70,7 +72,7 @@ export function ChatRoom({
     setMessages((m) => [...m, optimistic]);
     setDraft("");
     try {
-      const res = await fetch(`/api/dm/conversations/${conversationId}/messages`, {
+      const res = await fetch(tp(`/api/dm/conversations/${conversationId}/messages`), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ body }),
@@ -100,7 +102,7 @@ export function ChatRoom({
     <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", height: "calc(100dvh - 120px)" }}>
       {/* Header */}
       <div className="row" style={{ gap: 8, marginBottom: 12, alignItems: "center" }}>
-        <Link href="/mensajes" style={{ textDecoration: "none", color: "var(--muted)" }} className="mono">
+        <Link href={tp("/mensajes")} style={{ textDecoration: "none", color: "var(--muted)" }} className="mono">
           ← BANDEJA
         </Link>
       </div>
@@ -118,7 +120,7 @@ export function ChatRoom({
         <div className="av" style={{ width: 44, height: 44, fontSize: 14 }}>{peerInitials}</div>
         <div>
           <div className="row" style={{ gap: 8, alignItems: "center" }}>
-            <Link href={`/u/${peer.id}`} style={{ color: "inherit", textDecoration: "none" }}>
+            <Link href={tp(`/u/${peer.id}`)} style={{ color: "inherit", textDecoration: "none" }}>
               <span style={{ fontWeight: 700, fontSize: 15 }}>{peer.name}</span>
             </Link>
             {isStaff && (
@@ -141,7 +143,7 @@ export function ChatRoom({
             Lv.{peer.level} · MENSAJE PRIVADO
           </div>
         </div>
-        <Link href={`/u/${peer.id}`} className="btn btn-ghost" style={{ fontSize: 12 }}>
+        <Link href={tp(`/u/${peer.id}`)} className="btn btn-ghost" style={{ fontSize: 12 }}>
           Ver perfil
         </Link>
       </Card>

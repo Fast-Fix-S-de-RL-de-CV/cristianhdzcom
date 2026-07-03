@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { eq, and, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { bumpStreak } from "@/lib/streak";
 
 /**
@@ -19,6 +20,9 @@ const body = z.object({
 });
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+  const tenantId = tctx.tenant.id;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await ctx.params;
@@ -30,7 +34,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
   const data = parsed.data;
 
-  const [lesson] = await db.select().from(schema.lessons).where(eq(schema.lessons.id, id)).limit(1);
+  const [lesson] = await db
+    .select()
+    .from(schema.lessons)
+    .where(and(eq(schema.lessons.id, id), eq(schema.lessons.tenantId, tenantId)))
+    .limit(1);
   if (!lesson) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   // multiple_choice / true_false validate against correctKey; open and
@@ -81,7 +89,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
     // Same module-completion / promotion / certificate logic as /complete,
     // so modules whose last lesson is a quiz can actually finish.
-    const result = await completeModuleIfDone(user.id, lesson.moduleId);
+    const result = await completeModuleIfDone(user.id, lesson.moduleId, tenantId);
     moduleCompleted = result.moduleCompleted;
     certificateIssued = result.certificate;
   } else {
@@ -105,8 +113,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 async function completeModuleIfDone(
   userId: string,
   moduleId: string,
+  tenantId: string,
 ): Promise<{ moduleCompleted: boolean; certificate: { code: string; programId: string } | null }> {
-  const allLessons = await db.select().from(schema.lessons).where(eq(schema.lessons.moduleId, moduleId));
+  const allLessons = await db
+    .select()
+    .from(schema.lessons)
+    .where(and(eq(schema.lessons.moduleId, moduleId), eq(schema.lessons.tenantId, tenantId)));
   const completedLessons = await db
     .select()
     .from(schema.lessonProgress)
@@ -137,10 +149,17 @@ async function completeModuleIfDone(
     });
 
   let certificate: { code: string; programId: string } | null = null;
-  const [mod] = await db.select().from(schema.modules).where(eq(schema.modules.id, moduleId)).limit(1);
+  const [mod] = await db
+    .select()
+    .from(schema.modules)
+    .where(and(eq(schema.modules.id, moduleId), eq(schema.modules.tenantId, tenantId)))
+    .limit(1);
   if (mod) {
     const programModules = (
-      await db.select().from(schema.modules).where(eq(schema.modules.programId, mod.programId))
+      await db
+        .select()
+        .from(schema.modules)
+        .where(and(eq(schema.modules.programId, mod.programId), eq(schema.modules.tenantId, tenantId)))
     ).sort((a, b) => a.sortOrder - b.sortOrder);
     const idx = programModules.findIndex((m) => m.id === mod.id);
     const next = programModules[idx + 1];
@@ -162,14 +181,18 @@ async function completeModuleIfDone(
         .select()
         .from(schema.certificates)
         .where(
-          and(eq(schema.certificates.userId, userId), eq(schema.certificates.programId, mod.programId)),
+          and(
+            eq(schema.certificates.userId, userId),
+            eq(schema.certificates.programId, mod.programId),
+            eq(schema.certificates.tenantId, tenantId),
+          ),
         )
         .limit(1);
       let cert = existingCert;
       if (!cert) {
         const inserted = await db
           .insert(schema.certificates)
-          .values({ userId, programId: mod.programId, code: generateCertCode() })
+          .values({ tenantId, userId, programId: mod.programId, code: generateCertCode() })
           .returning();
         cert = inserted[0];
       }

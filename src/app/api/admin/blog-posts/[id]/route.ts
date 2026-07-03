@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const tenantCtx = await getTenantCtx();
+  if (!tenantCtx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const { id } = await ctx.params;
   try {
     const data = body.parse(await req.json());
@@ -36,7 +39,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
       const [existing] = await db
         .select({ publishedAt: schema.blogPosts.publishedAt })
         .from(schema.blogPosts)
-        .where(eq(schema.blogPosts.id, id))
+        .where(and(eq(schema.blogPosts.id, id), eq(schema.blogPosts.tenantId, tenantCtx.tenant.id)))
         .limit(1);
       if (!existing) return NextResponse.json({ error: "not_found" }, { status: 404 });
       update.publishedAt = existing.publishedAt ?? new Date();
@@ -44,7 +47,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const [row] = await db
       .update(schema.blogPosts)
       .set(update)
-      .where(eq(schema.blogPosts.id, id))
+      .where(and(eq(schema.blogPosts.id, id), eq(schema.blogPosts.tenantId, tenantCtx.tenant.id)))
       .returning();
     if (!row) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.json({ post: row });
@@ -67,7 +70,11 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const tenantCtx = await getTenantCtx();
+  if (!tenantCtx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const { id } = await ctx.params;
-  await db.delete(schema.blogPosts).where(eq(schema.blogPosts.id, id));
+  await db
+    .delete(schema.blogPosts)
+    .where(and(eq(schema.blogPosts.id, id), eq(schema.blogPosts.tenantId, tenantCtx.tenant.id)));
   return NextResponse.json({ ok: true });
 }

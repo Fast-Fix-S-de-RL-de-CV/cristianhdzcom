@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type ModuleNode = {
   id: string;
@@ -21,17 +22,18 @@ export function PlatformPath({
   firstLessonId?: string;
 }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   async function startModule(m: ModuleNode) {
     if (pendingId) return;
     setPendingId(m.id);
     try {
-      const res = await fetch(`/api/modules/${m.id}/start`, { method: "POST" });
+      const res = await fetch(tp(`/api/modules/${m.id}/start`), { method: "POST" });
       const data: any = await res.json().catch(() => ({}));
       const lessonId = data?.lessonId ?? firstLessonId;
       if (lessonId) {
-        router.push(`/plataforma/leccion/${lessonId}`);
+        router.push(tp(`/plataforma/leccion/${lessonId}`));
       } else {
         router.refresh();
       }

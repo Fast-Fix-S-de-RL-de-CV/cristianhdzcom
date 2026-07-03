@@ -1,6 +1,8 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { formatRelative } from "@/lib/utils";
@@ -8,6 +10,8 @@ import { formatRelative } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function SoportePage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = (await getCurrentUser())!;
 
   // Filter leads with source = "support" as a lightweight ticket inbox.
@@ -19,7 +23,7 @@ export default async function SoportePage() {
       createdAt: schema.leads.createdAt,
     })
     .from(schema.leads)
-    .where(eq(schema.leads.source, "support"))
+    .where(and(eq(schema.leads.source, "support"), eq(schema.leads.tenantId, ctx.tenant.id)))
     .orderBy(desc(schema.leads.createdAt));
 
   return (

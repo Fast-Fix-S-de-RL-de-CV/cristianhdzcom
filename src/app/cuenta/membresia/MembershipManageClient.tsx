@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 export function MembershipManageClient({
   cancelAtPeriodEnd,
@@ -13,6 +14,7 @@ export function MembershipManageClient({
   const router = useRouter();
   const confirm = useConfirm();
   const toast = useToast();
+  const { tp } = useTenant();
   const [pending, startTransition] = useTransition();
   const [done, setDone] = useState<string | null>(null);
 
@@ -31,7 +33,7 @@ export function MembershipManageClient({
 
     startTransition(async () => {
       try {
-        const res = await fetch("/api/membership/cancel", { method: "POST" });
+        const res = await fetch(tp("/api/membership/cancel"), { method: "POST" });
         const json = await res.json();
         if (!res.ok || !json.ok) {
           toast.error("No se pudo cancelar. Escríbenos a info@cristianhdz.com.");
@@ -49,7 +51,7 @@ export function MembershipManageClient({
   async function resume() {
     startTransition(async () => {
       try {
-        const res = await fetch("/api/membership/resume", { method: "POST" });
+        const res = await fetch(tp("/api/membership/resume"), { method: "POST" });
         const json = await res.json();
         if (!res.ok || !json.ok) {
           toast.error("No se pudo reactivar.");

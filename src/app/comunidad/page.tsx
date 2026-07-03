@@ -1,6 +1,8 @@
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { CommunityFeed } from "@/components/community/CommunityFeed";
@@ -11,6 +13,8 @@ import { AlumnoShell, AlumnoHeader } from "@/components/alumno/AlumnoShell";
 export const dynamic = "force-dynamic";
 
 export default async function CommunityPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = await getCurrentUser();
 
   const posts = await db
@@ -33,12 +37,14 @@ export default async function CommunityPage() {
     .from(schema.posts)
     .leftJoin(schema.users, eq(schema.users.id, schema.posts.authorId))
     .leftJoin(schema.categories, eq(schema.categories.id, schema.posts.categoryId))
+    .where(eq(schema.posts.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.posts.pinned), desc(schema.posts.createdAt))
     .limit(20);
 
   const leaderboard = await db
     .select({ id: schema.users.id, name: schema.users.name, level: schema.users.level, xp: schema.users.xp })
     .from(schema.users)
+    .where(eq(schema.users.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.users.xp))
     .limit(7);
 
@@ -46,18 +52,21 @@ export default async function CommunityPage() {
   if (!user) {
     const [{ members }] = await db
       .select({ members: sql<number>`count(*)::int` })
-      .from(schema.users);
+      .from(schema.users)
+      .where(eq(schema.users.tenantId, ctx.tenant.id));
     const [{ countries }] = await db
       .select({
         countries: sql<number>`count(DISTINCT ${schema.users.country}) FILTER (WHERE ${schema.users.country} IS NOT NULL AND ${schema.users.country} <> '')::int`,
       })
-      .from(schema.users);
+      .from(schema.users)
+      .where(eq(schema.users.tenantId, ctx.tenant.id));
     const [{ online }] = await db
       .select({ online: sql<number>`count(DISTINCT ${schema.sessions.userId})::int` })
       .from(schema.sessions)
-      .where(sql`${schema.sessions.expiresAt} > NOW()`);
+      .innerJoin(schema.users, eq(schema.users.id, schema.sessions.userId))
+      .where(and(sql`${schema.sessions.expiresAt} > NOW()`, eq(schema.users.tenantId, ctx.tenant.id)));
     const founderRes = (await db.execute(
-      sql`SELECT id, name FROM users WHERE role = 'superadmin' ORDER BY created_at ASC LIMIT 1`,
+      sql`SELECT id, name FROM users WHERE tenant_id = ${ctx.tenant.id} AND role IN ('admin', 'superadmin') ORDER BY created_at ASC LIMIT 1`,
     )) as unknown as { rows?: Array<{ id: string; name: string }> } | Array<{ id: string; name: string }>;
     const founderRows = Array.isArray(founderRes) ? founderRes : founderRes.rows ?? [];
     const founder = founderRows[0] ?? null;
@@ -76,11 +85,14 @@ export default async function CommunityPage() {
   }
 
   // ──────── Logged user → AlumnoShell with sidebar + feed ────────
-  const cats = await db.select().from(schema.categories);
+  const cats = await db
+    .select()
+    .from(schema.categories)
+    .where(eq(schema.categories.tenantId, ctx.tenant.id));
   const events = await db
     .select()
     .from(schema.events)
-    .where(gte(schema.events.startsAt, new Date()))
+    .where(and(gte(schema.events.startsAt, new Date()), eq(schema.events.tenantId, ctx.tenant.id)))
     .orderBy(schema.events.startsAt)
     .limit(3);
 
@@ -104,7 +116,7 @@ export default async function CommunityPage() {
   return (
     <AlumnoShell user={user} active="comunidad">
       <AlumnoHeader
-        eyebrow="COMUNIDAD · CH NEGOCIOS CON IA"
+        eyebrow={`COMUNIDAD · ${ctx.branding.siteName.toUpperCase()}`}
         title="Feed"
         subtitle="Conversaciones, victorias y preguntas de la generación."
         user={{ name: user.name, level: user.level, xp: user.xp, streakDays: user.streakDays }}

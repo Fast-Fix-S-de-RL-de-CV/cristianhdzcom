@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { apiErrorMessage } from "@/lib/apiError";
 
 /**
@@ -13,6 +14,7 @@ import { apiErrorMessage } from "@/lib/apiError";
  */
 export function BackfillTiersButton() {
   const router = useRouter();
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -29,7 +31,7 @@ export function BackfillTiersButton() {
 
     setBusy(true);
     try {
-      const res = await fetch("/api/admin/tiers/backfill", { method: "POST" });
+      const res = await fetch(tp("/api/admin/tiers/backfill"), { method: "POST" });
       const j = await res.json().catch(() => null);
       if (!res.ok) {
         toast.error(apiErrorMessage(j, "No se pudieron recalcular los tiers"));

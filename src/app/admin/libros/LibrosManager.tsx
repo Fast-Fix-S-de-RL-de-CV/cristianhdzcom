@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import {
   BulkActionBar,
@@ -45,6 +46,7 @@ type Filter = "all" | "books" | "bundles" | "inactive";
 
 export function LibrosManager({ rows }: { rows: BookRow[] }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState<BookRow | null>(null);
@@ -66,7 +68,7 @@ export function LibrosManager({ rows }: { rows: BookRow[] }) {
   const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
 
   const bulkDelete = useBulkDelete<string>({
-    url: "/api/admin/books/bulk-delete",
+    url: tp("/api/admin/books/bulk-delete"),
     entityLabel: { singular: "producto", plural: "productos" },
     description:
       "Se eliminan permanentemente del catálogo. Las órdenes ya pagadas conservan el snapshot " +
@@ -82,7 +84,7 @@ export function LibrosManager({ rows }: { rows: BookRow[] }) {
       tone: "danger",
     });
     if (!ok) return;
-    const res = await fetch(`/api/admin/books/${row.id}`, { method: "DELETE" });
+    const res = await fetch(tp(`/api/admin/books/${row.id}`), { method: "DELETE" });
     if (!res.ok) {
       toast.error("No se pudo eliminar.");
       return;
@@ -336,6 +338,7 @@ function BookDialog({
   onSaved: () => void;
 }) {
   const toast = useToast();
+  const { tp } = useTenant();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const isBundle = book?.isBundle ?? mode === "bundle";
@@ -396,7 +399,7 @@ function BookDialog({
       isActive: form.isActive,
     };
 
-    const url = book ? `/api/admin/books/${book.id}` : "/api/admin/books";
+    const url = tp(book ? `/api/admin/books/${book.id}` : "/api/admin/books");
     const method = book ? "PUT" : "POST";
 
     try {

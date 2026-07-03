@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CourseCover } from "./CourseCover";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 export type ProgramCard = {
   id: string;
@@ -216,6 +217,7 @@ function ProgramCardItem({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const { tp } = useTenant();
   return (
     <div
       style={{
@@ -340,7 +342,7 @@ function ProgramCardItem({
 
         {/* CTA principal: lleva a la ficha completa */}
         <Link
-          href={`/programas/${program.slug}`}
+          href={tp(`/programas/${program.slug}`)}
           style={{
             marginTop: 6,
             padding: "10px 14px",

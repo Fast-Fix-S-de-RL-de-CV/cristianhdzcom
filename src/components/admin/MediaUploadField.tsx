@@ -18,6 +18,7 @@
  * largos → siempre pegar link de Vimeo/YouTube (no se sube el archivo).
  */
 import { useRef, useState } from "react";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 const ACCEPT_IMAGE = "image/jpeg,image/png,image/webp,image/gif,image/avif";
 const ACCEPT_IMAGE_VIDEO = `${ACCEPT_IMAGE},video/mp4,video/webm,video/quicktime`;
@@ -42,6 +43,7 @@ export function MediaUploadField({
   hint?: string;
 }) {
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const { tp } = useTenant();
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState("");
@@ -62,7 +64,7 @@ export function MediaUploadField({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/admin/upload?type=cover", { method: "POST", body: fd });
+      const res = await fetch(tp("/api/admin/upload?type=cover"), { method: "POST", body: fd });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
         setErr(

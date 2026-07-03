@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { desc, sql, gte, and, eq } from "drizzle-orm";
+import { getTenantCtx } from "@/lib/tenant";
 
 // GET /api/leaderboard?limit=20&range=7d|30d|all
 //
@@ -10,6 +11,8 @@ import { desc, sql, gte, and, eq } from "drizzle-orm";
 // activity. We aggregate lesson_attempts.score sums over the window and use
 // them as a tie-breaker on top of base xp.
 export async function GET(req: Request) {
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const url = new URL(req.url);
   const rawLimit = Number(url.searchParams.get("limit") ?? 20);
   const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.trunc(rawLimit), 1), 100) : 20;
@@ -26,6 +29,7 @@ export async function GET(req: Request) {
         streakDays: schema.users.streakDays,
       })
       .from(schema.users)
+      .where(eq(schema.users.tenantId, ctx.tenant.id))
       .orderBy(desc(schema.users.xp))
       .limit(limit);
     return NextResponse.json(
@@ -50,12 +54,14 @@ export async function GET(req: Request) {
       SELECT author_id AS user_id, COUNT(*)::int * 10 AS xp
       FROM ${schema.posts}
       WHERE created_at >= ${sinceIso}::timestamptz
+        AND tenant_id = ${ctx.tenant.id}
       GROUP BY author_id
     ),
     comment_xp AS (
       SELECT author_id AS user_id, COUNT(*)::int * 5 AS xp
       FROM ${schema.comments}
       WHERE created_at >= ${sinceIso}::timestamptz
+        AND tenant_id = ${ctx.tenant.id}
       GROUP BY author_id
     )
     SELECT
@@ -66,6 +72,7 @@ export async function GET(req: Request) {
     LEFT JOIN attempt_xp a ON a.user_id = u.id
     LEFT JOIN post_xp p    ON p.user_id = u.id
     LEFT JOIN comment_xp c ON c.user_id = u.id
+    WHERE u.tenant_id = ${ctx.tenant.id}
     ORDER BY "periodXp" DESC, u.xp DESC
     LIMIT ${limit}
   `)) as unknown as { rows?: any[] } | any[];

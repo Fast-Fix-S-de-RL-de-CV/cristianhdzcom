@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/ConfirmProvider";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { apiErrorMessage } from "@/lib/apiError";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type PlanCard = {
   slug: string;
@@ -37,10 +38,11 @@ export function MembershipCheckout({
   const [pending, startTransition] = useTransition();
   const toast = useToast();
   const router = useRouter();
+  const { tp } = useTenant();
 
   function subscribe(planSlug: string) {
     if (alreadySubscribed) {
-      router.push("/cuenta/membresia");
+      router.push(tp("/cuenta/membresia"));
       return;
     }
     setSelectedPlan(planSlug);
@@ -54,7 +56,7 @@ export function MembershipCheckout({
     }
     startTransition(async () => {
       try {
-        const res = await fetch("/api/checkout/membership", {
+        const res = await fetch(tp("/api/checkout/membership"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -79,9 +81,9 @@ export function MembershipCheckout({
           window.location.href = json.url;
           return;
         }
-        // ── MODO DEMO ──
+        // ── MODO DEMO ── (la API devuelve paths internos SIN prefijo de tenant)
         if (json.redirectTo) {
-          router.push(json.redirectTo);
+          router.push(tp(json.redirectTo));
         }
       } catch {
         toast.error("Error de red. Intenta de nuevo.");

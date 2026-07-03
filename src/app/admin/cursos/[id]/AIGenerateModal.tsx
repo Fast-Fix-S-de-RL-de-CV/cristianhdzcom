@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { useToast } from "@/components/ui/ConfirmProvider";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { apiErrorMessage } from "@/lib/apiError";
 
 /** El API limita sourceText a 60,000 chars (z.max en ai-generate). */
@@ -31,6 +32,7 @@ export function AIGenerateModal({
   onCreated: () => void;
 }) {
   const toast = useToast();
+  const { tp } = useTenant();
   const [mode] = useState<"doc" | "scratch">(initialMode);
   const [sourceText, setSourceText] = useState("");
   const [brief, setBrief] = useState("");
@@ -52,7 +54,7 @@ export function AIGenerateModal({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/admin/extract-text", { method: "POST", body: fd });
+      const res = await fetch(tp("/api/admin/extract-text"), { method: "POST", body: fd });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
         toast.error(j.message || apiErrorMessage(j, "No se pudo extraer texto del archivo"));
@@ -79,7 +81,7 @@ export function AIGenerateModal({
     }
     setGenerating(true);
     try {
-      const res = await fetch(`/api/admin/programs/${programId}/ai-generate`, {
+      const res = await fetch(tp(`/api/admin/programs/${programId}/ai-generate`), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

@@ -1,6 +1,7 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Megaphone, FileText, Calculator, ArrowRight } from "lucide-react";
@@ -38,8 +39,11 @@ const TOOLS = [
 ];
 
 export default async function HerramientasPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/plataforma/herramientas");
+  if (!user) redirect(tp("/login?next=/plataforma/herramientas"));
 
   return (
     <AlumnoShell
@@ -122,7 +126,7 @@ export default async function HerramientasPage() {
             </div>
           );
           return t.ready ? (
-            <Link key={t.key} href={t.href} style={{ textDecoration: "none", color: "inherit" }}>
+            <Link key={t.key} href={tp(t.href)} style={{ textDecoration: "none", color: "inherit" }}>
               {card}
             </Link>
           ) : (

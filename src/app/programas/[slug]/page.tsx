@@ -13,7 +13,7 @@ import { CourseOutline } from "@/components/marketing/CourseOutline";
 import { DEFAULT_WHO_FOR, DEFAULT_FAQS } from "@/lib/courseDefaults";
 import { CourseCover } from "@/components/marketing/CourseCover";
 import { FreeEnrollButton } from "./FreeEnrollButton";
-import { getSiteSettings } from "@/lib/site-settings";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -26,20 +26,42 @@ function formatCohortRange(starts: Date, ends: Date) {
 
 
 export default async function SalesPage({ params }: { params: Promise<{ slug: string }> }) {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const { slug } = await params;
-  const [program] = await db.select().from(schema.programs).where(eq(schema.programs.slug, slug)).limit(1);
+  const [program] = await db
+    .select()
+    .from(schema.programs)
+    .where(and(eq(schema.programs.tenantId, ctx.tenant.id), eq(schema.programs.slug, slug)))
+    .limit(1);
   if (!program) notFound();
 
-  const [mods, openCohorts, hero] = await Promise.all([
-    db.select().from(schema.modules).where(eq(schema.modules.programId, program.id)).orderBy(asc(schema.modules.sortOrder)),
+  const [mods, openCohorts, heroRows] = await Promise.all([
+    db
+      .select()
+      .from(schema.modules)
+      .where(and(eq(schema.modules.tenantId, ctx.tenant.id), eq(schema.modules.programId, program.id)))
+      .orderBy(asc(schema.modules.sortOrder)),
     db
       .select()
       .from(schema.cohorts)
-      .where(and(eq(schema.cohorts.programId, program.id), eq(schema.cohorts.isOpen, true)))
+      .where(
+        and(
+          eq(schema.cohorts.tenantId, ctx.tenant.id),
+          eq(schema.cohorts.programId, program.id),
+          eq(schema.cohorts.isOpen, true),
+        ),
+      )
       .orderBy(asc(schema.cohorts.startsOn))
       .limit(1),
-    getSiteSettings(),
+    db
+      .select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.tenantId, ctx.tenant.id))
+      .limit(1),
   ]);
+  const hero = heroRows[0] ?? null;
   // Lecciones de todos los módulos → temario público (estructura del curso).
   const modIds = mods.map((m) => m.id);
   const allLessons = modIds.length
@@ -51,7 +73,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
           kind: schema.lessons.kind,
         })
         .from(schema.lessons)
-        .where(inArray(schema.lessons.moduleId, modIds))
+        .where(and(eq(schema.lessons.tenantId, ctx.tenant.id), inArray(schema.lessons.moduleId, modIds)))
         .orderBy(asc(schema.lessons.sortOrder))
     : [];
   const outline = mods.map((m) => ({
@@ -107,7 +129,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
           {/* ─── IZQUIERDA: breadcrumb + chips + título + subtítulo + CARD INSCRIBIR ─── */}
           <div>
             <div className="row" style={{ gap: 8, color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
-              <Link href="/programas">Programas</Link>
+              <Link href={tp("/programas")}>Programas</Link>
               <span>/</span>
               <span style={{ color: "var(--ink)" }}>{program.title}</span>
             </div>
@@ -222,7 +244,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
                     </div>
                   ) : null}
 
-                  <Link href={`/checkout/${program.slug}`}>
+                  <Link href={tp(`/checkout/${program.slug}`)}>
                     <Button size="lg" style={{ width: "100%", justifyContent: "center" }}>
                       Inscribirme ahora →
                     </Button>
@@ -271,7 +293,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
                   : [
                       "Acceso de por vida a la plataforma",
                       "Comunidad privada + 4 talleres bonus",
-                      "Los 2 libros de Cristian en versión digital",
+                      `Los 2 libros de ${ctx.branding.siteName} en versión digital`,
                       "Garantía de 14 días — sin preguntas",
                     ]
                 ).map((t, i) => (
@@ -328,7 +350,7 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
       <section className="sec bdr-t" style={{ background: "var(--bg-2)" }}>
         <div className="instructor-grid" style={{ display: "grid", gridTemplateColumns: "0.7fr 1fr", gap: 56 }}>
           <div>
-            {hero.heroPortraitUrl ? (
+            {hero?.heroPortraitUrl ? (
               <img
                 src={hero.heroPortraitUrl}
                 alt={hero.heroTitle}
@@ -336,13 +358,13 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
               />
             ) : (
               <div className="ph" style={{ aspectRatio: "4/5", borderRadius: 18 }}>
-                RETRATO · CRISTIAN
+                RETRATO · {ctx.branding.siteName.toUpperCase()}
               </div>
             )}
           </div>
           <div>
             <Eyebrow>Tu instructor</Eyebrow>
-            <h2 style={{ fontSize: 60, marginTop: 14, lineHeight: 1.04 }}>{hero.heroTitle}</h2>
+            <h2 style={{ fontSize: 60, marginTop: 14, lineHeight: 1.04 }}>{hero?.heroTitle ?? ctx.branding.siteName}</h2>
             <p className="serif" style={{ fontSize: 22, marginTop: 8, color: "var(--accent)", fontWeight: 600 }}>
               Arquitecto de Software
             </p>
@@ -358,10 +380,10 @@ export default async function SalesPage({ params }: { params: Promise<{ slug: st
             <p style={{ fontSize: 15, marginTop: 14, color: "var(--muted)", lineHeight: 1.65 }}>
               Ha colaborado con marcas internacionales reconocidas y fue ganador del premio Huawei Spark 2023 por su
               expansión en el sector informático. Ha participado en foros junto a empresarios como Marcus Dantus y
-              Ernesto Coppel, y mantiene relación directa con los consulados de Brasil y México. Trabajar con Cristian
-              Hernández es sinónimo de confianza, compromiso y resultados.
+              Ernesto Coppel, y mantiene relación directa con los consulados de Brasil y México. Trabajar con{" "}
+              {ctx.branding.siteName} es sinónimo de confianza, compromiso y resultados.
             </p>
-            {hero.heroStats && hero.heroStats.length > 0 && (
+            {hero?.heroStats && hero.heroStats.length > 0 && (
               <>
                 <div className="rule" style={{ margin: "32px 0" }} />
                 <div className="grid-3" style={{ gap: 24 }}>

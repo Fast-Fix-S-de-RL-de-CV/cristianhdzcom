@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -40,6 +41,8 @@ export async function POST(req: Request) {
   if (!me || (me.role !== "admin" && me.role !== "superadmin")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -53,11 +56,16 @@ export async function POST(req: Request) {
   // compatibility but its strings are email addresses.
   const lowered = [...new Set(parsed.data.ids.map((e) => e.trim().toLowerCase()))];
 
-  // ── 1. Find users that match. Exclude superadmins + self. ──
+  // ── 1. Find users that match (solo del tenant). Exclude superadmins + self. ──
   const userRows = await db
     .select({ id: schema.users.id, email: schema.users.email, role: schema.users.role })
     .from(schema.users)
-    .where(inArray(sql<string>`lower(${schema.users.email})`, lowered));
+    .where(
+      and(
+        inArray(sql<string>`lower(${schema.users.email})`, lowered),
+        eq(schema.users.tenantId, ctx.tenant.id),
+      ),
+    );
 
   const blocked: { email: string; reason: string }[] = [];
   const userIdsToDelete: string[] = [];
@@ -73,11 +81,16 @@ export async function POST(req: Request) {
     userIdsToDelete.push(u.id);
   }
 
-  // ── 2. Find leads that match. ──
+  // ── 2. Find leads that match (solo del tenant). ──
   const leadRows = await db
     .select({ id: schema.leads.id })
     .from(schema.leads)
-    .where(inArray(sql<string>`lower(${schema.leads.email})`, lowered));
+    .where(
+      and(
+        inArray(sql<string>`lower(${schema.leads.email})`, lowered),
+        eq(schema.leads.tenantId, ctx.tenant.id),
+      ),
+    );
   const leadIdsToDelete = leadRows.map((r) => r.id);
 
   // ── 3. Count orders that will survive with NULL user_id after the user
@@ -88,7 +101,12 @@ export async function POST(req: Request) {
     const [{ c }] = await db
       .select({ c: sql<number>`count(*)::int` })
       .from(schema.orders)
-      .where(inArray(schema.orders.userId, userIdsToDelete));
+      .where(
+        and(
+          inArray(schema.orders.userId, userIdsToDelete),
+          eq(schema.orders.tenantId, ctx.tenant.id),
+        ),
+      );
     preservedOrders = Number(c);
   }
 
@@ -101,6 +119,7 @@ export async function POST(req: Request) {
       .where(
         and(
           inArray(schema.users.id, userIdsToDelete),
+          eq(schema.users.tenantId, ctx.tenant.id),
           ne(schema.users.role, "superadmin"),
           ne(schema.users.id, me.id),
         ),
@@ -111,7 +130,12 @@ export async function POST(req: Request) {
   if (leadIdsToDelete.length > 0) {
     const res = await db
       .delete(schema.leads)
-      .where(inArray(schema.leads.id, leadIdsToDelete))
+      .where(
+        and(
+          inArray(schema.leads.id, leadIdsToDelete),
+          eq(schema.leads.tenantId, ctx.tenant.id),
+        ),
+      )
       .returning({ id: schema.leads.id });
     deletedLeads = res.length;
   }
@@ -131,6 +155,3 @@ export async function POST(req: Request) {
     blocked,
   });
 }
-
-// Drizzle helper for type-friendly equality in development (not used at runtime).
-void eq;

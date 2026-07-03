@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { ClientesTable } from "./ClientesTable";
@@ -8,6 +10,8 @@ import { ClientesTable } from "./ClientesTable";
 export const dynamic = "force-dynamic";
 
 export default async function ClientesPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = (await getCurrentUser())!;
 
   const rows = await db.execute<{
@@ -27,6 +31,7 @@ export default async function ClientesPage() {
       MAX(${schema.orders.paidAt})::text AS last_order_at
     FROM ${schema.orders}
     WHERE ${schema.orders.status} = 'succeeded'
+      AND ${schema.orders.tenantId} = ${ctx.tenant.id}
     GROUP BY ${schema.orders.email}, ${schema.orders.userId}
     ORDER BY lifetime_cents DESC
   `);

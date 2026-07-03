@@ -1,5 +1,6 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -10,8 +11,10 @@ import { LogoutButton, PasswordForm, ProfileForm } from "./AccountForms";
 export const dynamic = "force-dynamic";
 
 export default async function CuentaPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/cuenta");
+  if (!user) redirect(ctx.tp("/login?next=/cuenta"));
 
   return (
     <AlumnoShell user={user} active="cuenta">

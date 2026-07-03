@@ -4,6 +4,7 @@ import { and, eq, asc, sql } from "drizzle-orm";
 import type { Metadata } from "next";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
@@ -28,6 +29,8 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
+  const ctx = await getTenantCtx();
+  if (!ctx) return { title: "Post no encontrado" };
   const [row] = await db
     .select({
       title: schema.posts.title,
@@ -36,12 +39,12 @@ export async function generateMetadata({
     })
     .from(schema.posts)
     .innerJoin(schema.users, eq(schema.users.id, schema.posts.authorId))
-    .where(eq(schema.posts.id, id))
+    .where(and(eq(schema.posts.id, id), eq(schema.posts.tenantId, ctx.tenant.id)))
     .limit(1);
 
   if (!row) return { title: "Post no encontrado" };
   return {
-    title: `${row.title} · Comunidad CH`,
+    title: `${row.title} · Comunidad ${ctx.branding.siteName}`,
     description: buildPreview(row.body, 160),
     openGraph: {
       title: row.title,
@@ -53,6 +56,9 @@ export async function generateMetadata({
 }
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const tp = ctx.tp;
   const user = await getCurrentUser();
   const { id } = await params;
 
@@ -83,7 +89,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     .from(schema.posts)
     .innerJoin(schema.users, eq(schema.users.id, schema.posts.authorId))
     .leftJoin(schema.categories, eq(schema.categories.id, schema.posts.categoryId))
-    .where(eq(schema.posts.id, id))
+    .where(and(eq(schema.posts.id, id), eq(schema.posts.tenantId, ctx.tenant.id)))
     .limit(1);
 
   if (!row) notFound();
@@ -91,7 +97,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   // Increment views (fire and forget — never block render).
   db.update(schema.posts)
     .set({ viewsCount: sql`${schema.posts.viewsCount} + 1` })
-    .where(eq(schema.posts.id, id))
+    .where(and(eq(schema.posts.id, id), eq(schema.posts.tenantId, ctx.tenant.id)))
     .catch(() => {});
 
   // Calculate paywall visibility from viewer + post state.
@@ -140,7 +146,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
       })
       .from(schema.comments)
       .innerJoin(schema.users, eq(schema.users.id, schema.comments.authorId))
-      .where(eq(schema.comments.postId, id))
+      .where(and(eq(schema.comments.postId, id), eq(schema.comments.tenantId, ctx.tenant.id)))
       .orderBy(asc(schema.comments.createdAt));
   }
 
@@ -170,7 +176,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
       )}
 
       <div className="row" style={{ gap: 12, marginBottom: 16 }}>
-        <Link href={`/u/${row.authorId}`} style={{ textDecoration: "none" }}>
+        <Link href={tp(`/u/${row.authorId}`)} style={{ textDecoration: "none" }}>
           <div className="av" style={{ width: 44, height: 44, fontSize: 13 }}>
             {initials(row.authorName)}
           </div>
@@ -178,7 +184,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="row" style={{ gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
             <Link
-              href={`/u/${row.authorId}`}
+              href={tp(`/u/${row.authorId}`)}
               style={{ fontSize: 15, fontWeight: 600, color: "var(--navy)", textDecoration: "none" }}
             >
               {row.authorName}
@@ -300,7 +306,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         <section className="sec" style={{ paddingTop: 32, paddingBottom: 56 }}>
           <div style={{ maxWidth: 760, margin: "0 auto" }}>
             <Link
-              href="/comunidad"
+              href={tp("/comunidad")}
               className="mono"
               style={{ fontSize: 12, color: "var(--muted)", textDecoration: "none", letterSpacing: "0.06em" }}
             >
@@ -335,7 +341,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
               </p>
               <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
                 <Link
-                  href={`/registro?next=/comunidad/posts/${row.id}`}
+                  href={tp(`/registro?next=/comunidad/posts/${row.id}`)}
                   style={{
                     padding: "12px 24px",
                     background: "linear-gradient(180deg, #F2C65A 0%, #D8A83F 100%)",
@@ -349,7 +355,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   Crear cuenta gratis →
                 </Link>
                 <Link
-                  href={`/login?next=/comunidad/posts/${row.id}`}
+                  href={tp(`/login?next=/comunidad/posts/${row.id}`)}
                   style={{
                     padding: "12px 24px",
                     background: "transparent",
@@ -382,7 +388,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
       />
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "12px 24px 32px" }}>
         <Link
-          href="/comunidad"
+          href={tp("/comunidad")}
           className="mono"
           style={{ fontSize: 12, color: "var(--muted)", textDecoration: "none", letterSpacing: "0.06em" }}
         >

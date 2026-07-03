@@ -1,8 +1,11 @@
 /**
- * POST /api/stripe/webhook
+ * POST /api/stripe/webhook — POR TENANT.
  *
- * Endpoint que recibe eventos de Stripe (configurar en Stripe Dashboard →
- * Developers → Webhooks → Add endpoint).
+ * Cada tenant configura su endpoint en SU Stripe Dashboard apuntando a
+ * `mimarca.app/{slug}/api/stripe/webhook` o `sudominio.com/api/stripe/webhook`
+ * (el middleware setea x-tenant-key y aquí resolvemos el tenant con
+ * getTenantCtx). La firma se verifica con el webhookSecret DEL TENANT
+ * (payment_settings; fallback env solo para el tenant seed cristianhdz).
  *
  * Eventos que procesamos:
  *  - `checkout.session.completed` → finalizar order/membership.
@@ -13,9 +16,8 @@
  *  - `customer.subscription.updated` → sincronizar cancel_at_period_end y
  *    currentPeriodEnd.
  *
- * IMPORTANTE: la verificación de firma usa `STRIPE_WEBHOOK_SECRET` del .env.
- * Si no está configurado, retornamos 503 para evitar procesar eventos
- * falsos.
+ * IMPORTANTE: si el tenant no tiene webhookSecret configurado, retornamos
+ * 503 para evitar procesar eventos falsos.
  */
 
 import { NextResponse } from "next/server";
@@ -23,18 +25,22 @@ import { headers } from "next/headers";
 import type Stripe from "stripe";
 import { db, schema } from "@/db";
 import { and, eq, sql } from "drizzle-orm";
-import { getStripe, finalizeCheckoutSession } from "@/lib/stripe";
+import { getStripeForTenant, finalizeCheckoutSession } from "@/lib/stripe";
+import { getTenantCtx } from "@/lib/tenant";
 import { accrueCredit, type PlanSlug } from "@/lib/membership";
 import { MXN_PER_USD } from "@/lib/fx";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? "";
-
 export async function POST(req: Request) {
-  if (!WEBHOOK_SECRET) {
-    console.error("[stripe.webhook] STRIPE_WEBHOOK_SECRET no configurado");
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+  const tenantId = ctx.tenant.id;
+
+  const { stripe, webhookSecret } = await getStripeForTenant(tenantId);
+  if (!stripe || !webhookSecret) {
+    console.error(`[stripe.webhook] tenant ${ctx.tenant.slug}: webhook secret no configurado`);
     return NextResponse.json({ error: "webhook_secret_missing" }, { status: 503 });
   }
 
@@ -47,19 +53,21 @@ export async function POST(req: Request) {
   const rawBody = await req.text();
   let event: Stripe.Event;
   try {
-    event = getStripe().webhooks.constructEvent(rawBody, signature, WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch (e) {
     console.error("[stripe.webhook] firma inválida:", (e as Error).message);
     return NextResponse.json({ error: "invalid_signature" }, { status: 400 });
   }
 
-  // ── Idempotencia ── Insertamos el id del evento; si ya existe (reentrega
-  // o duplicado de Stripe), salimos con 200 sin reprocesar. La PK hace el
-  // trabajo atómico: onConflictDoNothing devuelve 0 filas si ya estaba.
+  // ── Idempotencia ── Insertamos el id del evento (con su tenant); si ya
+  // existe (reentrega o duplicado de Stripe), salimos con 200 sin reprocesar.
+  // La PK hace el trabajo atómico: onConflictDoNothing devuelve 0 filas si ya
+  // estaba. (Los event id de Stripe son únicos por cuenta, y cada tenant usa
+  // su propia cuenta.)
   try {
     const inserted = await db
       .insert(schema.stripeEvents)
-      .values({ id: event.id, type: event.type })
+      .values({ id: event.id, tenantId, type: event.type })
       .onConflictDoNothing()
       .returning({ id: schema.stripeEvents.id });
     if (inserted.length === 0) {
@@ -79,11 +87,11 @@ export async function POST(req: Request) {
         // current_period_end y guardar metadata desde el cliente.
         let full: Stripe.Checkout.Session = session;
         if (session.mode === "subscription" && typeof session.subscription === "string") {
-          full = await getStripe().checkout.sessions.retrieve(session.id, {
+          full = await stripe.checkout.sessions.retrieve(session.id, {
             expand: ["subscription"],
           });
         }
-        await finalizeCheckoutSession(full);
+        await finalizeCheckoutSession(full, tenantId);
         break;
       }
       case "invoice.paid": {
@@ -105,12 +113,12 @@ export async function POST(req: Request) {
           invoice.currency?.toLowerCase() === "mxn"
             ? Math.round(invoice.amount_paid / MXN_PER_USD)
             : invoice.amount_paid;
-        await handleSubscriptionRenewal(subId, amountUsdCents);
+        await handleSubscriptionRenewal(stripe, tenantId, subId, amountUsdCents);
         break;
       }
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
-        await syncSubscriptionState(sub);
+        await syncSubscriptionState(tenantId, sub);
         break;
       }
       case "customer.subscription.deleted": {
@@ -122,9 +130,17 @@ export async function POST(req: Request) {
             cancelAtPeriodEnd: true,
             canceledAt: new Date(),
           })
-          .where(sql`${schema.memberships.userId} IN (
-            SELECT user_id FROM orders WHERE metadata->>'stripeSubscriptionId' = ${sub.id} LIMIT 1
-          )`);
+          .where(
+            and(
+              eq(schema.memberships.tenantId, tenantId),
+              sql`${schema.memberships.userId} IN (
+                SELECT user_id FROM orders
+                WHERE metadata->>'stripeSubscriptionId' = ${sub.id}
+                  AND tenant_id = ${tenantId}
+                LIMIT 1
+              )`,
+            ),
+          );
         break;
       }
       default:
@@ -139,14 +155,25 @@ export async function POST(req: Request) {
 }
 
 /** Renovación de suscripción: encuentra membership por stripeSubscriptionId
- *  guardado en el order original, acumula crédito y extiende periodo.
- *  `amountPaidCents` viene YA convertido a centavos USD por el caller. */
-async function handleSubscriptionRenewal(stripeSubId: string, amountPaidCents: number) {
-  // Buscar order original con este subscription id
+ *  guardado en el order original (del tenant), acumula crédito y extiende
+ *  periodo. `amountPaidCents` viene YA convertido a centavos USD por el
+ *  caller. */
+async function handleSubscriptionRenewal(
+  stripe: Stripe,
+  tenantId: string,
+  stripeSubId: string,
+  amountPaidCents: number,
+) {
+  // Buscar order original con este subscription id (scoped al tenant)
   const [order] = await db
     .select()
     .from(schema.orders)
-    .where(sql`${schema.orders.metadata}->>'stripeSubscriptionId' = ${stripeSubId}`)
+    .where(
+      and(
+        sql`${schema.orders.metadata}->>'stripeSubscriptionId' = ${stripeSubId}`,
+        eq(schema.orders.tenantId, tenantId),
+      ),
+    )
     .orderBy(sql`${schema.orders.createdAt} DESC`)
     .limit(1);
   if (!order || !order.userId) {
@@ -157,12 +184,18 @@ async function handleSubscriptionRenewal(stripeSubId: string, amountPaidCents: n
   const [m] = await db
     .select()
     .from(schema.memberships)
-    .where(and(eq(schema.memberships.userId, order.userId), eq(schema.memberships.status, "active")))
+    .where(
+      and(
+        eq(schema.memberships.userId, order.userId),
+        eq(schema.memberships.status, "active"),
+        eq(schema.memberships.tenantId, tenantId),
+      ),
+    )
     .limit(1);
   if (!m) return;
 
   // Extender currentPeriodEnd desde Stripe (verdad canónica)
-  const sub = await getStripe().subscriptions.retrieve(stripeSubId);
+  const sub = await stripe.subscriptions.retrieve(stripeSubId);
   await db
     .update(schema.memberships)
     .set({
@@ -170,13 +203,13 @@ async function handleSubscriptionRenewal(stripeSubId: string, amountPaidCents: n
       currentPeriodEnd: new Date(sub.current_period_end * 1000),
       status: "active",
     })
-    .where(eq(schema.memberships.id, m.id));
+    .where(and(eq(schema.memberships.id, m.id), eq(schema.memberships.tenantId, tenantId)));
 
   // Acumular crédito sobre el monto pagado real
   const [plan] = await db
     .select()
     .from(schema.membershipPlans)
-    .where(eq(schema.membershipPlans.slug, m.planSlug))
+    .where(and(eq(schema.membershipPlans.slug, m.planSlug), eq(schema.membershipPlans.tenantId, tenantId)))
     .limit(1);
   if (plan) {
     await accrueCredit({
@@ -192,6 +225,7 @@ async function handleSubscriptionRenewal(stripeSubId: string, amountPaidCents: n
   await db
     .insert(schema.orders)
     .values({
+      tenantId,
       userId: order.userId,
       email: order.email,
       name: order.name,
@@ -212,7 +246,7 @@ async function handleSubscriptionRenewal(stripeSubId: string, amountPaidCents: n
     .catch((e) => console.error("[stripe.webhook] audit order renewal:", e));
 }
 
-async function syncSubscriptionState(sub: Stripe.Subscription) {
+async function syncSubscriptionState(tenantId: string, sub: Stripe.Subscription) {
   await db
     .update(schema.memberships)
     .set({
@@ -221,7 +255,15 @@ async function syncSubscriptionState(sub: Stripe.Subscription) {
       currentPeriodStart: new Date(sub.current_period_start * 1000),
       currentPeriodEnd: new Date(sub.current_period_end * 1000),
     })
-    .where(sql`${schema.memberships.userId} IN (
-      SELECT user_id FROM orders WHERE metadata->>'stripeSubscriptionId' = ${sub.id} LIMIT 1
-    )`);
+    .where(
+      and(
+        eq(schema.memberships.tenantId, tenantId),
+        sql`${schema.memberships.userId} IN (
+          SELECT user_id FROM orders
+          WHERE metadata->>'stripeSubscriptionId' = ${sub.id}
+            AND tenant_id = ${tenantId}
+          LIMIT 1
+        )`,
+      ),
+    );
 }

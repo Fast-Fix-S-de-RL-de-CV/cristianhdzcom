@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Card } from "@/components/ui/Card";
 import { initials } from "@/lib/utils";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type Range = "week" | "month" | "all";
 
@@ -35,6 +36,7 @@ export function RankingTabs({
   initialRows: RankingRow[];
   currentUserId: string;
 }) {
+  const { tp } = useTenant();
   const [active, setActive] = useState<Range>("all");
   const [rows, setRows] = useState<RankingRow[]>(initialRows);
   const [loading, setLoading] = useState(false);
@@ -48,7 +50,7 @@ export function RankingTabs({
     const range = TABS.find((t) => t.id === active)!.range;
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/leaderboard?range=${range}&limit=50`)
+    fetch(tp(`/api/leaderboard?range=${range}&limit=50`))
       .then((r) => (r.ok ? r.json() : null))
       .then((data: RankingRow[] | null) => {
         if (!cancelled && Array.isArray(data)) setRows(data);
@@ -60,7 +62,7 @@ export function RankingTabs({
     return () => {
       cancelled = true;
     };
-  }, [active, initialRows]);
+  }, [active, initialRows, tp]);
 
   return (
     <>

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatRelative } from "@/lib/utils";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import { apiErrorMessage } from "@/lib/apiError";
 import {
@@ -106,6 +107,7 @@ export function ComunidadManager({
 
 function PostsTab({ posts }: { posts: Post[] }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
@@ -115,7 +117,7 @@ function PostsTab({ posts }: { posts: Post[] }) {
   const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
 
   const bulkDelete = useBulkDelete<string>({
-    url: "/api/admin/posts/bulk-delete",
+    url: tp("/api/admin/posts/bulk-delete"),
     entityLabel: { singular: "post", plural: "posts" },
     description:
       "Se borran también los likes y todos los comentarios asociados. Esta acción no se puede deshacer.",
@@ -125,7 +127,7 @@ function PostsTab({ posts }: { posts: Post[] }) {
   async function togglePin(id: string) {
     setBusy(id);
     try {
-      const res = await fetch(`/api/admin/posts/${id}/pin`, { method: "PUT" });
+      const res = await fetch(tp(`/api/admin/posts/${id}/pin`), { method: "PUT" });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
         toast.error(apiErrorMessage(j, "No se pudo cambiar el pin"));
@@ -149,7 +151,7 @@ function PostsTab({ posts }: { posts: Post[] }) {
     if (!ok) return;
     setBusy(id);
     try {
-      const res = await fetch(`/api/admin/posts/${id}`, { method: "DELETE" });
+      const res = await fetch(tp(`/api/admin/posts/${id}`), { method: "DELETE" });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
         toast.error(apiErrorMessage(j, "No se pudo eliminar el post"));
@@ -279,6 +281,7 @@ function PostsTab({ posts }: { posts: Post[] }) {
 
 function CommentsTab({ comments }: { comments: Comment[] }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
@@ -288,7 +291,7 @@ function CommentsTab({ comments }: { comments: Comment[] }) {
   const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
 
   const bulkDelete = useBulkDelete<string>({
-    url: "/api/admin/comments/bulk-delete",
+    url: tp("/api/admin/comments/bulk-delete"),
     entityLabel: { singular: "comentario", plural: "comentarios" },
     onSuccess: bulk.clear,
   });
@@ -302,7 +305,7 @@ function CommentsTab({ comments }: { comments: Comment[] }) {
     if (!ok) return;
     setBusy(id);
     try {
-      const res = await fetch(`/api/admin/comments/${id}`, { method: "DELETE" });
+      const res = await fetch(tp(`/api/admin/comments/${id}`), { method: "DELETE" });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
         toast.error(apiErrorMessage(j, "No se pudo eliminar el comentario"));
@@ -409,6 +412,7 @@ function CommentsTab({ comments }: { comments: Comment[] }) {
 
 function CategoriesTab({ categories }: { categories: Category[] }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState<Category | null>(null);
@@ -421,7 +425,7 @@ function CategoriesTab({ categories }: { categories: Category[] }) {
   const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
 
   const bulkDelete = useBulkDelete<number>({
-    url: "/api/admin/categories/bulk-delete",
+    url: tp("/api/admin/categories/bulk-delete"),
     entityLabel: { singular: "categoría", plural: "categorías" },
     description: "Los posts asignados a estas categorías quedarán sin categoría (no se borran).",
     onSuccess: bulk.clear,
@@ -460,7 +464,7 @@ function CategoriesTab({ categories }: { categories: Category[] }) {
     if (!ok) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
+      const res = await fetch(tp(`/api/admin/categories/${id}`), { method: "DELETE" });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
         toast.error(apiErrorMessage(j, "No se pudo eliminar la categoría"));
@@ -584,8 +588,8 @@ function CategoriesTab({ categories }: { categories: Category[] }) {
           }}
           onSave={(data) =>
             editing
-              ? save("PUT", `/api/admin/categories/${editing.id}`, data)
-              : save("POST", `/api/admin/categories`, data)
+              ? save("PUT", tp(`/api/admin/categories/${editing.id}`), data)
+              : save("POST", tp(`/api/admin/categories`), data)
           }
           busy={busy}
           err={err}

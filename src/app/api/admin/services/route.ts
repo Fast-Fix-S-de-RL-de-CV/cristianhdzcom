@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { serviceBodySchema } from "./_schema";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,8 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   let data;
   try {
     data = serviceBodySchema.parse(await req.json());
@@ -26,6 +29,7 @@ export async function POST(req: Request) {
     const [row] = await db
       .insert(schema.services)
       .values({
+        tenantId: ctx.tenant.id,
         slug: data.slug,
         name: data.name,
         domain: data.domain ?? null,

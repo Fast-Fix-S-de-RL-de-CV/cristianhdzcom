@@ -12,6 +12,7 @@ import {
   suggestPricing,
 } from "@/lib/money";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { SelectField } from "@/components/ui/SelectField";
 import { apiErrorMessage } from "@/lib/apiError";
 import {
@@ -57,6 +58,7 @@ const ACCENTS: Accent[] = ["accent", "warm", "green", "navy", "gold"];
 
 export function CursosManager({ rows }: { rows: Row[] }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState<Row | null>(null);
@@ -69,7 +71,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
   const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
 
   const bulkDelete = useBulkDelete<string>({
-    url: "/api/admin/programs/bulk-delete",
+    url: tp("/api/admin/programs/bulk-delete"),
     entityLabel: { singular: "programa", plural: "programas" },
     description:
       "Borra también módulos, lecciones, cohortes/generaciones e inscripciones. " +
@@ -90,7 +92,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch("/api/admin/programs", {
+      const res = await fetch(tp("/api/admin/programs"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -113,7 +115,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/admin/programs/${id}`, {
+      const res = await fetch(tp(`/api/admin/programs/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -133,7 +135,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
   }
 
   async function toggleActive(id: string, next: boolean) {
-    const res = await fetch(`/api/admin/programs/${id}`, {
+    const res = await fetch(tp(`/api/admin/programs/${id}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: next }),
@@ -156,7 +158,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
     if (!ok) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/programs/${id}`, { method: "DELETE" });
+      const res = await fetch(tp(`/api/admin/programs/${id}`), { method: "DELETE" });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         if (j.error === "has_paid_orders" || j.error === "in_use") {
@@ -284,7 +286,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
               </span>
               <span className="row" style={{ width: 260, justifyContent: "flex-end", gap: 6 }}>
                 <a
-                  href={`/admin/cursos/${p.id}?tab=lessons`}
+                  href={tp(`/admin/cursos/${p.id}?tab=lessons`)}
                   className="mono"
                   style={{
                     fontSize: 11,
@@ -301,7 +303,7 @@ export function CursosManager({ rows }: { rows: Row[] }) {
                   Lecciones
                 </a>
                 <a
-                  href={`/admin/cursos/${p.id}`}
+                  href={tp(`/admin/cursos/${p.id}`)}
                   className="mono"
                   style={{
                     fontSize: 11,

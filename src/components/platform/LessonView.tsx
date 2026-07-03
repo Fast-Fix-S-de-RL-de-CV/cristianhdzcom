@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/ConfirmProvider";
 import { embedUrl } from "@/lib/video";
 import { apiErrorMessage } from "@/lib/apiError";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type LessonCommentRow = {
   id: string;
@@ -204,6 +205,7 @@ function VideoLesson({
   alreadyCompleted: boolean;
   onCompleted: () => void;
 }) {
+  const { tp } = useTenant();
   const [completed, setCompleted] = useState(alreadyCompleted);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -225,7 +227,7 @@ function VideoLesson({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/lessons/${lesson.id}/complete`, { method: "POST" });
+      const res = await fetch(tp(`/api/lessons/${lesson.id}/complete`), { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setCompleted(true);
@@ -372,7 +374,7 @@ function VideoLesson({
             </div>
             {feedback.cert && (
               <Link
-                href={`/cert/${feedback.cert.code}`}
+                href={tp(`/cert/${feedback.cert.code}`)}
                 className="btn btn-primary"
                 style={{ background: "var(--gold)", color: "var(--navy)" }}
               >
@@ -399,6 +401,7 @@ function QuizLesson({
   backHref: string;
 }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [hearts, setHearts] = useState(user.hearts);
@@ -416,7 +419,7 @@ function QuizLesson({
       setHearts((h) => Math.max(0, h - 1));
     }
     // El servidor recalcula isCorrect por su cuenta; solo enviamos la respuesta.
-    await fetch(`/api/lessons/${lesson.id}/attempt`, {
+    await fetch(tp(`/api/lessons/${lesson.id}/attempt`), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ answer: selected }),
@@ -625,6 +628,7 @@ function QuizLesson({
    NOTES PANEL
    ────────────────────────────────────────────────────────────────── */
 function NotesPanel({ lessonId }: { lessonId: string }) {
+  const { tp } = useTenant();
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -633,7 +637,7 @@ function NotesPanel({ lessonId }: { lessonId: string }) {
   // Initial fetch
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/lessons/${lessonId}/notes`)
+    fetch(tp(`/api/lessons/${lessonId}/notes`))
       .then((r) => (r.ok ? r.json() : { body: "" }))
       .then((j) => {
         if (!cancelled) {
@@ -651,7 +655,7 @@ function NotesPanel({ lessonId }: { lessonId: string }) {
   const save = useCallback(
     (next: string) => {
       setStatus("saving");
-      fetch(`/api/lessons/${lessonId}/notes`, {
+      fetch(tp(`/api/lessons/${lessonId}/notes`), {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ body: next }),
@@ -662,7 +666,7 @@ function NotesPanel({ lessonId }: { lessonId: string }) {
         })
         .catch(() => setStatus("error"));
     },
-    [lessonId],
+    [lessonId, tp],
   );
 
   function onChange(next: string) {
@@ -736,6 +740,7 @@ function LessonComments({
   currentUser: { id: string; name: string };
 }) {
   const confirm = useConfirm();
+  const { tp } = useTenant();
   const [rows, setRows] = useState<LessonCommentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
@@ -744,11 +749,11 @@ function LessonComments({
 
   const load = useCallback(() => {
     setLoading(true);
-    fetch(`/api/lessons/${lessonId}/comments`)
+    fetch(tp(`/api/lessons/${lessonId}/comments`))
       .then((r) => r.json())
       .then((j) => setRows(j.comments ?? []))
       .finally(() => setLoading(false));
-  }, [lessonId]);
+  }, [lessonId, tp]);
 
   useEffect(() => {
     load();
@@ -759,7 +764,7 @@ function LessonComments({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/lessons/${lessonId}/comments`, {
+      const res = await fetch(tp(`/api/lessons/${lessonId}/comments`), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ body: draft.trim() }),
@@ -787,7 +792,7 @@ function LessonComments({
     if (!ok) return;
     setError(null);
     try {
-      const res = await fetch(`/api/lessons/${lessonId}/comments/${id}`, { method: "DELETE" });
+      const res = await fetch(tp(`/api/lessons/${lessonId}/comments/${id}`), { method: "DELETE" });
       if (res.ok) {
         load();
       } else {
@@ -876,7 +881,7 @@ function LessonComments({
               <Card key={c.id} style={{ padding: 16 }}>
                 <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
                   <Link
-                    href={`/u/${c.authorId}`}
+                    href={tp(`/u/${c.authorId}`)}
                     aria-label={c.authorName ?? "Perfil"}
                     style={{ textDecoration: "none" }}
                   >
@@ -886,7 +891,7 @@ function LessonComments({
                   </Link>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      <Link href={`/u/${c.authorId}`} style={{ color: "inherit", textDecoration: "none" }}>
+                      <Link href={tp(`/u/${c.authorId}`)} style={{ color: "inherit", textDecoration: "none" }}>
                         <span style={{ fontWeight: 600, fontSize: 13 }}>{c.authorName ?? "—"}</span>
                       </Link>
                       {c.authorRole === "admin" || c.authorRole === "superadmin" ? (

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const tenantCtx = await getTenantCtx();
+  if (!tenantCtx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const { id } = await ctx.params;
   const numId = parseInt(id, 10);
   if (Number.isNaN(numId)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
@@ -28,7 +31,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const [row] = await db
       .update(schema.categories)
       .set(data)
-      .where(eq(schema.categories.id, numId))
+      .where(and(eq(schema.categories.id, numId), eq(schema.categories.tenantId, tenantCtx.tenant.id)))
       .returning();
     if (!row) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.json({ category: row });
@@ -45,9 +48,13 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const tenantCtx = await getTenantCtx();
+  if (!tenantCtx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const { id } = await ctx.params;
   const numId = parseInt(id, 10);
   if (Number.isNaN(numId)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
-  await db.delete(schema.categories).where(eq(schema.categories.id, numId));
+  await db
+    .delete(schema.categories)
+    .where(and(eq(schema.categories.id, numId), eq(schema.categories.tenantId, tenantCtx.tenant.id)));
   return NextResponse.json({ ok: true });
 }

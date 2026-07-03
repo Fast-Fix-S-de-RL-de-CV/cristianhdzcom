@@ -1,6 +1,8 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { BlogManager } from "./BlogManager";
@@ -8,6 +10,8 @@ import { BlogManager } from "./BlogManager";
 export const dynamic = "force-dynamic";
 
 export default async function BlogPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = (await getCurrentUser())!;
 
   const rows = await db
@@ -24,6 +28,7 @@ export default async function BlogPage() {
       createdAt: schema.blogPosts.createdAt,
     })
     .from(schema.blogPosts)
+    .where(eq(schema.blogPosts.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.blogPosts.createdAt));
 
   const data = rows.map((r) => ({

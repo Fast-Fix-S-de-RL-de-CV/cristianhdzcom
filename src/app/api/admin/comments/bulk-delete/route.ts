@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,6 +20,8 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_input", details: parsed.error.flatten() }, { status: 400 });
@@ -26,7 +29,7 @@ export async function POST(req: Request) {
   const { ids } = parsed.data;
   const result = await db
     .delete(schema.comments)
-    .where(inArray(schema.comments.id, ids))
+    .where(and(inArray(schema.comments.id, ids), eq(schema.comments.tenantId, ctx.tenant.id)))
     .returning({ id: schema.comments.id, postId: schema.comments.postId });
 
   // Decrementar el contador desnormalizado de cada post afectado
@@ -39,7 +42,7 @@ export async function POST(req: Request) {
     await db
       .update(schema.posts)
       .set({ commentsCount: sql`GREATEST(${schema.posts.commentsCount} - ${n}, 0)` })
-      .where(eq(schema.posts.id, postId));
+      .where(and(eq(schema.posts.id, postId), eq(schema.posts.tenantId, ctx.tenant.id)));
   }
 
   return NextResponse.json({ ok: true, deleted: result.length });

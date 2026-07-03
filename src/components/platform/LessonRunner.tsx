@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { Chip } from "@/components/ui/Chip";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Button } from "@/components/ui/Button";
@@ -30,6 +31,7 @@ export function LessonRunner({
   user: { hearts: number; streakDays: number; xp: number };
 }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [hearts, setHearts] = useState(user.hearts);
@@ -54,7 +56,7 @@ export function LessonRunner({
       setHearts((h) => Math.max(0, h - 1));
     }
     // Persist attempt
-    await fetch(`/api/lessons/${lesson.id}/attempt`, {
+    await fetch(tp(`/api/lessons/${lesson.id}/attempt`), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ answer: selected, isCorrect }),
@@ -62,7 +64,7 @@ export function LessonRunner({
   }
 
   function onContinue() {
-    router.push("/plataforma");
+    router.push(tp("/plataforma"));
   }
 
   // Keyboard shortcuts
@@ -96,7 +98,7 @@ export function LessonRunner({
         }}
       >
         <button
-          onClick={() => router.push("/plataforma")}
+          onClick={() => router.push(tp("/plataforma"))}
           style={{
             width: 36,
             height: 36,

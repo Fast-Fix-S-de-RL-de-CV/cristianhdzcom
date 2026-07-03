@@ -1,6 +1,8 @@
+"use client";
 import { AdminShell } from "./AdminShell";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { adminIcon } from "./adminIcons";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 const ITEMS = [
   ["Dashboard", "/admin"],
@@ -35,6 +37,7 @@ export function AdminPageShell({
   actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const { tp } = useTenant();
   return (
     <AdminShell user={user}>
       <div
@@ -55,7 +58,7 @@ export function AdminPageShell({
               return (
                 <a
                   key={href}
-                  href={href}
+                  href={tp(href)}
                   style={{
                     display: "flex",
                     alignItems: "center",

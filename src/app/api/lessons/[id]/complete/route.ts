@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { and, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { bumpStreak } from "@/lib/streak";
 
 export const dynamic = "force-dynamic";
@@ -23,10 +24,17 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: lessonId } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+  const tenantId = tctx.tenant.id;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const [lesson] = await db.select().from(schema.lessons).where(eq(schema.lessons.id, lessonId)).limit(1);
+  const [lesson] = await db
+    .select()
+    .from(schema.lessons)
+    .where(and(eq(schema.lessons.id, lessonId), eq(schema.lessons.tenantId, tenantId)))
+    .limit(1);
   if (!lesson) return NextResponse.json({ error: "lesson_not_found" }, { status: 404 });
 
   // Idempotency check
@@ -57,7 +65,10 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
   // Check whether the module is now complete.
   const moduleId = lesson.moduleId;
-  const allLessons = await db.select().from(schema.lessons).where(eq(schema.lessons.moduleId, moduleId));
+  const allLessons = await db
+    .select()
+    .from(schema.lessons)
+    .where(and(eq(schema.lessons.moduleId, moduleId), eq(schema.lessons.tenantId, tenantId)));
   const completedLessons = await db
     .select()
     .from(schema.lessonProgress)
@@ -92,12 +103,16 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       moduleCompleted = true;
 
       // Promote the next module of the same program to "current".
-      const [mod] = await db.select().from(schema.modules).where(eq(schema.modules.id, moduleId)).limit(1);
+      const [mod] = await db
+        .select()
+        .from(schema.modules)
+        .where(and(eq(schema.modules.id, moduleId), eq(schema.modules.tenantId, tenantId)))
+        .limit(1);
       if (mod) {
         const nextMods = await db
           .select()
           .from(schema.modules)
-          .where(eq(schema.modules.programId, mod.programId));
+          .where(and(eq(schema.modules.programId, mod.programId), eq(schema.modules.tenantId, tenantId)));
         const sorted = nextMods.sort((a, b) => a.sortOrder - b.sortOrder);
         const idx = sorted.findIndex((m) => m.id === mod.id);
         const next = sorted[idx + 1];
@@ -125,6 +140,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
               and(
                 eq(schema.certificates.userId, user.id),
                 eq(schema.certificates.programId, mod.programId),
+                eq(schema.certificates.tenantId, tenantId),
               ),
             )
             .limit(1);
@@ -133,7 +149,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
             const code = generateCertCode();
             const inserted = await db
               .insert(schema.certificates)
-              .values({ userId: user.id, programId: mod.programId, code })
+              .values({ tenantId, userId: user.id, programId: mod.programId, code })
               .returning();
             cert = inserted[0];
           }

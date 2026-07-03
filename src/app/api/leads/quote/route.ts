@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { sql } from "drizzle-orm";
 import { sendEmail } from "@/lib/email";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,6 +29,8 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   let data;
   try {
     data = Body.parse(await req.json());
@@ -48,18 +51,19 @@ export async function POST(req: Request) {
     submittedAt: new Date().toISOString(),
   } as Record<string, unknown>;
 
-  // Upsert por email: si ya existe el prospecto, refrescamos tag + metadata.
+  // Upsert por (tenant, email): si ya existe el prospecto, refrescamos tag + metadata.
   try {
     await db
       .insert(schema.leads)
       .values({
+        tenantId: ctx.tenant.id,
         email: data.email,
         source: "fast-fix",
         tag: data.projectType.slice(0, 60),
         metadata,
       })
       .onConflictDoUpdate({
-        target: schema.leads.email,
+        target: [schema.leads.tenantId, schema.leads.email],
         set: {
           source: "fast-fix",
           tag: data.projectType.slice(0, 60),

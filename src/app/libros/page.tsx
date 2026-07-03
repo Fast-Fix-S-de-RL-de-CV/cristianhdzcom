@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { db, schema } from "@/db";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
+import { getTenantCtx } from "@/lib/tenant";
 import { BookBlockClient } from "./BookBlockClient";
 
 export const dynamic = "force-dynamic";
@@ -45,10 +47,13 @@ function formatRating(avg: number | null, count: number) {
 }
 
 export default async function BooksPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const allRows = await db
     .select()
     .from(schema.books)
-    .where(eq(schema.books.isActive, true))
+    .where(and(eq(schema.books.tenantId, ctx.tenant.id), eq(schema.books.isActive, true)))
     .orderBy(asc(schema.books.sortOrder));
 
   const books = allRows.filter((b) => !b.isBundle);
@@ -144,7 +149,7 @@ export default async function BooksPage() {
             }}
           >
             {bundles.map((bundle) => (
-              <BundleCard key={bundle.id} bundle={bundle} />
+              <BundleCard key={bundle.id} bundle={bundle} tp={tp} />
             ))}
           </div>
         </section>
@@ -157,7 +162,13 @@ export default async function BooksPage() {
 
 /* ─────────── Componente: Bundle card ─────────── */
 
-function BundleCard({ bundle }: { bundle: typeof schema.books.$inferSelect }) {
+function BundleCard({
+  bundle,
+  tp,
+}: {
+  bundle: typeof schema.books.$inferSelect;
+  tp: (path: string) => string;
+}) {
   const isRecommended = bundle.badge != null;
   const includesCount =
     (bundle.bundleIncludes?.books?.length ?? 0) + (bundle.bundleIncludes?.programs?.length ?? 0);
@@ -229,7 +240,7 @@ function BundleCard({ bundle }: { bundle: typeof schema.books.$inferSelect }) {
           ))}
         </div>
       )}
-      <Link href={`/checkout/libro/${bundle.slug}`}>
+      <Link href={tp(`/checkout/libro/${bundle.slug}`)}>
         <Button
           size="lg"
           variant={isRecommended ? "accent" : "ghost"}

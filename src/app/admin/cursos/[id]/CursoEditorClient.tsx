@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { SelectField } from "@/components/ui/SelectField";
 import { apiErrorMessage } from "@/lib/apiError";
@@ -123,6 +124,7 @@ export function CursoEditorClient({
   initialTab: string;
 }) {
   const router = useRouter();
+  const { tp } = useTenant();
   // Migración suave: links viejos a ?tab=modules o ?tab=lessons ahora abren "structure".
   const normalizedInitial =
     initialTab === "modules" || initialTab === "lessons" ? "structure" : initialTab;
@@ -157,7 +159,7 @@ export function CursoEditorClient({
       >
         <div className="row" style={{ gap: 8, alignItems: "center" }}>
           <a
-            href="/admin/cursos"
+            href={tp("/admin/cursos")}
             className="mono"
             style={{
               fontSize: 11,
@@ -219,7 +221,7 @@ export function CursoEditorClient({
           )}
         </div>
         <a
-          href={`/programas/${program.slug}`}
+          href={tp(`/programas/${program.slug}`)}
           target="_blank"
           rel="noreferrer"
           className="btn btn-ghost"
@@ -284,6 +286,7 @@ export function CursoEditorClient({
 /* ───────────────── INFO TAB ───────────────── */
 
 function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }) {
+  const { tp } = useTenant();
   // Precarga con los mismos textos por defecto que muestra la página pública
   // cuando el curso aún no tiene los suyos, para que admin y web coincidan.
   const initWhoFor = program.whoFor && program.whoFor.length > 0 ? program.whoFor : DEFAULT_WHO_FOR;
@@ -333,7 +336,7 @@ function InfoTab({ program, onSaved }: { program: Program; onSaved: () => void }
         isFeatured: form.isFeatured,
         isActive: form.isActive,
       };
-      const res = await fetch(`/api/admin/programs/${program.id}`, {
+      const res = await fetch(tp(`/api/admin/programs/${program.id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -944,6 +947,7 @@ function ModulesTab({
   onChanged: () => void;
   onGotoLessons: (mid: string) => void;
 }) {
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState<ModuleRow | null>(null);
@@ -961,7 +965,7 @@ function ModulesTab({
     if (!ok) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/modules/${id}`, { method: "DELETE" });
+      const res = await fetch(tp(`/api/admin/modules/${id}`), { method: "DELETE" });
       if (!res.ok) throw new Error("Error al borrar");
       onChanged();
     } catch (e) {
@@ -1271,6 +1275,7 @@ function ModuleDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { tp } = useTenant();
   const [form, setForm] = useState<ModuleForm>({
     code: mod?.code ?? `M${String(existingCount + 1).padStart(2, "0")}`,
     title: mod?.title ?? "",
@@ -1292,7 +1297,7 @@ function ModuleDialog({
       const payload = mod
         ? form
         : { programId, ...form };
-      const res = await fetch(url, {
+      const res = await fetch(tp(url), {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -1416,6 +1421,7 @@ function LessonsTab({
     }
     return modules[0]?.id ?? "";
   });
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState<LessonRow | null>(null);
@@ -1433,7 +1439,7 @@ function LessonsTab({
     if (!ok) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/lessons/${id}`, { method: "DELETE" });
+      const res = await fetch(tp(`/api/admin/lessons/${id}`), { method: "DELETE" });
       if (!res.ok) throw new Error("Error al borrar");
       onChanged();
     } catch (e) {
@@ -1640,6 +1646,7 @@ function LessonDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { tp } = useTenant();
   const [form, setForm] = useState<LessonForm>(() => {
     if (lesson) {
       const existingVideoUrl = lesson.videoUrl
@@ -1708,7 +1715,7 @@ function LessonDialog({
     setBusy(true);
     setErr(null);
     try {
-      const url = lesson ? `/api/admin/lessons/${lesson.id}` : `/api/admin/lessons`;
+      const url = tp(lesson ? `/api/admin/lessons/${lesson.id}` : `/api/admin/lessons`);
       const method = lesson ? "PUT" : "POST";
       const isVideo = form.kind === "video";
       const payload: Record<string, unknown> = {
@@ -2014,6 +2021,7 @@ function CohortsTab({
   cohorts: CohortRow[];
   onChanged: () => void;
 }) {
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState<CohortRow | null>(null);
@@ -2029,7 +2037,7 @@ function CohortsTab({
     if (!ok) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/cohorts/${id}`, { method: "DELETE" });
+      const res = await fetch(tp(`/api/admin/cohorts/${id}`), { method: "DELETE" });
       if (!res.ok) throw new Error("Error al borrar");
       onChanged();
     } catch (e) {
@@ -2191,6 +2199,7 @@ function CohortDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { tp } = useTenant();
   const [form, setForm] = useState<CohortForm>({
     code: cohort?.code ?? "",
     startsOn: cohort?.startsOn ?? "",
@@ -2205,7 +2214,7 @@ function CohortDialog({
     setBusy(true);
     setErr(null);
     try {
-      const url = cohort ? `/api/admin/cohorts/${cohort.id}` : `/api/admin/cohorts`;
+      const url = tp(cohort ? `/api/admin/cohorts/${cohort.id}` : `/api/admin/cohorts`);
       const method = cohort ? "PUT" : "POST";
       const payload = cohort
         ? { code: form.code || null, startsOn: form.startsOn, endsOn: form.endsOn, seatsTotal: form.seatsTotal, isOpen: form.isOpen }
@@ -2315,6 +2324,7 @@ function EnrollmentsTab({
   program: Program;
   enrollments: EnrollmentRow[];
 }) {
+  const { tp } = useTenant();
   const [q, setQ] = useState("");
 
   const filtered = enrollments.filter((e) => {
@@ -2346,7 +2356,7 @@ function EnrollmentsTab({
           style={{ ...input(), maxWidth: 320 }}
         />
         <a
-          href={`/api/admin/export?type=enrollments&programId=${program.id}`}
+          href={tp(`/api/admin/export?type=enrollments&programId=${program.id}`)}
           className="btn btn-ghost"
           style={{ padding: "8px 14px", fontSize: 12, textDecoration: "none" }}
         >

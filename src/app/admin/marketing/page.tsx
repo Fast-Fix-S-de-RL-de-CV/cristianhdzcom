@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,8 @@ export const dynamic = "force-dynamic";
  * entre "lead" y "registrado"). Mantenemos el redirect para no romper
  * bookmarks ni links de campañas antiguas.
  */
-export default function MarketingPage() {
-  redirect("/admin/prospectos");
+export default async function MarketingPage() {
+  const ctx = await getTenantCtx();
+  const tp = ctx?.tp ?? ((p: string) => p);
+  redirect(tp("/admin/prospectos"));
 }

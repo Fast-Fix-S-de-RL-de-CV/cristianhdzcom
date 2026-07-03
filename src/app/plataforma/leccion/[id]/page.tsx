@@ -2,29 +2,41 @@ import { notFound, redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { LessonView } from "@/components/platform/LessonView";
 
 export const dynamic = "force-dynamic";
 
 export default async function LessonPage({ params }: { params: Promise<{ id: string }> }) {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/plataforma");
+  if (!user) redirect(tp("/login?next=/plataforma"));
   const { id } = await params;
 
-  const [lesson] = await db.select().from(schema.lessons).where(eq(schema.lessons.id, id)).limit(1);
+  const [lesson] = await db
+    .select()
+    .from(schema.lessons)
+    .where(and(eq(schema.lessons.id, id), eq(schema.lessons.tenantId, ctx.tenant.id)))
+    .limit(1);
   if (!lesson) notFound();
 
-  const [mod] = await db.select().from(schema.modules).where(eq(schema.modules.id, lesson.moduleId)).limit(1);
+  const [mod] = await db
+    .select()
+    .from(schema.modules)
+    .where(and(eq(schema.modules.id, lesson.moduleId), eq(schema.modules.tenantId, ctx.tenant.id)))
+    .limit(1);
 
   // Slug del curso para volver a su sendero al cerrar la lección.
-  let backHref = "/plataforma";
+  let backHref = tp("/plataforma");
   if (mod?.programId) {
     const [program] = await db
       .select({ slug: schema.programs.slug })
       .from(schema.programs)
-      .where(eq(schema.programs.id, mod.programId))
+      .where(and(eq(schema.programs.id, mod.programId), eq(schema.programs.tenantId, ctx.tenant.id)))
       .limit(1);
-    if (program?.slug) backHref = `/plataforma/curso/${program.slug}`;
+    if (program?.slug) backHref = tp(`/plataforma/curso/${program.slug}`);
   }
 
   // Has the user completed this lesson already (for video kind)?

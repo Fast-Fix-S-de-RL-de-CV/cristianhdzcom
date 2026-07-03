@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { and, asc, eq, gte, sql } from "drizzle-orm";
+import { getTenantCtx } from "@/lib/tenant";
 import { CheckoutClient } from "@/components/checkout/CheckoutClient";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,13 @@ function formatCohortRange(starts: Date, ends: Date) {
 
 export default async function CheckoutPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [program] = await db.select().from(schema.programs).where(eq(schema.programs.slug, slug)).limit(1);
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const [program] = await db
+    .select()
+    .from(schema.programs)
+    .where(and(eq(schema.programs.slug, slug), eq(schema.programs.tenantId, ctx.tenant.id)))
+    .limit(1);
   if (!program) notFound();
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
@@ -28,6 +35,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
       .from(schema.orders)
       .where(
         and(
+          eq(schema.orders.tenantId, ctx.tenant.id),
           eq(schema.orders.programId, program.id),
           eq(schema.orders.status, "succeeded"),
           gte(schema.orders.createdAt, sevenDaysAgo),
@@ -36,7 +44,13 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
     db
       .select()
       .from(schema.cohorts)
-      .where(and(eq(schema.cohorts.programId, program.id), eq(schema.cohorts.isOpen, true)))
+      .where(
+        and(
+          eq(schema.cohorts.tenantId, ctx.tenant.id),
+          eq(schema.cohorts.programId, program.id),
+          eq(schema.cohorts.isOpen, true),
+        ),
+      )
       .orderBy(asc(schema.cohorts.startsOn))
       .limit(1),
   ]);

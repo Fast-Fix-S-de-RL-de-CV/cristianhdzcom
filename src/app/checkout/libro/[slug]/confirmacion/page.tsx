@@ -1,12 +1,14 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { getStripe, finalizeCheckoutSession, isStripeConfigured } from "@/lib/stripe";
+import { getStripeForTenant, finalizeCheckoutSession } from "@/lib/stripe";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -18,21 +20,30 @@ export default async function ConfirmacionLibroPage({
   searchParams: Promise<{ order?: string; new?: string; session_id?: string }>;
 }) {
   const { slug } = await params;
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const tp = ctx.tp;
   const { order: orderIdParam, new: isNewAccount, session_id: sessionId } = await searchParams;
   let orderId = orderIdParam ?? null;
   let accountWasCreated = isNewAccount === "1";
 
-  // Si vino de Stripe (session_id), finalizar aquí como fallback al webhook.
-  if (!orderId && sessionId && isStripeConfigured()) {
+  // Fallback al webhook: finaliza inline con las llaves DEL TENANT.
+  const { stripe: tenantStripe } = await getStripeForTenant(ctx.tenant.id);
+  if (!orderId && sessionId && tenantStripe) {
     try {
-      const stripe = getStripe();
+      const stripe = tenantStripe;
       const session = await stripe.checkout.sessions.retrieve(sessionId, {
         expand: ["payment_intent"],
       });
       const [existing] = await db
         .select({ id: schema.orders.id, userId: schema.orders.userId })
         .from(schema.orders)
-        .where(sql`${schema.orders.metadata}->>'stripeSessionId' = ${sessionId}`)
+        .where(
+          and(
+            eq(schema.orders.tenantId, ctx.tenant.id),
+            sql`${schema.orders.metadata}->>'stripeSessionId' = ${sessionId}`,
+          ),
+        )
         .limit(1);
       if (existing) {
         orderId = existing.id;
@@ -40,7 +51,7 @@ export default async function ConfirmacionLibroPage({
         // Fallback si ni el webhook ni /api/checkout/finish procesaron aún.
         // El login NO ocurre aquí (una página no puede escribir cookies):
         // lo hace /api/checkout/finish antes de redirigir.
-        const result = await finalizeCheckoutSession(session);
+        const result = await finalizeCheckoutSession(session, ctx.tenant.id);
         orderId = result.orderId;
         accountWasCreated = accountWasCreated || result.createdNewAccount;
       }
@@ -53,12 +64,20 @@ export default async function ConfirmacionLibroPage({
   const me = await getCurrentUser();
 
   // Datos del producto comprado (para mostrar título + cover)
-  const [product] = await db.select().from(schema.books).where(eq(schema.books.slug, slug)).limit(1);
+  const [product] = await db
+    .select()
+    .from(schema.books)
+    .where(and(eq(schema.books.slug, slug), eq(schema.books.tenantId, ctx.tenant.id)))
+    .limit(1);
 
   // Datos de la orden si tenemos id
   let order: typeof schema.orders.$inferSelect | null = null;
   if (orderId) {
-    const [row] = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).limit(1);
+    const [row] = await db
+      .select()
+      .from(schema.orders)
+      .where(and(eq(schema.orders.id, orderId), eq(schema.orders.tenantId, ctx.tenant.id)))
+      .limit(1);
     order = row ?? null;
   }
 
@@ -182,10 +201,10 @@ export default async function ConfirmacionLibroPage({
           </Card>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 32, flexWrap: "wrap" }}>
-            <Link href="/comunidad">
+            <Link href={tp("/comunidad")}>
               <Button>Entrar a la comunidad →</Button>
             </Link>
-            <Link href="/libros">
+            <Link href={tp("/libros")}>
               <Button variant="ghost">Ver más libros</Button>
             </Link>
           </div>

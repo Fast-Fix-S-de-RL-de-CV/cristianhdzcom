@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
+import { getTenantCtx } from "@/lib/tenant";
+import { initials } from "@/lib/utils";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Card } from "@/components/ui/Card";
@@ -12,9 +15,13 @@ import { BlogList } from "@/components/marketing/BlogList";
 export const dynamic = "force-dynamic";
 
 export default async function BlogPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const posts = await db
     .select()
     .from(schema.blogPosts)
+    .where(eq(schema.blogPosts.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.blogPosts.publishedAt))
     .limit(20);
 
@@ -32,8 +39,8 @@ export default async function BlogPage() {
             <h1 style={{ fontSize: "clamp(64px, 9vw, 96px)", marginTop: 16 }}>Pensar en voz alta.</h1>
           </div>
           <p style={{ maxWidth: 360, color: "var(--muted)", lineHeight: 1.55 }}>
-            Notas semanales de Cristian. Estrategia, código, casos reales y decisiones detrás de cada lanzamiento. Persuasivas
-            porque son verdaderas.
+            Notas semanales de {ctx.branding.siteName}. Estrategia, código, casos reales y decisiones detrás de cada
+            lanzamiento. Persuasivas porque son verdaderas.
           </p>
         </div>
       </section>
@@ -41,7 +48,7 @@ export default async function BlogPage() {
       {/* Featured */}
       {featured && (
         <section className="sec" style={{ paddingTop: 0 }}>
-          <Link href={`/blog/${featured.slug}`}>
+          <Link href={tp(`/blog/${featured.slug}`)}>
             <Card
               hover
               className="blog-featured-grid"
@@ -82,10 +89,10 @@ export default async function BlogPage() {
                 >
                   <div className="row" style={{ gap: 12 }}>
                     <div className="av" style={{ background: "var(--ink)", color: "var(--bg)" }}>
-                      CH
+                      {initials(ctx.branding.siteName)}
                     </div>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>Cristian Hernández</div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{ctx.branding.siteName}</div>
                       <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
                         FUNDADOR
                       </div>

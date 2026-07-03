@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { TIER_META, type Tier, usdToNextTier } from "@/lib/experience";
 import type { PostVisibility } from "@/lib/post-visibility";
+import { getTenantCtx } from "@/lib/tenant";
 
 /**
  * Overlay glass-blur sobre contenido restringido (body o adjuntos).
@@ -11,7 +12,7 @@ import type { PostVisibility } from "@/lib/post-visibility";
  *  - `below_min_tier`      → CTA "Sube a {tier}" → /libros
  *  - `below_author_tier`   → idem
  */
-export function PostPaywall({
+export async function PostPaywall({
   visibility,
   viewerScore = 0,
   variant = "body",
@@ -22,6 +23,8 @@ export function PostPaywall({
   variant?: "body" | "attachments";
   children: ReactNode;
 }) {
+  const ctx = await getTenantCtx();
+  const tp = ctx?.tp ?? ((p: string) => p);
   const target = visibility.requiredTier ?? "bronze";
   const meta = TIER_META[target];
   const usdNeeded = visibility.reason === "anonymous" ? 1 : usdToNextTier(viewerScore);
@@ -112,7 +115,7 @@ export function PostPaywall({
         </div>
         <div style={{ fontSize: 13, color: "var(--ink-2)", maxWidth: 520, lineHeight: 1.5 }}>{c.sub}</div>
         <Link
-          href={c.href}
+          href={tp(c.href)}
           style={{
             marginTop: 6,
             padding: "10px 22px",

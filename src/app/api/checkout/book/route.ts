@@ -1,25 +1,25 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { basePrice, computeBumps } from "@/lib/book-bumps";
 import {
-  getStripe,
-  siteUrl,
-  isStripeConfigured,
+  getStripeForTenant,
+  requestOrigin,
   finalizeCheckoutSession,
 } from "@/lib/stripe";
+import { getTenantCtx } from "@/lib/tenant";
 import { usdToMxnCents, MXN_PER_USD } from "@/lib/fx";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * POST /api/checkout/book — Stripe Checkout Session para LIBROS.
+ * POST /api/checkout/book — Stripe Checkout Session para LIBROS (del tenant).
  *
- * Devuelve `{ url }` con el destino de Stripe Checkout. La orden se crea
- * por el webhook cuando se confirma el pago. Fallback demo si no hay
- * Stripe configurado.
+ * Devuelve `{ url }` con el destino de Stripe Checkout (llaves DEL TENANT).
+ * La orden se crea por el webhook cuando se confirma el pago. Sin Stripe
+ * configurado → 400 (o demo si ALLOW_DEMO_CHECKOUT=1).
  */
 const BumpItem = z.object({
   productSlug: z.string().min(2).max(80),
@@ -52,6 +52,9 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+
   let data;
   try {
     data = Body.parse(await req.json());
@@ -62,11 +65,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
 
-  // 1. Producto principal
+  // 1. Producto principal (del tenant)
   const [product] = await db
     .select()
     .from(schema.books)
-    .where(eq(schema.books.slug, data.slug))
+    .where(and(eq(schema.books.slug, data.slug), eq(schema.books.tenantId, ctx.tenant.id)))
     .limit(1);
   if (!product || !product.isActive) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -101,7 +104,7 @@ export async function POST(req: Request) {
     const catalog = await db
       .select()
       .from(schema.books)
-      .where(eq(schema.books.isActive, true));
+      .where(and(eq(schema.books.isActive, true), eq(schema.books.tenantId, ctx.tenant.id)));
     const offered = computeBumps({ product, format: data.format, catalog });
     const collected: typeof validatedBumps = [];
     for (const b of data.bumps) {
@@ -122,39 +125,49 @@ export async function POST(req: Request) {
 
   const baseUsd = basePrice(product, data.format);
 
-  // ── MODO DEMO ──
-  if (!isStripeConfigured()) {
-    const fake = {
-      id: `demo_${Date.now()}`,
-      payment_status: "paid",
-      mode: "payment",
-      payment_intent: null,
-      customer: null,
-      subscription: null,
-      metadata: {
-        kind: "book",
-        bookSlug: product.slug,
-        bookTitle: product.title,
-        format: data.format,
-        buyerName: data.buyer.name,
-        buyerEmail: data.buyer.email,
-        shippingJson: data.shipping ? JSON.stringify(data.shipping) : "",
-        bumpsJson: JSON.stringify(validatedBumps),
-      },
-    } as unknown as import("stripe").Stripe.Checkout.Session;
-    const result = await finalizeCheckoutSession(fake);
-    return NextResponse.json({
-      ok: true,
-      orderId: result.orderId,
-      createdNewAccount: result.createdNewAccount,
-      demo: true,
-      redirectTo: `/checkout/libro/${product.slug}/confirmacion?order=${result.orderId}${result.createdNewAccount ? "&new=1" : ""}`,
-    });
+  // ── Stripe del TENANT ──
+  const { stripe } = await getStripeForTenant(ctx.tenant.id);
+  if (!stripe) {
+    // ── MODO DEMO (solo staging con ALLOW_DEMO_CHECKOUT=1) ──
+    if (process.env.ALLOW_DEMO_CHECKOUT === "1") {
+      const fake = {
+        id: `demo_${Date.now()}`,
+        payment_status: "paid",
+        mode: "payment",
+        payment_intent: null,
+        customer: null,
+        subscription: null,
+        metadata: {
+          kind: "book",
+          tenantId: ctx.tenant.id,
+          bookSlug: product.slug,
+          bookTitle: product.title,
+          format: data.format,
+          buyerName: data.buyer.name,
+          buyerEmail: data.buyer.email,
+          shippingJson: data.shipping ? JSON.stringify(data.shipping) : "",
+          bumpsJson: JSON.stringify(validatedBumps),
+        },
+      } as unknown as import("stripe").Stripe.Checkout.Session;
+      const result = await finalizeCheckoutSession(fake, ctx.tenant.id);
+      return NextResponse.json({
+        ok: true,
+        orderId: result.orderId,
+        createdNewAccount: result.createdNewAccount,
+        demo: true,
+        // Path SIN basePath: el client component lo envuelve con tp() al navegar.
+        redirectTo: `/checkout/libro/${product.slug}/confirmacion?order=${result.orderId}${result.createdNewAccount ? "&new=1" : ""}`,
+      });
+    }
+    return NextResponse.json(
+      { error: "payments_not_configured", message: "Este sitio aún no tiene pagos configurados." },
+      { status: 400 },
+    );
   }
 
   // ── MODO STRIPE ──
   // Sesión en MXN para activar card + paypal + oxxo + customer_balance (SPEI).
-  const stripe = getStripe();
+  const origin = requestOrigin(req);
   const line_items: import("stripe").Stripe.Checkout.SessionCreateParams.LineItem[] = [
     {
       quantity: 1,
@@ -190,10 +203,11 @@ export async function POST(req: Request) {
       : undefined,
     // Pasamos por /api/checkout/finish (Route Handler): finaliza la orden
     // y abre la sesión web del comprador antes de mostrar la confirmación.
-    success_url: `${siteUrl()}/api/checkout/finish?session_id={CHECKOUT_SESSION_ID}&next=${encodeURIComponent(`/checkout/libro/${product.slug}/confirmacion`)}`,
-    cancel_url: `${siteUrl()}/checkout/libro/${product.slug}?cancelled=1`,
+    success_url: `${origin}${ctx.tp("/api/checkout/finish")}?session_id={CHECKOUT_SESSION_ID}&next=${encodeURIComponent(ctx.tp(`/checkout/libro/${product.slug}/confirmacion`))}`,
+    cancel_url: `${origin}${ctx.tp(`/checkout/libro/${product.slug}`)}?cancelled=1`,
     metadata: {
       kind: "book",
+      tenantId: ctx.tenant.id,
       bookSlug: product.slug,
       bookTitle: product.title,
       format: data.format,

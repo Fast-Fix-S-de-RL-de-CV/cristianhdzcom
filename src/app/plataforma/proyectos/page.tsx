@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -20,14 +21,17 @@ function initials(name: string | null | undefined) {
 }
 
 export default async function ProyectosPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/plataforma/proyectos");
+  if (!user) redirect(tp("/login?next=/plataforma/proyectos"));
 
   // My projects
   const myProjects = await db
     .select()
     .from(schema.userProjects)
-    .where(eq(schema.userProjects.userId, user.id))
+    .where(and(eq(schema.userProjects.userId, user.id), eq(schema.userProjects.tenantId, ctx.tenant.id)))
     .orderBy(desc(schema.userProjects.createdAt));
 
   // Featured community projects (joined with author name)
@@ -42,8 +46,11 @@ export default async function ProyectosPage() {
       authorName: schema.users.name,
     })
     .from(schema.userProjects)
-    .innerJoin(schema.users, eq(schema.users.id, schema.userProjects.userId))
-    .where(and(eq(schema.userProjects.featured, true)))
+    .innerJoin(
+      schema.users,
+      and(eq(schema.users.id, schema.userProjects.userId), eq(schema.users.tenantId, ctx.tenant.id)),
+    )
+    .where(and(eq(schema.userProjects.featured, true), eq(schema.userProjects.tenantId, ctx.tenant.id)))
     .orderBy(desc(schema.userProjects.createdAt))
     .limit(9);
 
@@ -95,10 +102,10 @@ export default async function ProyectosPage() {
                 su demo, repositorio y devolución del mentor.
               </p>
               <div className="row" style={{ justifyContent: "center", marginTop: 24, gap: 12 }}>
-                <Link href="/plataforma" className="btn btn-primary">
+                <Link href={tp("/plataforma")} className="btn btn-primary">
                   Ver retos →
                 </Link>
-                <Link href="/plataforma/biblioteca" className="btn btn-ghost">
+                <Link href={tp("/plataforma/biblioteca")} className="btn btn-ghost">
                   Explorar biblioteca
                 </Link>
               </div>

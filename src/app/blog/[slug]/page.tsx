@@ -1,15 +1,23 @@
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Chip } from "@/components/ui/Chip";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { NewsletterForm } from "@/components/marketing/NewsletterForm";
+import { getTenantCtx } from "@/lib/tenant";
+import { initials } from "@/lib/utils";
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const { slug } = await params;
-  const [post] = await db.select().from(schema.blogPosts).where(eq(schema.blogPosts.slug, slug)).limit(1);
+  const [post] = await db
+    .select()
+    .from(schema.blogPosts)
+    .where(and(eq(schema.blogPosts.tenantId, ctx.tenant.id), eq(schema.blogPosts.slug, slug)))
+    .limit(1);
   if (!post) notFound();
 
   return (
@@ -29,11 +37,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <p style={{ fontSize: 22, color: "var(--ink-2)", lineHeight: 1.5, marginBottom: 40 }}>{post.excerpt}</p>
         <div className="row" style={{ gap: 12, marginBottom: 56, paddingBottom: 24, borderBottom: "1px solid var(--line)" }}>
           <div className="av" style={{ background: "var(--ink)", color: "var(--bg)" }}>
-            CH
+            {initials(ctx.branding.siteName)}
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>Cristian Hernández</div>
-            <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>FUNDADOR · CH · IA</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{ctx.branding.siteName}</div>
+            <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>FUNDADOR</div>
           </div>
         </div>
         <div

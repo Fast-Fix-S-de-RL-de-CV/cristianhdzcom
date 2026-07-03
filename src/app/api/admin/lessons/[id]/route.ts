@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { parseVideoUrl } from "@/lib/video";
 
 export const dynamic = "force-dynamic";
@@ -68,10 +69,22 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   try {
     const data = body.parse(await req.json());
     const { videoUrl, ...rest } = data;
     const update: Record<string, unknown> = { ...rest };
+
+    // Si la lección se mueve de módulo, el módulo destino debe ser del tenant.
+    if (data.moduleId) {
+      const [mod] = await db
+        .select({ id: schema.modules.id })
+        .from(schema.modules)
+        .where(and(eq(schema.modules.id, data.moduleId), eq(schema.modules.tenantId, tctx.tenant.id)))
+        .limit(1);
+      if (!mod) return NextResponse.json({ error: "module_not_found" }, { status: 404 });
+    }
 
     if (data.options && data.correctKey) {
       update.options = normalizeOptions(data.options, data.correctKey);
@@ -79,7 +92,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
       const [current] = await db
         .select({ correctKey: schema.lessons.correctKey })
         .from(schema.lessons)
-        .where(eq(schema.lessons.id, id))
+        .where(and(eq(schema.lessons.id, id), eq(schema.lessons.tenantId, tctx.tenant.id)))
         .limit(1);
       const ck = current?.correctKey ?? "";
       update.options = normalizeOptions(data.options, ck);
@@ -104,7 +117,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const [row] = await db
       .update(schema.lessons)
       .set(update)
-      .where(eq(schema.lessons.id, id))
+      .where(and(eq(schema.lessons.id, id), eq(schema.lessons.tenantId, tctx.tenant.id)))
       .returning();
     if (!row) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.json({ lesson: row });
@@ -122,6 +135,10 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
-  await db.delete(schema.lessons).where(eq(schema.lessons.id, id));
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+  await db
+    .delete(schema.lessons)
+    .where(and(eq(schema.lessons.id, id), eq(schema.lessons.tenantId, tctx.tenant.id)));
   return NextResponse.json({ ok: true });
 }

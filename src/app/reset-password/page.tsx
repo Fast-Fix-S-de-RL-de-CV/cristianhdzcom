@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Field } from "@/components/ui/Field";
 import { Nav } from "@/components/marketing/Nav";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 function ResetInner() {
   const router = useRouter();
   const params = useSearchParams();
+  const { tp } = useTenant();
   const token = params.get("token") ?? "";
 
   const [password, setPassword] = useState("");
@@ -38,7 +40,7 @@ function ResetInner() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/auth/reset-password", {
+      const res = await fetch(tp("/api/auth/reset-password"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ token, password }),
@@ -56,7 +58,7 @@ function ResetInner() {
         return;
       }
       setDone(true);
-      setTimeout(() => router.push("/login"), 2500);
+      setTimeout(() => router.push(tp("/login")), 2500);
     } catch {
       setLoading(false);
       setError("No hay conexión. Revisa tu internet.");
@@ -74,7 +76,7 @@ function ResetInner() {
             <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.6 }}>
               Pide uno nuevo desde "Recuperar contraseña".
             </p>
-            <Link href="/recuperar" className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 24 }}>
+            <Link href={tp("/recuperar")} className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 24 }}>
               Recuperar contraseña
             </Link>
           </div>

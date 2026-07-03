@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/ConfirmProvider";
 import { apiErrorMessage } from "@/lib/apiError";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 /**
  * Button that starts (or reopens) a DM conversation with a member and
@@ -20,20 +21,21 @@ export function StartDmButton({
 }) {
   const router = useRouter();
   const toast = useToast();
+  const { tp } = useTenant();
   const [busy, setBusy] = useState(false);
 
   async function start() {
     if (busy) return;
     setBusy(true);
     try {
-      const res = await fetch("/api/dm/conversations/start", {
+      const res = await fetch(tp("/api/dm/conversations/start"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ userId }),
       });
       const j = await res.json().catch(() => ({}));
       if (res.ok && j.conversation?.id) {
-        router.push(`/mensajes/${j.conversation.id}`);
+        router.push(tp(`/mensajes/${j.conversation.id}`));
       } else {
         setBusy(false);
         toast.error(apiErrorMessage(j, "No se pudo abrir el chat — intenta de nuevo"));

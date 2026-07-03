@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { db, schema } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { MarketingCanvas } from "@/components/tools/MarketingCanvas";
@@ -9,8 +10,11 @@ export const dynamic = "force-dynamic";
 
 export default async function MarketingCanvasPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const user = await getCurrentUser();
-  if (!user) redirect(`/login?next=/plataforma/herramientas/marketing/${id}`);
+  if (!user) redirect(tp(`/login?next=/plataforma/herramientas/marketing/${id}`));
 
   const [plan] = await db
     .select()

@@ -12,8 +12,12 @@ export type IncompleteLesson = {
  * Lecciones de tipo "video" de un programa que aún NO tienen un video válido
  * resuelto (videoProvider + videoId). Un curso solo puede activarse cuando esta
  * lista está vacía: como borrador se permite cualquier estado.
+ * Multi-tenant: recibe el tenantId del request y solo mira lecciones de ese tenant.
  */
-export async function incompleteVideoLessons(programId: string): Promise<IncompleteLesson[]> {
+export async function incompleteVideoLessons(
+  programId: string,
+  tenantId: string,
+): Promise<IncompleteLesson[]> {
   const rows = await db
     .select({
       id: schema.lessons.id,
@@ -26,6 +30,7 @@ export async function incompleteVideoLessons(programId: string): Promise<Incompl
     .where(
       and(
         eq(schema.modules.programId, programId),
+        eq(schema.lessons.tenantId, tenantId),
         eq(schema.lessons.kind, "video"),
         or(isNull(schema.lessons.videoProvider), isNull(schema.lessons.videoId)),
       ),

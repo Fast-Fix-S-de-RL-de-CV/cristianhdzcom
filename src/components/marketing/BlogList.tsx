@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type Post = {
   id: string;
@@ -17,6 +18,7 @@ const FILTERS = ["Todo", "IA · Ingeniería", "Negocios", "Casos reales", "Tutor
 const PAGE_SIZE = 9;
 
 export function BlogList({ posts }: { posts: Post[] }) {
+  const { tp, siteName } = useTenant();
   const [filter, setFilter] = useState("Todo");
   const [query, setQuery] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
@@ -107,7 +109,7 @@ export function BlogList({ posts }: { posts: Post[] }) {
         ) : (
           <div className="grid-3">
             {visible.map((p, i) => (
-              <Link key={p.id} href={`/blog/${p.slug}`} className="lift" style={{ display: "block" }}>
+              <Link key={p.id} href={tp(`/blog/${p.slug}`)} className="lift" style={{ display: "block" }}>
                 <div
                   className="ph"
                   style={{
@@ -154,7 +156,7 @@ export function BlogList({ posts }: { posts: Post[] }) {
                   {p.title}
                 </h3>
                 <div className="row" style={{ gap: 8, marginTop: 16, fontSize: 13 }}>
-                  <span style={{ color: "var(--muted)" }}>Cristian Hernández</span>
+                  <span style={{ color: "var(--muted)" }}>{siteName || "Cristian Hernández"}</span>
                   <span style={{ marginLeft: "auto", color: "var(--accent)" }}>Leer →</span>
                 </div>
               </Link>

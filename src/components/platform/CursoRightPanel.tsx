@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTenantCtx } from "@/lib/tenant";
 
 export type NextMission = {
   lessonId: string;
@@ -54,7 +55,9 @@ export function CursoRightPanel({
 }
 
 /* ───────────────── PRÓXIMA MISIÓN ───────────────── */
-function NextMissionCard({ mission }: { mission: NextMission | null }) {
+async function NextMissionCard({ mission }: { mission: NextMission | null }) {
+  const ctx = await getTenantCtx();
+  const tp = ctx?.tp ?? ((p: string) => p);
   if (!mission) {
     return (
       <div style={navyCardStyle}>
@@ -149,7 +152,7 @@ function NextMissionCard({ mission }: { mission: NextMission | null }) {
         </span>
       </div>
       <Link
-        href={`/plataforma/leccion/${mission.lessonId}`}
+        href={tp(`/plataforma/leccion/${mission.lessonId}`)}
         style={{
           display: "block",
           marginTop: 14,

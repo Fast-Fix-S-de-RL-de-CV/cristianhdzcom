@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { and, eq, desc, gte } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 /**
  * POST /api/coach { message?: string }
@@ -12,6 +13,8 @@ import { getCurrentUser } from "@/lib/auth";
  *      of contextual suggestions. Works without any external API key.
  */
 export async function POST(req: Request) {
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ message: "unauthorized" }, { status: 401 });
 
@@ -24,7 +27,7 @@ export async function POST(req: Request) {
   const message = (body.message ?? "").trim();
 
   // Gather context: progress, current module, recent activity.
-  const ctx = await buildCoachContext(user.id);
+  const ctx = await buildCoachContext(user.id, tctx.tenant.id);
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (apiKey) {
@@ -51,7 +54,7 @@ interface CoachContext {
   firstName: string;
 }
 
-async function buildCoachContext(userId: string): Promise<CoachContext> {
+async function buildCoachContext(userId: string, tenantId: string): Promise<CoachContext> {
   const [u] = await db
     .select({
       name: schema.users.name,
@@ -66,7 +69,7 @@ async function buildCoachContext(userId: string): Promise<CoachContext> {
   const [prog] = await db
     .select({ id: schema.programs.id })
     .from(schema.programs)
-    .where(eq(schema.programs.slug, "programacion-con-ia"))
+    .where(and(eq(schema.programs.slug, "programacion-con-ia"), eq(schema.programs.tenantId, tenantId)))
     .limit(1);
 
   let totalModules = 0;
@@ -82,7 +85,7 @@ async function buildCoachContext(userId: string): Promise<CoachContext> {
         sortOrder: schema.modules.sortOrder,
       })
       .from(schema.modules)
-      .where(eq(schema.modules.programId, prog.id))
+      .where(and(eq(schema.modules.programId, prog.id), eq(schema.modules.tenantId, tenantId)))
       .orderBy(schema.modules.sortOrder);
     totalModules = mods.length;
 
@@ -110,7 +113,7 @@ async function buildCoachContext(userId: string): Promise<CoachContext> {
     })
     .from(schema.lessonAttempts)
     .innerJoin(schema.lessons, eq(schema.lessons.id, schema.lessonAttempts.lessonId))
-    .where(eq(schema.lessonAttempts.userId, userId))
+    .where(and(eq(schema.lessonAttempts.userId, userId), eq(schema.lessons.tenantId, tenantId)))
     .orderBy(desc(schema.lessonAttempts.createdAt))
     .limit(1);
   const recentLessonTitle = recent[0]?.title ?? null;

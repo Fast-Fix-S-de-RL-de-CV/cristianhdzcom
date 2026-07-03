@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type Turn = { role: "user" | "assistant"; text: string };
 
 const MAX_TURNS = 6;
 
 export function CopilotoPanel() {
+  const { tp } = useTenant();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -17,7 +19,7 @@ export function CopilotoPanel() {
     if (initialised.current) return;
     initialised.current = true;
     setThinking(true);
-    fetch("/api/coach", {
+    fetch(tp("/api/coach"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({}),
@@ -52,7 +54,7 @@ export function CopilotoPanel() {
     });
     setThinking(true);
     try {
-      const res = await fetch("/api/coach", {
+      const res = await fetch(tp("/api/coach"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message: msg }),

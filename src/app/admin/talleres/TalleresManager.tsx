@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { SelectField } from "@/components/ui/SelectField";
 import {
@@ -55,6 +56,7 @@ type Row = {
 
 export function TalleresManager({ rows }: { rows: Row[] }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState<Row | null>(null);
@@ -67,7 +69,7 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
   const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
 
   const bulkDelete = useBulkDelete<string>({
-    url: "/api/admin/events/bulk-delete",
+    url: tp("/api/admin/events/bulk-delete"),
     entityLabel: { singular: "evento", plural: "eventos" },
     description:
       "Se borran también las asistencias registradas. Esta acción no se puede deshacer.",
@@ -78,7 +80,7 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(url, {
+      const res = await fetch(tp(url), {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -102,7 +104,7 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
   }
 
   async function toggleActive(id: string, next: boolean) {
-    const res = await fetch(`/api/admin/events/${id}`, {
+    const res = await fetch(tp(`/api/admin/events/${id}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: next }),
@@ -123,7 +125,7 @@ export function TalleresManager({ rows }: { rows: Row[] }) {
     if (!ok) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/events/${id}`, { method: "DELETE" });
+      const res = await fetch(tp(`/api/admin/events/${id}`), { method: "DELETE" });
       if (!res.ok) throw new Error("Error al borrar");
       router.refresh();
     } catch (e) {

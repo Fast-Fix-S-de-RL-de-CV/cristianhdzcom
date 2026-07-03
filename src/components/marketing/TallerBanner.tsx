@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTenantCtx } from "@/lib/tenant";
 
 export type TallerBannerRow = {
   id: string;
@@ -38,13 +39,15 @@ type BadgeColor = "red" | "navy" | "warm" | "green" | "gold" | "muted" | "accent
  * eyebrow superior, para que el usuario perciba el orden curado de
  * importancia.
  */
-export function TallerBanner({
+export async function TallerBanner({
   taller,
   index,
 }: {
   taller: TallerBannerRow;
   index?: number;
 }) {
+  const ctx = await getTenantCtx();
+  const tp = ctx?.tp ?? ((p: string) => p);
   const startsAtDate = taller.startsAt ? new Date(taller.startsAt) : null;
   const dateLabel = taller.isEvergreen
     ? taller.evergreenScheduleHint || "Disponible al inscribirte"
@@ -240,7 +243,7 @@ export function TallerBanner({
           }}
         >
           <Link
-            href={taller.link || `/programas`}
+            href={tp(taller.link || `/programas`)}
             style={{
               padding: "10px 20px",
               background: "var(--ink)",

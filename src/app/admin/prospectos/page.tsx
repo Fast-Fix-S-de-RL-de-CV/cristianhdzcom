@@ -1,6 +1,8 @@
 import { db, schema } from "@/db";
-import { desc, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
+import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { ProspectosTable, type ProspectoRow } from "./ProspectosTable";
@@ -27,6 +29,9 @@ export const dynamic = "force-dynamic";
  * Embudo completo: anónimo → PROSPECTO → CLIENTE → ALUMNO.
  */
 export default async function ProspectosPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const tenantId = ctx.tenant.id;
   const user = (await getCurrentUser())!;
 
   // 1) Users sin orden pagada, con engagement calculado.
@@ -57,10 +62,12 @@ export default async function ProspectosPage() {
       (SELECT COUNT(*)::int FROM lesson_progress lp WHERE lp.user_id = u.id)
                                     AS "lessonsDone"
     FROM users u
-    WHERE u.role NOT IN ('admin', 'superadmin')
+    WHERE u.tenant_id = ${tenantId}
+      AND u.role NOT IN ('admin', 'superadmin')
       AND NOT EXISTS (
         SELECT 1 FROM orders o
         WHERE LOWER(o.email) = LOWER(u.email)
+          AND o.tenant_id = ${tenantId}
           AND o.status = 'succeeded'
       )
     LIMIT 1000
@@ -78,10 +85,12 @@ export default async function ProspectosPage() {
       hasPurchased: sql<number>`(
         SELECT COUNT(*)::int FROM ${schema.orders}
         WHERE LOWER(${schema.orders.email}) = LOWER(${schema.leads.email})
+          AND ${schema.orders.tenantId} = ${tenantId}
           AND ${schema.orders.status} = 'succeeded'
       )`,
     })
     .from(schema.leads)
+    .where(eq(schema.leads.tenantId, tenantId))
     .orderBy(desc(schema.leads.createdAt));
   const leadsFiltered = leadRows.filter((l) => Number(l.hasPurchased) === 0);
 

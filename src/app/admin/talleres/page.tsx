@@ -1,6 +1,8 @@
-import { desc } from "drizzle-orm";
+import { notFound } from "next/navigation";
+import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { TalleresManager } from "./TalleresManager";
@@ -8,6 +10,8 @@ import { TalleresManager } from "./TalleresManager";
 export const dynamic = "force-dynamic";
 
 export default async function TalleresPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = (await getCurrentUser())!;
 
   const rows = await db
@@ -37,6 +41,7 @@ export default async function TalleresPage() {
       badge2Color: schema.events.badge2Color,
     })
     .from(schema.events)
+    .where(eq(schema.events.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.events.startsAt));
 
   const data = rows.map((r) => ({

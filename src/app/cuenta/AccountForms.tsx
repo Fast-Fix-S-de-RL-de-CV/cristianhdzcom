@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type UserLite = {
   id: string;
@@ -11,6 +12,7 @@ type UserLite = {
 
 export function ProfileForm({ user }: { user: UserLite }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const [name, setName] = useState(user.name);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -20,7 +22,7 @@ export function ProfileForm({ user }: { user: UserLite }) {
     setSaving(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/user/profile", {
+      const res = await fetch(tp("/api/user/profile"), {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name }),
@@ -88,6 +90,7 @@ export function ProfileForm({ user }: { user: UserLite }) {
 }
 
 export function PasswordForm() {
+  const { tp } = useTenant();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -107,7 +110,7 @@ export function PasswordForm() {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/auth/change-password", {
+      const res = await fetch(tp("/api/auth/change-password"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),
@@ -195,13 +198,14 @@ export function PasswordForm() {
 
 export function LogoutButton() {
   const router = useRouter();
+  const { tp } = useTenant();
   const [loading, setLoading] = useState(false);
 
   async function onClick() {
     setLoading(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
+      await fetch(tp("/api/auth/logout"), { method: "POST" });
+      router.push(tp("/login"));
       router.refresh();
     } finally {
       setLoading(false);

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
-import { sql } from "drizzle-orm";
-import { getStripe, siteUrl, isStripeConfigured, finalizeCheckoutSession } from "@/lib/stripe";
+import { and, eq, sql } from "drizzle-orm";
+import { getStripeForTenant, requestOrigin, finalizeCheckoutSession } from "@/lib/stripe";
+import { getTenantCtx } from "@/lib/tenant";
 import { createSession, getCurrentUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -15,30 +16,38 @@ export const dynamic = "force-dynamic";
  * permite escribir cookies — las páginas de confirmación no pueden abrir
  * sesión durante el render.
  *
- *  1. Finaliza la session (idempotente: advisory lock vs webhook).
+ *  1. Finaliza la session (idempotente: advisory lock vs webhook) con el
+ *     Stripe DEL TENANT del request.
  *  2. Si el comprador no tiene sesión web, la abre (createSession).
- *  3. Redirige a `next` (solo paths relativos) conservando los searchParams
- *     originales, para que la página de confirmación resuelva la orden.
+ *  3. Redirige a `next` (solo paths relativos; ya viene con el basePath del
+ *     tenant porque el checkout lo generó con ctx.tp()) conservando los
+ *     searchParams originales, para que la página de confirmación resuelva
+ *     la orden.
  */
 export async function GET(req: Request) {
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+
   const url = new URL(req.url);
   const sessionId = url.searchParams.get("session_id");
 
   // Solo paths relativos del propio sitio (evita open redirect).
-  let next = url.searchParams.get("next") || "/";
-  if (!next.startsWith("/") || next.startsWith("//")) next = "/";
+  let next = url.searchParams.get("next") || ctx.tp("/");
+  if (!next.startsWith("/") || next.startsWith("//")) next = ctx.tp("/");
 
-  const target = new URL(next, siteUrl());
+  // Host público real del request (dominio propio o mimarca.app/{slug}).
+  const target = new URL(next, requestOrigin(req));
   url.searchParams.forEach((v, k) => {
     if (k !== "next") target.searchParams.set(k, v);
   });
 
-  if (sessionId && isStripeConfigured()) {
+  const { stripe } = await getStripeForTenant(ctx.tenant.id);
+  if (sessionId && stripe) {
     try {
-      const session = await getStripe().checkout.sessions.retrieve(sessionId, {
+      const session = await stripe.checkout.sessions.retrieve(sessionId, {
         expand: ["subscription", "payment_intent"],
       });
-      await finalizeCheckoutSession(session);
+      await finalizeCheckoutSession(session, ctx.tenant.id);
     } catch (e) {
       // La página de confirmación tiene su propio fallback de finalize;
       // aquí no bloqueamos el redirect.
@@ -54,7 +63,12 @@ export async function GET(req: Request) {
         const [order] = await db
           .select({ userId: schema.orders.userId })
           .from(schema.orders)
-          .where(sql`${schema.orders.metadata}->>'stripeSessionId' = ${sessionId}`)
+          .where(
+            and(
+              sql`${schema.orders.metadata}->>'stripeSessionId' = ${sessionId}`,
+              eq(schema.orders.tenantId, ctx.tenant.id),
+            ),
+          )
           .limit(1);
         if (order?.userId) await createSession(order.userId);
       }

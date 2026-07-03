@@ -2,6 +2,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 export type SenderoModuleState = "done" | "current" | "in_progress" | "locked";
 
@@ -71,6 +72,7 @@ function nodeAssetUrl(kind: NodeKind): string {
 
 export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     const init = new Set<string>();
@@ -107,10 +109,10 @@ export function SenderoMap({ modules }: { modules: SenderoModule[] }) {
     if (pendingId || (m.state !== "current" && m.state !== "in_progress")) return;
     setPendingId(m.id);
     try {
-      const res = await fetch(`/api/modules/${m.id}/start`, { method: "POST" });
+      const res = await fetch(tp(`/api/modules/${m.id}/start`), { method: "POST" });
       const data: any = await res.json().catch(() => ({}));
       if (data?.lessonId) {
-        router.push(`/plataforma/leccion/${data.lessonId}`);
+        router.push(tp(`/plataforma/leccion/${data.lessonId}`));
       } else {
         router.refresh();
         setPendingId(null);
@@ -371,6 +373,7 @@ function ModuleCard({
   isExpanded: boolean;
   router: ReturnType<typeof useRouter>;
 }) {
+  const { tp } = useTenant();
   const offset = size / 2 + 22;
   // Al expandir, anclar según la posición para no salir del mapa: la primera
   // card crece hacia abajo, la última hacia arriba, las de en medio centradas.
@@ -550,7 +553,7 @@ function ModuleCard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (lessonClickable) router.push(`/plataforma/leccion/${l.id}`);
+                  if (lessonClickable) router.push(tp(`/plataforma/leccion/${l.id}`));
                 }}
                 disabled={!lessonClickable}
                 style={{

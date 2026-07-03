@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { bookBodySchema } from "../_schema";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const tenantCtx = await getTenantCtx();
+  if (!tenantCtx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const { id } = await ctx.params;
   let data;
   try {
@@ -53,7 +56,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
         ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
       })
-      .where(eq(schema.books.id, id))
+      .where(and(eq(schema.books.id, id), eq(schema.books.tenantId, tenantCtx.tenant.id)))
       .returning();
     if (!row) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.json({ book: row });
@@ -73,7 +76,11 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const tenantCtx = await getTenantCtx();
+  if (!tenantCtx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const { id } = await ctx.params;
-  await db.delete(schema.books).where(eq(schema.books.id, id));
+  await db
+    .delete(schema.books)
+    .where(and(eq(schema.books.id, id), eq(schema.books.tenantId, tenantCtx.tenant.id)));
   return NextResponse.json({ ok: true });
 }

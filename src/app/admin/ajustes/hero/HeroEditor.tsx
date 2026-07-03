@@ -2,6 +2,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/ConfirmProvider";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { apiErrorMessage } from "@/lib/apiError";
 
 type Stat = { value: string; label: string };
@@ -29,6 +30,7 @@ type Settings = {
 export function HeroEditor({ initial }: { initial: Settings }) {
   const router = useRouter();
   const toast = useToast();
+  const { tp } = useTenant();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
@@ -48,7 +50,7 @@ export function HeroEditor({ initial }: { initial: Settings }) {
   function save() {
     startTransition(async () => {
       try {
-        const res = await fetch("/api/admin/site-settings", {
+        const res = await fetch(tp("/api/admin/site-settings"), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -75,7 +77,7 @@ export function HeroEditor({ initial }: { initial: Settings }) {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/admin/upload?type=hero-portrait", { method: "POST", body: fd });
+      const res = await fetch(tp("/api/admin/upload?type=hero-portrait"), { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok || !json.url) {
         toast.error(json.error || "No se pudo subir.");

@@ -1,10 +1,11 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { db, schema } from "@/db";
-import { asc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, sql } from "drizzle-orm";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { CopilotoPanel } from "@/components/platform/CopilotoPanel";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
@@ -44,8 +45,11 @@ const TYPE_LABEL: Record<string, string> = {
  * and `moduleProgress` with no cached layer.
  */
 export default async function PlatformPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/plataforma");
+  if (!user) redirect(tp("/login?next=/plataforma"));
 
   // Pull every program the user is enrolled in (active), with module and
   // progress counts computed in SQL so the dashboard is one round-trip.
@@ -106,6 +110,8 @@ export default async function PlatformPage() {
       LIMIT 1
     ) cur ON TRUE
     WHERE e.user_id = ${user.id}
+      AND e.tenant_id = ${ctx.tenant.id}
+      AND p.tenant_id = ${ctx.tenant.id}
       AND e.status IN ('active', 'trial')
       AND p.is_active = TRUE
     ORDER BY p.sort_order ASC, p.title ASC
@@ -119,7 +125,8 @@ export default async function PlatformPage() {
            p.price_usd AS "priceUsd", p.accent
     FROM programs p
     WHERE p.is_active = TRUE
-      AND p.id NOT IN (SELECT program_id FROM enrollments WHERE user_id = ${user.id})
+      AND p.tenant_id = ${ctx.tenant.id}
+      AND p.id NOT IN (SELECT program_id FROM enrollments WHERE user_id = ${user.id} AND tenant_id = ${ctx.tenant.id})
     ORDER BY p.is_featured DESC, p.sort_order ASC
     LIMIT 3
   `)) as unknown as { rows?: Reco[] } | Reco[];
@@ -129,7 +136,7 @@ export default async function PlatformPage() {
   const upcoming = await db
     .select()
     .from(schema.events)
-    .where(gte(schema.events.startsAt, new Date()))
+    .where(and(eq(schema.events.tenantId, ctx.tenant.id), gte(schema.events.startsAt, new Date())))
     .orderBy(asc(schema.events.startsAt))
     .limit(3);
   const today = new Date();
@@ -144,7 +151,7 @@ export default async function PlatformPage() {
       <div>
         <div className="between" style={{ marginBottom: 12 }}>
           <span className="eyebrow">Próximos eventos</span>
-          <Link href="/comunidad/calendario" className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
+          <Link href={tp("/comunidad/calendario")} className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
             VER TODO
           </Link>
         </div>
@@ -243,7 +250,7 @@ export default async function PlatformPage() {
           <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 8 }}>
             Explora los programas disponibles y empieza tu primer carril.
           </p>
-          <Link href="/programas" className="btn btn-primary" style={{ marginTop: 16, display: "inline-flex" }}>
+          <Link href={tp("/programas")} className="btn btn-primary" style={{ marginTop: 16, display: "inline-flex" }}>
             Ver programas →
           </Link>
         </Card>
@@ -267,7 +274,7 @@ export default async function PlatformPage() {
               return (
                 <Link
                   key={c.programId}
-                  href={`/plataforma/curso/${c.slug}`}
+                  href={tp(`/plataforma/curso/${c.slug}`)}
                   style={{ textDecoration: "none", color: "inherit" }}
                 >
                   <Card
@@ -496,7 +503,7 @@ export default async function PlatformPage() {
             {recommended.map((r: any) => {
               const palette = ACCENT_PALETTE[r.accent || "accent"] || ACCENT_PALETTE.accent!;
               return (
-                <Link key={r.id} href={`/programas/${r.slug}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <Link key={r.id} href={tp(`/programas/${r.slug}`)} style={{ textDecoration: "none", color: "inherit" }}>
                   <Card hover style={{ padding: 18 }}>
                     <span
                       className="mono"

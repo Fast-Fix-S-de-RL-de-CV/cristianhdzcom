@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { initials } from "@/lib/utils";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import {
   BulkActionBar,
   BulkCheckbox,
@@ -54,6 +55,7 @@ export function ProspectosTable({
   rows: ProspectoRow[];
   currentUserId: string;
 }) {
+  const { tp } = useTenant();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const bulk = useBulkSelection<string>(); // key = lowercased email
@@ -91,7 +93,7 @@ export function ProspectosTable({
   // The endpoint expects { ids: [emails…] } — the shared `useBulkDelete` hook
   // always serializes to that shape, so we just pass emails as the "ids".
   const bulkDelete = useBulkDelete<string>({
-    url: "/api/admin/prospects/bulk-delete",
+    url: tp("/api/admin/prospects/bulk-delete"),
     entityLabel: { singular: "prospecto", plural: "prospectos" },
     description:
       "Para cada email seleccionado se borra TODO lo que tengamos: la cuenta registrada con su " +
@@ -284,7 +286,7 @@ export function ProspectosTable({
               {/* Prospecto: avatar + nombre + email */}
               <div className="row" style={{ flex: 2, gap: 12, alignItems: "center", minWidth: 0 }}>
                 {r.userId ? (
-                  <Link href={`/u/${r.userId}`} aria-label={r.name ?? r.email} style={{ textDecoration: "none", flexShrink: 0 }}>
+                  <Link href={tp(`/u/${r.userId}`)} aria-label={r.name ?? r.email} style={{ textDecoration: "none", flexShrink: 0 }}>
                     <div className="av" style={{ width: 38, height: 38, fontSize: 12 }}>
                       {initials(r.name ?? r.email)}
                     </div>

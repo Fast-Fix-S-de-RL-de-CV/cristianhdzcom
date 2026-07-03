@@ -1,7 +1,9 @@
+"use client";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { coverEmbedUrl } from "@/lib/video";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 export type ServiceCard = {
   id: string;
@@ -58,6 +60,7 @@ export function ServiceCardItem({
   /** Si true, ignora el video de portada (lo usa el carrusel para no autoplayear N iframes en movimiento). */
   staticCover?: boolean;
 }) {
+  const { tp } = useTenant();
   const isCta = s.isCtaCard;
   const accent = `oklch(42% 0.14 ${s.hue})`;
   const coverVideo = !isCta && !staticCover ? coverEmbedUrl(s.coverVideoUrl) : null;
@@ -244,7 +247,7 @@ export function ServiceCardItem({
       );
     }
     return (
-      <Link href={s.ctaUrl} style={{ display: "block", textDecoration: "none", color: "inherit" }}>
+      <Link href={tp(s.ctaUrl)} style={{ display: "block", textDecoration: "none", color: "inherit" }}>
         {cardInner}
       </Link>
     );

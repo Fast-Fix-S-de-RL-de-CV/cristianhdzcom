@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { incompleteVideoLessons } from "@/lib/courseReadiness";
 
 export const dynamic = "force-dynamic";
@@ -90,13 +91,23 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   try {
     const data = body.parse(await req.json());
 
     // Gate de activación: un curso solo puede ponerse ACTIVO si todas sus
     // lecciones de video tienen un link válido. Como borrador no se exige.
     if (data.isActive === true) {
-      const pending = await incompleteVideoLessons(id);
+      // incompleteVideoLessons no filtra por tenant: verificar primero que el
+      // programa pertenezca al tenant del request.
+      const [owned] = await db
+        .select({ id: schema.programs.id })
+        .from(schema.programs)
+        .where(and(eq(schema.programs.id, id), eq(schema.programs.tenantId, tctx.tenant.id)))
+        .limit(1);
+      if (!owned) return NextResponse.json({ error: "not_found" }, { status: 404 });
+      const pending = await incompleteVideoLessons(id, tctx.tenant.id);
       if (pending.length > 0) {
         return NextResponse.json(
           {
@@ -115,7 +126,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const [row] = await db
       .update(schema.programs)
       .set(data)
-      .where(eq(schema.programs.id, id))
+      .where(and(eq(schema.programs.id, id), eq(schema.programs.tenantId, tctx.tenant.id)))
       .returning();
     if (!row) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.json({ program: row });
@@ -139,18 +150,22 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   // orders.programId no tiene onDelete: cualquier orden (pagada o pendiente)
   // bloquea el DELETE a nivel FK. Pre-check para responder algo legible.
   const [order] = await db
     .select({ id: schema.orders.id })
     .from(schema.orders)
-    .where(eq(schema.orders.programId, id))
+    .where(and(eq(schema.orders.programId, id), eq(schema.orders.tenantId, tctx.tenant.id)))
     .limit(1);
   if (order) {
     return NextResponse.json({ error: "has_paid_orders" }, { status: 409 });
   }
   try {
-    await db.delete(schema.programs).where(eq(schema.programs.id, id));
+    await db
+      .delete(schema.programs)
+      .where(and(eq(schema.programs.id, id), eq(schema.programs.tenantId, tctx.tenant.id)));
   } catch (e) {
     const code =
       (e as { cause?: { code?: string }; code?: string })?.cause?.code ??

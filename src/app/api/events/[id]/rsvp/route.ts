@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { eq, and, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,9 +15,19 @@ export const dynamic = "force-dynamic";
  * Returns { attending: boolean, count: number }.
  */
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await ctx.params;
+
+  // El evento debe ser del tenant del request.
+  const [event] = await db
+    .select({ id: schema.events.id })
+    .from(schema.events)
+    .where(and(eq(schema.events.id, id), eq(schema.events.tenantId, tctx.tenant.id)))
+    .limit(1);
+  if (!event) return NextResponse.json({ error: "event_not_found" }, { status: 404 });
 
   const existing = await db
     .select()
@@ -32,21 +43,21 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     await db
       .update(schema.events)
       .set({ attending: sql`GREATEST(${schema.events.attending} - 1, 0)` })
-      .where(eq(schema.events.id, id));
+      .where(and(eq(schema.events.id, id), eq(schema.events.tenantId, tctx.tenant.id)));
     attending = false;
   } else {
     await db.insert(schema.eventRsvps).values({ userId: user.id, eventId: id });
     await db
       .update(schema.events)
       .set({ attending: sql`${schema.events.attending} + 1` })
-      .where(eq(schema.events.id, id));
+      .where(and(eq(schema.events.id, id), eq(schema.events.tenantId, tctx.tenant.id)));
     attending = true;
   }
 
   const [row] = await db
     .select({ count: schema.events.attending })
     .from(schema.events)
-    .where(eq(schema.events.id, id))
+    .where(and(eq(schema.events.id, id), eq(schema.events.tenantId, tctx.tenant.id)))
     .limit(1);
 
   return NextResponse.json({ attending, count: row?.count ?? 0 });

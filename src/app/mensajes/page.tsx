@@ -1,6 +1,7 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { db, schema } from "@/db";
 import { sql } from "drizzle-orm";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
@@ -23,8 +24,11 @@ type ConvoRow = {
 };
 
 export default async function MensajesInbox() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const tp = ctx.tp;
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/mensajes");
+  if (!user) redirect(tp("/login?next=/mensajes"));
 
   const res = (await db.execute(sql`
     SELECT
@@ -46,6 +50,7 @@ export default async function MensajesInbox() {
                            AS "unread"
     FROM conversations c
     JOIN users u ON u.id = CASE WHEN c.user_a_id = ${user.id} THEN c.user_b_id ELSE c.user_a_id END
+      AND u.tenant_id = ${ctx.tenant.id}
     WHERE c.user_a_id = ${user.id} OR c.user_b_id = ${user.id}
     ORDER BY c.last_message_at DESC
     LIMIT 100
@@ -61,7 +66,7 @@ export default async function MensajesInbox() {
             Bandeja de entrada
           </h1>
           <p style={{ color: "var(--muted)", marginTop: 8, fontSize: 14 }}>
-            Conversaciones privadas con otros miembros y el equipo de CH.
+            Conversaciones privadas con otros miembros y el equipo.
           </p>
         </div>
 
@@ -70,7 +75,7 @@ export default async function MensajesInbox() {
             <div style={{ fontSize: 48, marginBottom: 12 }}>💬</div>
             <h2 className="serif" style={{ fontSize: 22 }}>Aún no tienes conversaciones</h2>
             <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 8 }}>
-              Entra al <Link href="/comunidad/miembros" style={{ color: "var(--accent)", fontWeight: 600 }}>
+              Entra al <Link href={tp("/comunidad/miembros")} style={{ color: "var(--accent)", fontWeight: 600 }}>
                 directorio de miembros
               </Link>{" "}
               y dale "Mensaje" a alguien para empezar.
@@ -85,7 +90,7 @@ export default async function MensajesInbox() {
               return (
                 <Link
                   key={c.id}
-                  href={`/mensajes/${c.id}`}
+                  href={tp(`/mensajes/${c.id}`)}
                   style={{
                     display: "grid",
                     gridTemplateColumns: "48px 1fr auto",

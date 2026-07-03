@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
-import { desc } from "drizzle-orm";
+import { notFound, redirect } from "next/navigation";
+import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -10,8 +11,10 @@ import { MiembrosClient } from "./MiembrosClient";
 export const dynamic = "force-dynamic";
 
 export default async function MiembrosPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/comunidad/miembros");
+  if (!user) redirect(ctx.tp("/login?next=/comunidad/miembros"));
 
   // Pull all community members, ordered by recent activity (XP as proxy).
   const members = await db
@@ -25,6 +28,7 @@ export default async function MiembrosPage() {
       streakDays: schema.users.streakDays,
     })
     .from(schema.users)
+    .where(eq(schema.users.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.users.xp))
     .limit(120);
 

@@ -7,16 +7,21 @@ import { eq } from "drizzle-orm";
  * (los mismos textos que antes vivían hardcoded en page.tsx) para que la
  * home nunca se rompa.
  */
-export async function getSiteSettings() {
-  const [row] = await db.select().from(schema.siteSettings).where(eq(schema.siteSettings.id, 1)).limit(1);
-  if (!row) return defaults();
+export async function getSiteSettings(tenantId: string) {
+  const [row] = await db
+    .select()
+    .from(schema.siteSettings)
+    .where(eq(schema.siteSettings.tenantId, tenantId))
+    .limit(1);
+  if (!row) return defaults(tenantId);
   return row;
 }
 
 /** Defaults que se usan si la fila no existe. Evita layout-shift en cold start. */
-function defaults(): typeof schema.siteSettings.$inferSelect {
+function defaults(tenantId: string): typeof schema.siteSettings.$inferSelect {
   return {
-    id: 1,
+    id: 0,
+    tenantId,
     heroChip1Label: "G20 · Brasil 2024 · Sudáfrica 2025",
     heroChip1Pulse: true,
     heroChip2Label: "HUAWEI SPARK 2023",

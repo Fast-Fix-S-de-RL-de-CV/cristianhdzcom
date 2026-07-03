@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { initials } from "@/lib/utils";
@@ -27,6 +28,9 @@ export default async function PublicProfilePage({
 }: {
   params: Promise<{ userId: string }>;
 }) {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const { userId } = await params;
 
   // UUID sanity check — if the param isn't a UUID just 404 cleanly.
@@ -49,7 +53,7 @@ export default async function PublicProfilePage({
       createdAt: schema.users.createdAt,
     })
     .from(schema.users)
-    .where(eq(schema.users.id, userId))
+    .where(and(eq(schema.users.id, userId), eq(schema.users.tenantId, ctx.tenant.id)))
     .limit(1);
 
   if (!profile) notFound();
@@ -66,12 +70,12 @@ export default async function PublicProfilePage({
       totalViews: sql<number>`COALESCE(SUM(${schema.posts.viewsCount}), 0)::int`,
     })
     .from(schema.posts)
-    .where(eq(schema.posts.authorId, userId));
+    .where(and(eq(schema.posts.tenantId, ctx.tenant.id), eq(schema.posts.authorId, userId)));
 
   const [commentsAgg] = await db
     .select({ total: sql<number>`count(*)::int` })
     .from(schema.comments)
-    .where(eq(schema.comments.authorId, userId));
+    .where(and(eq(schema.comments.tenantId, ctx.tenant.id), eq(schema.comments.authorId, userId)));
 
   // Recent posts (up to 8)
   const recentPosts = await db
@@ -89,7 +93,7 @@ export default async function PublicProfilePage({
     })
     .from(schema.posts)
     .leftJoin(schema.categories, eq(schema.categories.id, schema.posts.categoryId))
-    .where(eq(schema.posts.authorId, userId))
+    .where(and(eq(schema.posts.tenantId, ctx.tenant.id), eq(schema.posts.authorId, userId)))
     .orderBy(desc(schema.posts.createdAt))
     .limit(8);
 
@@ -104,15 +108,15 @@ export default async function PublicProfilePage({
     })
     .from(schema.comments)
     .innerJoin(schema.posts, eq(schema.posts.id, schema.comments.postId))
-    .where(eq(schema.comments.authorId, userId))
+    .where(and(eq(schema.comments.tenantId, ctx.tenant.id), eq(schema.comments.authorId, userId)))
     .orderBy(desc(schema.comments.createdAt))
     .limit(5);
 
-  // Compute global rank by XP (count users with xp > this user)
+  // Compute rank by XP within the tenant (count users with xp > this user)
   const [higherXp] = await db
     .select({ c: sql<number>`count(*)::int` })
     .from(schema.users)
-    .where(sql`${schema.users.xp} > ${profile.xp}`);
+    .where(and(eq(schema.users.tenantId, ctx.tenant.id), sql`${schema.users.xp} > ${profile.xp}`));
   const rank = (higherXp?.c ?? 0) + 1;
 
   const isAdminBadge = profile.role === "admin" || profile.role === "superadmin";
@@ -131,15 +135,15 @@ export default async function PublicProfilePage({
           className="between"
           style={{ maxWidth: 1120, margin: "0 auto", flexWrap: "wrap", gap: 12 }}
         >
-          <Link href="/" className="ch-logo" aria-label="Cristian Hernández — Inicio">
-            <img src="/logo.png" alt="Cristian Hernández" />
+          <Link href={tp("/")} className="ch-logo" aria-label={`${ctx.branding.siteName} — Inicio`}>
+            <img src={ctx.branding.logoUrl ?? "/logo.png"} alt={ctx.branding.siteName} />
           </Link>
           <div className="row" style={{ gap: 8 }}>
-            <Link href="/comunidad/miembros" className="btn btn-ghost">
+            <Link href={tp("/comunidad/miembros")} className="btn btn-ghost">
               ← Miembros
             </Link>
             {viewer && (
-              <Link href="/plataforma" className="btn btn-primary">
+              <Link href={tp("/plataforma")} className="btn btn-primary">
                 Mi plataforma
               </Link>
             )}
@@ -218,24 +222,24 @@ export default async function PublicProfilePage({
             </div>
             <div className="col" style={{ gap: 8, alignItems: "flex-end" }}>
               {isSelf ? (
-                <Link href="/cuenta" className="btn btn-primary">
+                <Link href={tp("/cuenta")} className="btn btn-primary">
                   Editar mi perfil
                 </Link>
               ) : viewer ? (
                 <a
-                  href={`mailto:${profile.email}?subject=${encodeURIComponent("Hola desde cristianhdz.com")}`}
+                  href={`mailto:${profile.email}?subject=${encodeURIComponent(`Hola desde ${ctx.branding.siteName}`)}`}
                   className="btn btn-primary"
                 >
                   Enviar email
                 </a>
               ) : (
-                <Link href="/registro" className="btn btn-primary">
+                <Link href={tp("/registro")} className="btn btn-primary">
                   Únete a la comunidad
                 </Link>
               )}
               {isAdminViewer && !isSelf && (
                 <Link
-                  href="/admin/alumnos"
+                  href={tp("/admin/alumnos")}
                   className="mono"
                   style={{ fontSize: 11, color: "var(--muted)", textDecoration: "none" }}
                 >
@@ -284,7 +288,7 @@ export default async function PublicProfilePage({
                 {recentPosts.map((p) => (
                   <Link
                     key={p.id}
-                    href={`/comunidad/posts/${p.id}`}
+                    href={tp(`/comunidad/posts/${p.id}`)}
                     style={{ textDecoration: "none", color: "inherit" }}
                   >
                     <Card hover style={{ padding: 18 }}>
@@ -346,7 +350,7 @@ export default async function PublicProfilePage({
                 {recentComments.map((c) => (
                   <Link
                     key={c.id}
-                    href={`/comunidad/posts/${c.postId}`}
+                    href={tp(`/comunidad/posts/${c.postId}`)}
                     style={{ textDecoration: "none", color: "inherit" }}
                   >
                     <Card hover style={{ padding: 14 }}>

@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { initials, formatRelative } from "@/lib/utils";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { RoleBadge } from "@/components/admin/AdminPageShell";
 import {
   BulkActionBar,
@@ -25,6 +26,7 @@ type Row = {
 type Filter = "all" | "member" | "admin" | "superadmin";
 
 export function AlumnosTable({ rows, currentUserId }: { rows: Row[]; currentUserId: string }) {
+  const { tp } = useTenant();
   const [filter, setFilter] = useState<Filter>("all");
   const [q, setQ] = useState("");
   const bulk = useBulkSelection<string>();
@@ -50,7 +52,7 @@ export function AlumnosTable({ rows, currentUserId }: { rows: Row[]; currentUser
   const someVisibleSelected = !allVisibleSelected && selectableIds.some((id) => bulk.isSelected(id));
 
   const bulkDelete = useBulkDelete<string>({
-    url: "/api/admin/users/bulk-delete",
+    url: tp("/api/admin/users/bulk-delete"),
     entityLabel: { singular: "alumno", plural: "alumnos" },
     description:
       "Se borrará TODA su data personal: sesiones, posts, comentarios, lecciones, notas, mensajes, " +
@@ -236,7 +238,7 @@ export function AlumnosTable({ rows, currentUserId }: { rows: Row[]; currentUser
               </span>
               <span style={{ width: 110, textAlign: "right" }}>
                 <a
-                  href={`/u/${u.id}`}
+                  href={tp(`/u/${u.id}`)}
                   className="mono"
                   style={{
                     fontSize: 11,

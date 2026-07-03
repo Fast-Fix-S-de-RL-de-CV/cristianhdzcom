@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
-import { getStripe, siteUrl, isStripeConfigured, finalizeCheckoutSession } from "@/lib/stripe";
+import { and, eq } from "drizzle-orm";
+import { getStripeForTenant, requestOrigin, finalizeCheckoutSession } from "@/lib/stripe";
+import { getTenantCtx, type TenantCtx } from "@/lib/tenant";
 import { usdToMxnCents, MXN_PER_USD } from "@/lib/fx";
 import { resolveProgramBumps } from "@/lib/program-bumps";
 
@@ -10,14 +11,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/checkout — Stripe Checkout Session para PROGRAMAS.
+ * POST /api/checkout — Stripe Checkout Session para PROGRAMAS (del tenant).
  *
- * Crea una Session con line_items (programa + bumps) y devuelve `{ url }`
- * para que el frontend redirija a Stripe. La orden se crea por el webhook
- * cuando Stripe confirma el pago.
+ * Crea una Session con line_items (programa + bumps) usando las llaves de
+ * Stripe DEL TENANT y devuelve `{ url }` para que el frontend redirija a
+ * Stripe. La orden se crea por el webhook cuando Stripe confirma el pago.
  *
- * Si Stripe no está configurado (sin secret key), funciona en MODO DEMO:
- * crea la orden directamente con status=succeeded (útil para staging).
+ * Si el tenant no tiene Stripe configurado → 400 "pagos no configurados"
+ * (o MODO DEMO si ALLOW_DEMO_CHECKOUT=1, útil para staging: crea la orden
+ * directamente con status=succeeded).
  */
 const body = z.object({
   programId: z.string().uuid(),
@@ -34,11 +36,14 @@ const body = z.object({
 
 export async function POST(req: Request) {
   try {
+    const ctx = await getTenantCtx();
+    if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+
     const data = body.parse(await req.json());
     const [program] = await db
       .select()
       .from(schema.programs)
-      .where(eq(schema.programs.id, data.programId))
+      .where(and(eq(schema.programs.id, data.programId), eq(schema.programs.tenantId, ctx.tenant.id)))
       .limit(1);
     if (!program) return NextResponse.json({ error: "program_not_found" }, { status: 404 });
 
@@ -47,16 +52,23 @@ export async function POST(req: Request) {
     const bumps = resolveProgramBumps(data.bumps.map((b) => b.id));
     if (!bumps) return NextResponse.json({ error: "invalid_bump" }, { status: 400 });
 
-    // ── MODO DEMO si no hay Stripe configurado ──
-    if (!isStripeConfigured()) {
-      return demoFlow(data, program, bumps);
+    // ── Stripe del TENANT (payment_settings; fallback env solo cristianhdz) ──
+    const { stripe } = await getStripeForTenant(ctx.tenant.id);
+    if (!stripe) {
+      // MODO DEMO solo si la plataforma lo permite explícitamente (staging).
+      if (process.env.ALLOW_DEMO_CHECKOUT === "1") {
+        return demoFlow(ctx, data, program, bumps);
+      }
+      return NextResponse.json(
+        { error: "payments_not_configured", message: "Este sitio aún no tiene pagos configurados." },
+        { status: 400 },
+      );
     }
 
     // ── MODO STRIPE: crear Checkout Session en MXN ──
     // OXXO + SPEI sólo se activan con currency=mxn. Convertimos USD→MXN con
     // tasa fija (ver lib/fx.ts) y mantenemos el USD original en metadata
     // para que la DB siga en USD.
-    const stripe = getStripe();
 
     // Resolver descuento del cupón antes de armar line items.
     let couponDiscountUsdCents = 0;
@@ -64,7 +76,12 @@ export async function POST(req: Request) {
       const [coupon] = await db
         .select()
         .from(schema.coupons)
-        .where(eq(schema.coupons.code, data.couponCode.toUpperCase()))
+        .where(
+          and(
+            eq(schema.coupons.code, data.couponCode.toUpperCase()),
+            eq(schema.coupons.tenantId, ctx.tenant.id),
+          ),
+        )
         .limit(1);
       // Solo aplica si está activo Y todavía tiene canjes (null = ilimitado).
       const hasUsesLeft = coupon?.usesLeft == null || coupon.usesLeft > 0;
@@ -99,6 +116,10 @@ export async function POST(req: Request) {
       })),
     ];
 
+    // URLs con el host real del request (dominio propio o mimarca.app) y el
+    // basePath del tenant via ctx.tp().
+    const origin = requestOrigin(req);
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       // Sin payment_method_types: Stripe muestra todos los activados en
@@ -118,10 +139,11 @@ export async function POST(req: Request) {
         : undefined,
       // Pasamos por /api/checkout/finish (Route Handler): finaliza la orden
       // y abre la sesión web del comprador antes de mostrar la confirmación.
-      success_url: `${siteUrl()}/api/checkout/finish?session_id={CHECKOUT_SESSION_ID}&next=${encodeURIComponent(`/checkout/${program.slug}/confirmacion`)}`,
-      cancel_url: `${siteUrl()}/checkout/${program.slug}?cancelled=1`,
+      success_url: `${origin}${ctx.tp("/api/checkout/finish")}?session_id={CHECKOUT_SESSION_ID}&next=${encodeURIComponent(ctx.tp(`/checkout/${program.slug}/confirmacion`))}`,
+      cancel_url: `${origin}${ctx.tp(`/checkout/${program.slug}`)}?cancelled=1`,
       metadata: {
         kind: "program",
+        tenantId: ctx.tenant.id,
         programId: program.id,
         buyerName: data.name,
         buyerEmail: data.email,
@@ -144,9 +166,10 @@ export async function POST(req: Request) {
   }
 }
 
-/** Fallback demo: si STRIPE_SECRET_KEY no está set, completa la orden
- *  directo en DB usando el mismo flujo del webhook. Útil para staging. */
+/** Fallback demo (ALLOW_DEMO_CHECKOUT=1): completa la orden directo en DB
+ *  usando el mismo flujo del webhook. Útil para staging. */
 async function demoFlow(
+  ctx: TenantCtx,
   data: z.infer<typeof body>,
   _program: typeof schema.programs.$inferSelect,
   bumps: { id: string; title: string; priceCents: number }[],
@@ -161,6 +184,7 @@ async function demoFlow(
     subscription: null,
     metadata: {
       kind: "program",
+      tenantId: ctx.tenant.id,
       programId: data.programId,
       buyerName: data.name,
       buyerEmail: data.email,
@@ -170,11 +194,12 @@ async function demoFlow(
       couponCode: data.couponCode ?? "",
     },
   } as unknown as import("stripe").Stripe.Checkout.Session;
-  const result = await finalizeCheckoutSession(fake);
+  const result = await finalizeCheckoutSession(fake, ctx.tenant.id);
   return NextResponse.json({
     orderId: result.orderId,
     status: "succeeded",
     demo: true,
+    // Path SIN basePath: el client component lo envuelve con tp() al navegar.
     redirectTo: `/checkout/${_program.slug}/confirmacion?order=${result.orderId}`,
   });
 }

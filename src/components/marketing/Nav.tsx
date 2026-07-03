@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 // Public-facing nav. Same 5 items para todos los usuarios — la entrada al
 // área privada se hace por el botón "Mi escritorio →" / avatar a la
@@ -22,7 +23,14 @@ const NAV_ITEMS: [string, string][] = [
 type SessionUser = { id: string; name: string; role: string; level: number } | null;
 
 export function Nav() {
-  const pathname = usePathname() || "/";
+  const { tp, basePath, siteName, logoUrl } = useTenant();
+  const rawPathname = usePathname() || "/";
+  // En mimarca.app/{slug} el pathname del navegador trae el prefijo del
+  // tenant; lo quitamos para comparar contra los hrefs internos.
+  const pathname =
+    basePath && (rawPathname === basePath || rawPathname.startsWith(basePath + "/"))
+      ? rawPathname.slice(basePath.length) || "/"
+      : rawPathname;
   const [user, setUser] = useState<SessionUser>(null);
   const [loaded, setLoaded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,7 +53,7 @@ export function Nav() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/auth/me", { credentials: "include" });
+        const res = await fetch(tp("/api/auth/me"), { credentials: "include" });
         if (!cancelled && res.ok) {
           const j = (await res.json()) as { user?: SessionUser };
           setUser(j.user ?? null);
@@ -74,8 +82,8 @@ export function Nav() {
 
   return (
     <nav className="ch-nav">
-      <Link href="/" className="ch-logo" aria-label="Cristian Hernández — Inicio">
-        <img src="/logo.png" alt="Cristian Hernández" />
+      <Link href={tp("/")} className="ch-logo" aria-label={`${siteName} — Inicio`}>
+        {logoUrl ? <img src={logoUrl} alt={siteName} /> : <span>{siteName}</span>}
       </Link>
       <div className="ch-nav-links">
         {NAV_ITEMS.map(([label, href]) => {
@@ -83,7 +91,7 @@ export function Nav() {
           return (
             <Link
               key={href}
-              href={href}
+              href={tp(href)}
               className={cn(active && "is-active")}
             >
               {label}
@@ -97,10 +105,10 @@ export function Nav() {
           <div style={{ width: 200, height: 40 }} />
         ) : user ? (
           <>
-            <Link href={dashboardHref}>
+            <Link href={tp(dashboardHref)}>
               <Button variant="primary">Mi escritorio →</Button>
             </Link>
-            <Link href="/cuenta" aria-label="Mi cuenta">
+            <Link href={tp("/cuenta")} aria-label="Mi cuenta">
               <div
                 className="av"
                 style={{ cursor: "pointer", width: 40, height: 40 }}
@@ -112,10 +120,10 @@ export function Nav() {
           </>
         ) : (
           <>
-            <Link href="/login">
+            <Link href={tp("/login")}>
               <Button variant="ghost">Iniciar sesión</Button>
             </Link>
-            <Link href="/registro">
+            <Link href={tp("/registro")}>
               <Button variant="primary">Empezar gratis →</Button>
             </Link>
           </>
@@ -141,8 +149,8 @@ export function Nav() {
       {menuOpen && (
         <div className="ch-mobile-menu" role="dialog" aria-modal="true" aria-label="Menú de navegación">
           <div className="ch-mobile-menu-head">
-            <Link href="/" aria-label="Inicio">
-              <img src="/logo.png" alt="Cristian Hernández" />
+            <Link href={tp("/")} aria-label="Inicio">
+              {logoUrl ? <img src={logoUrl} alt={siteName} /> : <span className="ch-logo">{siteName}</span>}
             </Link>
             <button
               type="button"
@@ -158,7 +166,7 @@ export function Nav() {
             {NAV_ITEMS.map(([label, href]) => {
               const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
               return (
-                <Link key={href} href={href} className={cn(active && "is-active")}>
+                <Link key={href} href={tp(href)} className={cn(active && "is-active")}>
                   {label}
                 </Link>
               );
@@ -168,19 +176,19 @@ export function Nav() {
           <div className="ch-mobile-actions">
             {user ? (
               <>
-                <Link href={dashboardHref}>
+                <Link href={tp(dashboardHref)}>
                   <Button variant="primary">Mi escritorio →</Button>
                 </Link>
-                <Link href="/cuenta">
+                <Link href={tp("/cuenta")}>
                   <Button variant="ghost">Mi cuenta</Button>
                 </Link>
               </>
             ) : (
               <>
-                <Link href="/registro">
+                <Link href={tp("/registro")}>
                   <Button variant="primary">Empezar gratis →</Button>
                 </Link>
-                <Link href="/login">
+                <Link href={tp("/login")}>
                   <Button variant="ghost">Iniciar sesión</Button>
                 </Link>
               </>

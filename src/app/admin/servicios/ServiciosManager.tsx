@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import { SelectField } from "@/components/ui/SelectField";
 import {
@@ -48,6 +49,7 @@ const KIND_LABELS: Record<string, { label: string; emoji: string }> = {
 
 export function ServiciosManager({ rows }: { rows: ServiceRow[] }) {
   const router = useRouter();
+  const { tp } = useTenant();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState<ServiceRow | null>(null);
@@ -68,7 +70,7 @@ export function ServiciosManager({ rows }: { rows: ServiceRow[] }) {
   const someSelected = !allSelected && visibleIds.some((id) => bulk.isSelected(id));
 
   const bulkDelete = useBulkDelete<string>({
-    url: "/api/admin/services/bulk-delete",
+    url: tp("/api/admin/services/bulk-delete"),
     entityLabel: { singular: "empresa", plural: "empresas" },
     description: "Se eliminan del catálogo público. Esta acción no se puede deshacer.",
     onSuccess: bulk.clear,
@@ -81,7 +83,7 @@ export function ServiciosManager({ rows }: { rows: ServiceRow[] }) {
       tone: "danger",
     });
     if (!ok) return;
-    const res = await fetch(`/api/admin/services/${r.id}`, { method: "DELETE" });
+    const res = await fetch(tp(`/api/admin/services/${r.id}`), { method: "DELETE" });
     if (!res.ok) {
       toast.error("No se pudo eliminar.");
       return;
@@ -320,6 +322,7 @@ function ServiceDialog({
   onSaved: () => void;
 }) {
   const toast = useToast();
+  const { tp } = useTenant();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -370,7 +373,7 @@ function ServiceDialog({
       sortOrder: Number(form.sortOrder),
     };
 
-    const url = service ? `/api/admin/services/${service.id}` : "/api/admin/services";
+    const url = tp(service ? `/api/admin/services/${service.id}` : "/api/admin/services");
     const method = service ? "PUT" : "POST";
 
     try {

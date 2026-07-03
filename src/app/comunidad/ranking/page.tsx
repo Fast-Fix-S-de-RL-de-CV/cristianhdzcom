@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
-import { desc } from "drizzle-orm";
+import { notFound, redirect } from "next/navigation";
+import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { RankingTabs } from "./RankingTabs";
@@ -9,8 +10,10 @@ import { RankingTabs } from "./RankingTabs";
 export const dynamic = "force-dynamic";
 
 export default async function RankingPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/comunidad/ranking");
+  if (!user) redirect(ctx.tp("/login?next=/comunidad/ranking"));
 
   const rows = await db
     .select({
@@ -22,6 +25,7 @@ export default async function RankingPage() {
       streakDays: schema.users.streakDays,
     })
     .from(schema.users)
+    .where(eq(schema.users.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.users.xp))
     .limit(50);
 

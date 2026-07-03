@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Field } from "@/components/ui/Field";
 import { Nav } from "@/components/marketing/Nav";
+import { useTenant } from "@/components/tenant/TenantProvider";
 import { isValidEmail } from "@/lib/format";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { tp } = useTenant();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,7 +51,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch(tp("/api/auth/register"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name: name.trim(), email, password }),
@@ -66,7 +68,7 @@ export default function RegisterPage() {
         }
         return;
       }
-      router.push("/plataforma");
+      router.push(tp("/plataforma"));
       router.refresh();
     } catch {
       setLoading(false);
@@ -145,7 +147,7 @@ export default function RegisterPage() {
           </form>
           <div style={{ marginTop: 24, fontSize: 13, color: "var(--muted)", textAlign: "center" }}>
             ¿Ya tienes cuenta?{" "}
-            <Link href="/login" style={{ color: "var(--accent)", fontWeight: 600 }}>
+            <Link href={tp("/login")} style={{ color: "var(--accent)", fontWeight: 600 }}>
               Inicia sesión
             </Link>
           </div>

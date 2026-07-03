@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { initials } from "@/lib/utils";
 import { apiErrorMessage } from "@/lib/apiError";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 interface Comment {
   id: string;
@@ -39,6 +40,7 @@ export function PostThreadClient({
   initialLikesCount,
   currentUser,
 }: Props) {
+  const { tp } = useTenant();
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -53,7 +55,7 @@ export function PostThreadClient({
     setSubmitting(true);
     setCommentError(null);
     try {
-      const res = await fetch(`/api/posts/${postId}/comments`, {
+      const res = await fetch(tp(`/api/posts/${postId}/comments`), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ body: body.trim() }),
@@ -82,7 +84,7 @@ export function PostThreadClient({
     setLiked(willLike);
     setLikesCount((c) => c + (willLike ? 1 : -1));
     try {
-      const res = await fetch(`/api/posts/${postId}/like`, {
+      const res = await fetch(tp(`/api/posts/${postId}/like`), {
         method: willLike ? "POST" : "DELETE",
       });
       if (!res.ok) throw new Error("like_failed");
@@ -161,7 +163,7 @@ export function PostThreadClient({
         {comments.map((c) => (
           <Card key={c.id} style={{ padding: 16 }}>
             <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
-              <Link href={`/u/${c.authorId}`} style={{ textDecoration: "none", flexShrink: 0 }}>
+              <Link href={tp(`/u/${c.authorId}`)} style={{ textDecoration: "none", flexShrink: 0 }}>
                 <div className="av" style={{ width: 36, height: 36, fontSize: 11 }}>
                   {initials(c.authorName)}
                 </div>
@@ -169,7 +171,7 @@ export function PostThreadClient({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="row" style={{ gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
                   <Link
-                    href={`/u/${c.authorId}`}
+                    href={tp(`/u/${c.authorId}`)}
                     style={{ fontSize: 14, fontWeight: 600, color: "var(--navy)", textDecoration: "none" }}
                   >
                     {c.authorName}

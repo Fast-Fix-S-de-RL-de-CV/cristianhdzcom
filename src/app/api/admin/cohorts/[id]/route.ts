@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +34,15 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   try {
     const data = body.parse(await req.json());
     // seatsTaken is intentionally excluded — derived from enrollments
     const [row] = await db
       .update(schema.cohorts)
       .set(data)
-      .where(eq(schema.cohorts.id, id))
+      .where(and(eq(schema.cohorts.id, id), eq(schema.cohorts.tenantId, tctx.tenant.id)))
       .returning();
     if (!row) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.json({ cohort: row });
@@ -57,6 +60,10 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
-  await db.delete(schema.cohorts).where(eq(schema.cohorts.id, id));
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+  await db
+    .delete(schema.cohorts)
+    .where(and(eq(schema.cohorts.id, id), eq(schema.cohorts.tenantId, tctx.tenant.id)));
   return NextResponse.json({ ok: true });
 }

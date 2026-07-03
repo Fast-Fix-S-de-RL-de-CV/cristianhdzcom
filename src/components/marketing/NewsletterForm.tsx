@@ -2,8 +2,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 export function NewsletterForm({ source = "blog" }: { source?: string }) {
+  const { tp } = useTenant();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "err">("idle");
 
@@ -11,7 +13,7 @@ export function NewsletterForm({ source = "blog" }: { source?: string }) {
     e.preventDefault();
     setStatus("loading");
     try {
-      const res = await fetch("/api/leads", {
+      const res = await fetch(tp("/api/leads"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email, source, tag: "newsletter" }),

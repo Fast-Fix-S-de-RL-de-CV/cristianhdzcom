@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { initials } from "@/lib/utils";
 import { StartDmButton } from "@/components/community/StartDmButton";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type Member = {
   id: string;
@@ -31,6 +32,7 @@ export function MiembrosClient({
   members: Member[];
   currentUserId: string;
 }) {
+  const { tp } = useTenant();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
 
@@ -133,7 +135,7 @@ export function MiembrosClient({
                 </div>
                 <div className="row" style={{ gap: 8, marginTop: 16 }}>
                   <Link
-                    href={`/u/${m.id}`}
+                    href={tp(`/u/${m.id}`)}
                     className="btn btn-ghost"
                     style={{ flex: 1, fontSize: 12, padding: "8px 12px", textAlign: "center" }}
                   >

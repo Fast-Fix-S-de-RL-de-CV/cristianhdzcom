@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +45,14 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
 
-  // Lesson must exist
-  const [lesson] = await db.select().from(schema.lessons).where(eq(schema.lessons.id, lessonId)).limit(1);
+  // Lesson must exist (dentro del tenant del request)
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
+  const [lesson] = await db
+    .select()
+    .from(schema.lessons)
+    .where(and(eq(schema.lessons.id, lessonId), eq(schema.lessons.tenantId, tctx.tenant.id)))
+    .limit(1);
   if (!lesson) return NextResponse.json({ error: "lesson_not_found" }, { status: 404 });
 
   await db

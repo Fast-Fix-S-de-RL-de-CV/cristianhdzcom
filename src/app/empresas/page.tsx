@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { asc, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
+import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { getTenantCtx } from "@/lib/tenant";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -18,10 +20,13 @@ export const dynamic = "force-dynamic";
  * Abajo: grid completo para quien quiera ver todo de golpe.
  */
 export default async function EmpresasPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const rows = await db
     .select()
     .from(schema.services)
-    .where(eq(schema.services.isActive, true))
+    .where(and(eq(schema.services.tenantId, ctx.tenant.id), eq(schema.services.isActive, true)))
     .orderBy(asc(schema.services.sortOrder));
 
   const services: ServiceCard[] = rows.map((s) => ({
@@ -96,7 +101,7 @@ export default async function EmpresasPage() {
             <a href="mailto:info@cristianhdz.com">
               <Button size="lg">Hablar con la agencia →</Button>
             </a>
-            <Link href="/programas">
+            <Link href={tp("/programas")}>
               <Button size="lg" variant="ghost">
                 Ver programas
               </Button>

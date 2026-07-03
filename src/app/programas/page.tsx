@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { and, asc, eq } from "drizzle-orm";
+import { getTenantCtx } from "@/lib/tenant";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Card } from "@/components/ui/Card";
@@ -28,6 +30,9 @@ export default async function ProgramsPage({
 }: {
   searchParams: Promise<{ filtro?: string }>;
 }) {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const { filtro } = await searchParams;
   const active = FILTERS.find((f) => f.key === filtro) ?? FILTERS[0];
 
@@ -36,8 +41,12 @@ export default async function ProgramsPage({
     .from(schema.programs)
     .where(
       active.type
-        ? and(eq(schema.programs.isActive, true), eq(schema.programs.type, active.type))
-        : eq(schema.programs.isActive, true),
+        ? and(
+            eq(schema.programs.tenantId, ctx.tenant.id),
+            eq(schema.programs.isActive, true),
+            eq(schema.programs.type, active.type),
+          )
+        : and(eq(schema.programs.tenantId, ctx.tenant.id), eq(schema.programs.isActive, true)),
     )
     .orderBy(asc(schema.programs.sortOrder));
 
@@ -72,7 +81,7 @@ export default async function ProgramsPage({
         >
           <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
             {FILTERS.map((f) => (
-              <Link key={f.key} href={f.key === "todos" ? "/programas" : `/programas?filtro=${f.key}`}>
+              <Link key={f.key} href={tp(f.key === "todos" ? "/programas" : `/programas?filtro=${f.key}`)}>
                 <Button variant={f.key === active.key ? "primary" : "ghost"} size="sm">
                   {f.label}
                 </Button>
@@ -146,7 +155,7 @@ export default async function ProgramsPage({
                             : "PAGO ÚNICO"}
                       </div>
                     </div>
-                    <Link href={`/programas/${p.slug}`}>
+                    <Link href={tp(`/programas/${p.slug}`)}>
                       <Button>Ver detalles →</Button>
                     </Link>
                   </div>

@@ -1,9 +1,14 @@
+import { notFound } from "next/navigation";
+import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
+import { DomainSection } from "@/components/admin/DomainSection";
 import { PaymentMethodsCard } from "./PaymentMethodsCard";
+import { MiSitioCard } from "./MiSitioCard";
 
 export const dynamic = "force-dynamic";
 
@@ -30,10 +35,17 @@ function detectStripeMode(opts: {
 }
 
 export default async function AjustesPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const tp = ctx.tp;
   const user = (await getCurrentUser())!;
 
-  // Single source of truth para el indicador: combinar .env + DB.
-  const [pay] = await db.select().from(schema.paymentSettings).limit(1);
+  // Single source of truth para el indicador: combinar .env + DB (del tenant).
+  const [pay] = await db
+    .select()
+    .from(schema.paymentSettings)
+    .where(eq(schema.paymentSettings.tenantId, ctx.tenant.id))
+    .limit(1);
 
   const env = {
     smtpHost: process.env.SMTP_HOST || "",
@@ -45,7 +57,8 @@ export default async function AjustesPage() {
       dbKey: pay?.stripeSecretKey ?? null,
       dbMode: pay?.stripeMode ?? null,
       dbEnabled: !!pay?.enableStripe,
-      envKey: process.env.STRIPE_SECRET_KEY,
+      // El fallback a la llave env (plataforma) solo aplica al tenant de la casa.
+      envKey: ctx.tenant.slug === "cristianhdz" ? process.env.STRIPE_SECRET_KEY : undefined,
     }),
     databaseHost: (() => {
       try {
@@ -64,6 +77,31 @@ export default async function AjustesPage() {
       subtitle="Configuración global del sitio"
     >
       <div style={{ display: "grid", gap: 20, gridTemplateColumns: "1fr", maxWidth: 920 }}>
+        {/* Mi sitio (branding del tenant) */}
+        <Card style={{ padding: 24 }}>
+          <Eyebrow>Mi sitio</Eyebrow>
+          <h2 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
+            Marca y apariencia
+          </h2>
+          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18 }}>
+            Nombre, colores, logo, favicon, footer y redes sociales de tu plataforma. Los cambios
+            aplican en todo el sitio público.
+          </p>
+          <MiSitioCard />
+        </Card>
+
+        {/* Dominio personalizado */}
+        <Card style={{ padding: 24 }}>
+          <Eyebrow>Dominio</Eyebrow>
+          <h2 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
+            Dominio personalizado
+          </h2>
+          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18 }}>
+            Conecta tu propio dominio (ej. tumarca.com) para que tu plataforma viva ahí.
+          </p>
+          <DomainSection />
+        </Card>
+
         {/* Hero del Home */}
         <Card style={{ padding: 24 }}>
           <Eyebrow>Página de Inicio</Eyebrow>
@@ -76,7 +114,7 @@ export default async function AjustesPage() {
             párrafos de bio.
           </p>
           <a
-            href="/admin/ajustes/hero"
+            href={tp("/admin/ajustes/hero")}
             className="btn btn-primary"
             style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}
           >
@@ -107,12 +145,12 @@ export default async function AjustesPage() {
           </p>
           <div className="col" style={{ gap: 14 }}>
             <Field label="Nombre">
-              <input disabled value="CH · Negocios con IA" style={inputStyle()} />
+              <input disabled value={ctx.branding.siteName} style={inputStyle()} />
             </Field>
             <Field label="Descripción">
               <textarea
                 disabled
-                value="Comunidad de fundadores construyendo negocios con IA junto a Cristian Hernández."
+                value={`Comunidad de ${ctx.branding.siteName}.`}
                 style={{ ...inputStyle(), minHeight: 64 }}
               />
             </Field>
@@ -122,7 +160,9 @@ export default async function AjustesPage() {
           </div>
         </Card>
 
-        {/* Email */}
+        {/* Email — SOLO el tenant de la casa ve la config de infraestructura
+            de la plataforma (SMTP/DB/Stripe env). Otros tenants no. */}
+        {ctx.tenant.slug === "cristianhdz" && (
         <Card style={{ padding: 24 }}>
           <Eyebrow>Email</Eyebrow>
           <h2 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
@@ -166,6 +206,7 @@ export default async function AjustesPage() {
             </Field>
           </div>
         </Card>
+        )}
 
         {/* Datos */}
         <Card style={{ padding: 24 }}>
@@ -178,21 +219,21 @@ export default async function AjustesPage() {
           </p>
           <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
             <a
-              href="/api/admin/export?type=orders"
+              href={tp("/api/admin/export?type=orders")}
               className="btn btn-primary"
               style={{ padding: "10px 16px", fontSize: 13, textDecoration: "none" }}
             >
               ⬇ Exportar pedidos (CSV)
             </a>
             <a
-              href="/api/admin/export?type=users"
+              href={tp("/api/admin/export?type=users")}
               className="btn btn-ghost"
               style={{ padding: "10px 16px", fontSize: 13, textDecoration: "none" }}
             >
               ⬇ Exportar usuarios
             </a>
             <a
-              href="/api/admin/export?type=leaderboard"
+              href={tp("/api/admin/export?type=leaderboard")}
               className="btn btn-ghost"
               style={{ padding: "10px 16px", fontSize: 13, textDecoration: "none" }}
             >

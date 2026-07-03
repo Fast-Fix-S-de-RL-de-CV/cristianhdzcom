@@ -1,6 +1,8 @@
 import { asc, desc, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { ComunidadManager } from "./ComunidadManager";
@@ -8,6 +10,8 @@ import { ComunidadManager } from "./ComunidadManager";
 export const dynamic = "force-dynamic";
 
 export default async function ComunidadAdminPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = (await getCurrentUser())!;
 
   const posts = await db
@@ -24,6 +28,7 @@ export default async function ComunidadAdminPage() {
     })
     .from(schema.posts)
     .leftJoin(schema.users, eq(schema.users.id, schema.posts.authorId))
+    .where(eq(schema.posts.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.posts.createdAt))
     .limit(200);
 
@@ -37,6 +42,7 @@ export default async function ComunidadAdminPage() {
     })
     .from(schema.comments)
     .leftJoin(schema.users, eq(schema.users.id, schema.comments.authorId))
+    .where(eq(schema.comments.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.comments.createdAt))
     .limit(200);
 
@@ -50,6 +56,7 @@ export default async function ComunidadAdminPage() {
       sortOrder: schema.categories.sortOrder,
     })
     .from(schema.categories)
+    .where(eq(schema.categories.tenantId, ctx.tenant.id))
     .orderBy(asc(schema.categories.sortOrder));
 
   return (

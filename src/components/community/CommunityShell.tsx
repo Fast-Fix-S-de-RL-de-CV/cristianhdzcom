@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type CommunityStats = {
   members: number;
@@ -31,12 +32,23 @@ export function CommunityShell({
   children: React.ReactNode;
   admin?: boolean;
 }) {
-  const pathname = usePathname() || "/comunidad";
+  const { tp, basePath } = useTenant();
+  const rawPathname = usePathname() || "/comunidad";
+  // Quitar el prefijo del tenant (mimarca.app/{slug}) para comparar rutas internas.
+  const pathname =
+    basePath && (rawPathname === basePath || rawPathname.startsWith(basePath + "/"))
+      ? rawPathname.slice(basePath.length) || "/"
+      : rawPathname;
   const [stats, setStats] = useState<CommunityStats | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [origin, setOrigin] = useState("");
 
-  const inviteUrl = "https://cristianhdz.com/registro";
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
+  const inviteUrl = `${origin}${tp("/registro")}`;
 
   async function copyInvite() {
     try {
@@ -52,7 +64,7 @@ export function CommunityShell({
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/community/stats")
+    fetch(tp("/api/community/stats"))
       .then((r) => (r.ok ? r.json() : null))
       .then((data: CommunityStats | null) => {
         if (!cancelled && data) setStats(data);
@@ -61,6 +73,7 @@ export function CommunityShell({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const membersLabel =
@@ -131,10 +144,10 @@ export function CommunityShell({
               </>
             ) : (
               <>
-                <Link href="/login">
+                <Link href={tp("/login")}>
                   <Button variant="ghost">Iniciar sesión</Button>
                 </Link>
-                <Link href="/registro">
+                <Link href={tp("/registro")}>
                   <Button>Entrar gratis →</Button>
                 </Link>
               </>
@@ -148,7 +161,7 @@ export function CommunityShell({
             return (
               <Link
                 key={href}
-                href={href}
+                href={tp(href)}
                 style={{
                   padding: "12px 18px",
                   fontSize: 14,
@@ -165,7 +178,7 @@ export function CommunityShell({
           })}
           {(user?.role === "admin" || user?.role === "superadmin") && (
             <Link
-              href="/admin"
+              href={tp("/admin")}
               style={{
                 padding: "12px 18px",
                 fontSize: 14,

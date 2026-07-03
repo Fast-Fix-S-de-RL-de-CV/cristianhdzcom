@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { asc, gte, and, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -27,13 +28,15 @@ const MONTHS = [
 ];
 
 export default async function CalendarioPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/comunidad/calendario");
+  if (!user) redirect(ctx.tp("/login?next=/comunidad/calendario"));
 
   const events = await db
     .select()
     .from(schema.events)
-    .where(gte(schema.events.startsAt, new Date()))
+    .where(and(gte(schema.events.startsAt, new Date()), eq(schema.events.tenantId, ctx.tenant.id)))
     .orderBy(asc(schema.events.startsAt))
     .limit(50);
 

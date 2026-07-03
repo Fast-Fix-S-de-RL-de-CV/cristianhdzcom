@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { CursoEditorClient } from "./CursoEditorClient";
@@ -15,6 +16,8 @@ export default async function CursoEditorPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = (await getCurrentUser())!;
   const { id } = await params;
   const { tab } = await searchParams;
@@ -22,14 +25,14 @@ export default async function CursoEditorPage({
   const [program] = await db
     .select()
     .from(schema.programs)
-    .where(eq(schema.programs.id, id))
+    .where(and(eq(schema.programs.id, id), eq(schema.programs.tenantId, ctx.tenant.id)))
     .limit(1);
   if (!program) notFound();
 
   const modulesRows = await db
     .select()
     .from(schema.modules)
-    .where(eq(schema.modules.programId, id))
+    .where(and(eq(schema.modules.programId, id), eq(schema.modules.tenantId, ctx.tenant.id)))
     .orderBy(asc(schema.modules.sortOrder), asc(schema.modules.code));
 
   const moduleIds = modulesRows.map((m) => m.id);
@@ -39,13 +42,18 @@ export default async function CursoEditorPage({
       : await db
           .select()
           .from(schema.lessons)
-          .where(inArray(schema.lessons.moduleId, moduleIds))
+          .where(
+            and(
+              inArray(schema.lessons.moduleId, moduleIds),
+              eq(schema.lessons.tenantId, ctx.tenant.id),
+            ),
+          )
           .orderBy(asc(schema.lessons.sortOrder), asc(schema.lessons.code));
 
   const cohortsRows = await db
     .select()
     .from(schema.cohorts)
-    .where(eq(schema.cohorts.programId, id))
+    .where(and(eq(schema.cohorts.programId, id), eq(schema.cohorts.tenantId, ctx.tenant.id)))
     .orderBy(desc(schema.cohorts.startsOn));
 
   const enrollmentsRows = await db
@@ -64,7 +72,12 @@ export default async function CursoEditorPage({
     .from(schema.enrollments)
     .innerJoin(schema.users, eq(schema.users.id, schema.enrollments.userId))
     .leftJoin(schema.cohorts, eq(schema.cohorts.id, schema.enrollments.cohortId))
-    .where(eq(schema.enrollments.programId, id))
+    .where(
+      and(
+        eq(schema.enrollments.programId, id),
+        eq(schema.enrollments.tenantId, ctx.tenant.id),
+      ),
+    )
     .orderBy(desc(schema.enrollments.enrolledAt));
 
   // Count lessons per module

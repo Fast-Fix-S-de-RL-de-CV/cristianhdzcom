@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { and, eq, or } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,8 @@ export const dynamic = "force-dynamic";
 const body = z.object({ userId: z.string().uuid() });
 
 export async function POST(req: Request) {
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
@@ -29,8 +32,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "cannot_message_self" }, { status: 400 });
   }
 
-  // Confirm peer exists
-  const [peer] = await db.select().from(schema.users).where(eq(schema.users.id, parsed.data.userId)).limit(1);
+  // Confirm peer exists (y pertenece al MISMO tenant — nunca DMs cross-tenant)
+  const [peer] = await db
+    .select()
+    .from(schema.users)
+    .where(and(eq(schema.users.id, parsed.data.userId), eq(schema.users.tenantId, ctx.tenant.id)))
+    .limit(1);
   if (!peer) return NextResponse.json({ error: "user_not_found" }, { status: 404 });
 
   // Normalize pair order

@@ -1,6 +1,8 @@
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { BackfillTiersButton } from "./BackfillTiersButton";
@@ -8,12 +10,15 @@ import { BackfillTiersButton } from "./BackfillTiersButton";
 export const dynamic = "force-dynamic";
 
 export default async function MembresiasAdminPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = (await getCurrentUser())!;
 
   // 1. Stats por plan
   const plans = await db
     .select()
     .from(schema.membershipPlans)
+    .where(eq(schema.membershipPlans.tenantId, ctx.tenant.id))
     .orderBy(schema.membershipPlans.sortOrder);
 
   // 2. MRR calculation: suma de price_usd de membresías activas (monthly normalized)
@@ -28,7 +33,12 @@ export default async function MembresiasAdminPage() {
       activeCount: sql<number>`count(*)::int`,
     })
     .from(schema.memberships)
-    .where(eq(schema.memberships.status, "active"));
+    .where(
+      and(
+        eq(schema.memberships.status, "active"),
+        eq(schema.memberships.tenantId, ctx.tenant.id),
+      ),
+    );
 
   const mrrUsd = Math.round(Number(mrrRow.mrrCents) / 100);
   const arrUsd = mrrUsd * 12;
@@ -50,6 +60,7 @@ export default async function MembresiasAdminPage() {
     })
     .from(schema.memberships)
     .innerJoin(schema.users, eq(schema.users.id, schema.memberships.userId))
+    .where(eq(schema.memberships.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.memberships.startedAt))
     .limit(50);
 

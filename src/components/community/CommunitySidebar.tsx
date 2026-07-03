@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { initials } from "@/lib/utils";
 import Link from "next/link";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 type SidebarStats = {
   members: number;
@@ -50,6 +51,7 @@ export function CommunitySidebar({
   currentUser?: { xp: number; level: number } | null;
   events: { id: string; title: string; host: string | null; startsAt: string; hot?: boolean | null }[];
 }) {
+  const { tp } = useTenant();
   const [stats, setStats] = useState<SidebarStats | null>(null);
   const [range, setRange] = useState<Range>("7d");
   const [board, setBoard] = useState<LeaderboardEntry[]>(leaderboard);
@@ -57,7 +59,7 @@ export function CommunitySidebar({
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/community/stats")
+    fetch(tp("/api/community/stats"))
       .then((r) => (r.ok ? r.json() : null))
       .then((data: SidebarStats | null) => {
         if (!cancelled && data) setStats(data);
@@ -66,12 +68,13 @@ export function CommunitySidebar({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     setBoardLoading(true);
-    fetch(`/api/leaderboard?range=${range}&limit=7`)
+    fetch(tp(`/api/leaderboard?range=${range}&limit=7`))
       .then((r) => (r.ok ? r.json() : null))
       .then((data: LeaderboardEntry[] | null) => {
         if (!cancelled && Array.isArray(data)) setBoard(data);
@@ -83,7 +86,7 @@ export function CommunitySidebar({
     return () => {
       cancelled = true;
     };
-  }, [range]);
+  }, [range, tp]);
 
   const membersK =
     stats?.members != null
@@ -184,7 +187,7 @@ export function CommunitySidebar({
             </div>
           </div>
           {!currentUserId && (
-            <Link href="/registro">
+            <Link href={tp("/registro")}>
               <Button style={{ width: "100%", justifyContent: "center", marginTop: 16 }}>Entrar gratis →</Button>
             </Link>
           )}
@@ -198,7 +201,7 @@ export function CommunitySidebar({
             Ranking
           </h4>
           <Link
-            href="/comunidad/ranking"
+            href={tp("/comunidad/ranking")}
             className="mono"
             style={{ fontSize: 10, color: "var(--accent)", textDecoration: "none" }}
           >
@@ -392,7 +395,7 @@ export function CommunitySidebar({
         <h4 className="serif" style={{ fontSize: 20, marginTop: 12, color: "var(--ink)", lineHeight: 1.2 }}>
           Acceso completo a la academia + mentorías.
         </h4>
-        <Link href="/programas">
+        <Link href={tp("/programas")}>
           <Button style={{ width: "100%", justifyContent: "center", marginTop: 14 }}>Ver programas →</Button>
         </Link>
       </Card>

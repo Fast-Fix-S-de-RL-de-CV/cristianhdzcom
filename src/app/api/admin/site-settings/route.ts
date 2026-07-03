@@ -3,14 +3,15 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 /**
  * PUT /api/admin/site-settings
  *
- * Update parcial de la fila singleton (id=1) con los campos del hero.
- * Si la fila no existe la crea (UPSERT atómico vía INSERT … ON CONFLICT).
+ * Update parcial de la fila DEL TENANT (UNIQUE(tenant_id) — una por tenant)
+ * con los campos del hero. Si la fila del tenant no existe, la crea.
  */
 const Body = z.object({
   heroChip1Label: z.string().max(80).nullable().optional(),
@@ -50,6 +51,8 @@ export async function PUT(req: Request) {
   } catch {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const ctx = await getTenantCtx();
+  if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   let data;
   try {
     data = Body.parse(await req.json());
@@ -60,21 +63,25 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
 
-  // ¿Existe la fila?
-  const [existing] = await db.select().from(schema.siteSettings).where(eq(schema.siteSettings.id, 1)).limit(1);
+  // ¿Existe la fila del tenant?
+  const [existing] = await db
+    .select()
+    .from(schema.siteSettings)
+    .where(eq(schema.siteSettings.tenantId, ctx.tenant.id))
+    .limit(1);
   if (existing) {
     const [row] = await db
       .update(schema.siteSettings)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(schema.siteSettings.id, 1))
+      .where(eq(schema.siteSettings.tenantId, ctx.tenant.id))
       .returning();
     return NextResponse.json({ settings: row });
   }
 
-  // Crear singleton con id=1
+  // Crear la fila del tenant al primer guardado
   const [row] = await db
     .insert(schema.siteSettings)
-    .values({ id: 1, ...data })
+    .values({ tenantId: ctx.tenant.id, ...data })
     .returning();
   return NextResponse.json({ settings: row });
 }

@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { asc, gte, and, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AlumnoShell } from "@/components/alumno/AlumnoShell";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -34,13 +35,16 @@ function formatCountdown(target: Date, now: Date): string {
 }
 
 export default async function TalleresPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/plataforma/talleres");
+  if (!user) redirect(tp("/login?next=/plataforma/talleres"));
 
   const allUpcoming = await db
     .select()
     .from(schema.events)
-    .where(gte(schema.events.startsAt, new Date()))
+    .where(and(eq(schema.events.tenantId, ctx.tenant.id), gte(schema.events.startsAt, new Date())))
     .orderBy(asc(schema.events.startsAt))
     .limit(50);
 

@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { and, asc, eq, gt, ne, or, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Button } from "@/components/ui/Button";
@@ -12,7 +14,6 @@ import { TallerBanner } from "@/components/marketing/TallerBanner";
 import { ProgramsCarousel } from "@/components/marketing/ProgramsCarousel";
 import { ServicesCarousel } from "@/components/marketing/ServicesCarousel";
 import { Hero3D } from "@/components/marketing/Hero3D";
-import { getSiteSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -50,8 +51,11 @@ const PATHS = [
 ];
 
 export default async function HomePage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
   const now = new Date();
-  const [user, featured, talleres, services, hero] = await Promise.all([
+  const [user, featured, talleres, services, heroRows] = await Promise.all([
     getCurrentUser(),
     // Programas y certificaciones (excluye talleres — esos viven en su propia
     // sección de banners arriba). Trae varios para alimentar el carrusel.
@@ -60,6 +64,7 @@ export default async function HomePage() {
       .from(schema.programs)
       .where(
         and(
+          eq(schema.programs.tenantId, ctx.tenant.id),
           eq(schema.programs.isActive, true),
           ne(schema.programs.type, "taller"),
         ),
@@ -71,9 +76,12 @@ export default async function HomePage() {
       .select()
       .from(schema.events)
       .where(
-        or(
-          eq(schema.events.isEvergreen, true),
-          gt(schema.events.startsAt, now),
+        and(
+          eq(schema.events.tenantId, ctx.tenant.id),
+          or(
+            eq(schema.events.isEvergreen, true),
+            gt(schema.events.startsAt, now),
+          ),
         ),
       )
       .orderBy(
@@ -85,12 +93,22 @@ export default async function HomePage() {
     db
       .select()
       .from(schema.services)
-      .where(eq(schema.services.isActive, true))
+      .where(
+        and(
+          eq(schema.services.tenantId, ctx.tenant.id),
+          eq(schema.services.isActive, true),
+        ),
+      )
       .orderBy(asc(schema.services.sortOrder))
       .limit(12),
-    // Site settings singleton — controla todo el hero (título, bio, foto, etc).
-    getSiteSettings(),
+    // Site settings del tenant — controla todo el hero (título, bio, foto, etc).
+    db
+      .select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.tenantId, ctx.tenant.id))
+      .limit(1),
   ]);
+  const hero = heroRows[0] ?? null;
 
   // Próximo taller en vivo con fecha real (no evergreen). Si no hay, el CTA
   // final muestra un texto genérico en vez de una fecha inventada.
@@ -113,7 +131,7 @@ export default async function HomePage() {
       {/* HERO — Visual 3D "Modern Visual" (auto-rota; nombre y titulo van en 3D) */}
       <section
         className="home-hero-3d"
-        aria-label="Cristian Hernandez — Inicio"
+        aria-label={`${ctx.branding.siteName} — Inicio`}
         style={{
           position: "relative",
           height: "100svh",
@@ -137,7 +155,9 @@ export default async function HomePage() {
             border: 0,
           }}
         >
-          {hero.heroTitle} {hero.heroSubtitleAccent} {hero.heroSubtitleRest}
+          {hero
+            ? `${hero.heroTitle} ${hero.heroSubtitleAccent ?? ""} ${hero.heroSubtitleRest ?? ""}`.trim()
+            : ctx.branding.siteName}
         </h1>
 
         {/* Visual 3D interactivo (Three.js, in-page): arrastra para rotar en
@@ -168,7 +188,7 @@ export default async function HomePage() {
             const accentColor = c.color === "accent" ? "var(--accent)" : c.color === "warm" ? "var(--warm)" : "var(--ink)";
             const decoBg = c.color === "accent" ? "var(--accent-soft)" : c.color === "warm" ? "var(--warm-soft)" : "var(--bg-2)";
             return (
-              <Link key={i} href={c.href} style={{ display: "block" }}>
+              <Link key={i} href={tp(c.href)} style={{ display: "block" }}>
                 <Card
                   hover
                   style={{
@@ -243,7 +263,7 @@ export default async function HomePage() {
                 en tiempo real con casos reales.
               </p>
             </div>
-            <Link href="/programas?filtro=taller">
+            <Link href={tp("/programas?filtro=taller")}>
               <Button variant="ghost">Ver todos los talleres →</Button>
             </Link>
           </div>
@@ -284,7 +304,7 @@ export default async function HomePage() {
                 sin salir de aquí.
               </p>
             </div>
-            <Link href="/programas">
+            <Link href={tp("/programas")}>
               <Button variant="ghost">Ver todos los programas →</Button>
             </Link>
           </div>
@@ -352,7 +372,7 @@ export default async function HomePage() {
         />
 
         <div style={{ marginTop: 32, textAlign: "center" }}>
-          <Link href="/empresas">
+          <Link href={tp("/empresas")}>
             <Button variant="ghost">Ver todas mis empresas →</Button>
           </Link>
         </div>
@@ -429,12 +449,12 @@ export default async function HomePage() {
               </p>
             </div>
             <div className="col">
-              <Link href={user ? "/plataforma" : "/registro"}>
+              <Link href={tp(user ? "/plataforma" : "/registro")}>
                 <Button size="lg" style={{ width: "100%", justifyContent: "center" }}>
                   {user ? "Ir a mi plataforma →" : "Reservar taller gratis →"}
                 </Button>
               </Link>
-              <Link href="/programas">
+              <Link href={tp("/programas")}>
                 <Button size="lg" variant="ghost" style={{ width: "100%", justifyContent: "center" }}>
                   Ver programas pagos
                 </Button>

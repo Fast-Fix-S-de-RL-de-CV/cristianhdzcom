@@ -1,6 +1,8 @@
-import { asc, sql } from "drizzle-orm";
+import { notFound } from "next/navigation";
+import { asc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { CursosManager } from "./CursosManager";
@@ -8,6 +10,8 @@ import { CursosManager } from "./CursosManager";
 export const dynamic = "force-dynamic";
 
 export default async function CursosPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = (await getCurrentUser())!;
 
   const rows = await db
@@ -37,6 +41,7 @@ export default async function CursosPage() {
       enrollmentsCount: sql<number>`(SELECT COUNT(*)::int FROM ${schema.enrollments} WHERE program_id = ${schema.programs.id})`,
     })
     .from(schema.programs)
+    .where(eq(schema.programs.tenantId, ctx.tenant.id))
     .orderBy(asc(schema.programs.sortOrder));
 
   type Accent = "accent" | "warm" | "green" | "navy" | "gold";

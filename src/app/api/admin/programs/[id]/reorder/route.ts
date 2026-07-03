@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id: programId } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   let data;
   try {
     data = body.parse(await req.json());
@@ -65,7 +68,13 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const ownedModules = await db
     .select({ id: schema.modules.id })
     .from(schema.modules)
-    .where(and(eq(schema.modules.programId, programId), inArray(schema.modules.id, moduleIds)));
+    .where(
+      and(
+        eq(schema.modules.programId, programId),
+        eq(schema.modules.tenantId, tctx.tenant.id),
+        inArray(schema.modules.id, moduleIds),
+      ),
+    );
   const ownedSet = new Set(ownedModules.map((m) => m.id));
   for (const m of data.modules) {
     if (!ownedSet.has(m.id)) {
@@ -82,7 +91,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const ownedLessons = await db
       .select({ id: schema.lessons.id, moduleId: schema.lessons.moduleId })
       .from(schema.lessons)
-      .where(inArray(schema.lessons.id, allLessonIds));
+      .where(and(eq(schema.lessons.tenantId, tctx.tenant.id), inArray(schema.lessons.id, allLessonIds)));
     const ownedLessonModules = new Set(ownedLessons.map((l) => l.moduleId));
     // Every lesson's current module must be one of THIS program's modules.
     // We pull program ids of those module ids in one go.
@@ -93,6 +102,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         .where(
           and(
             eq(schema.modules.programId, programId),
+            eq(schema.modules.tenantId, tctx.tenant.id),
             inArray(schema.modules.id, Array.from(ownedLessonModules)),
           ),
         );
@@ -113,13 +123,13 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     await db
       .update(schema.modules)
       .set({ sortOrder: m.sortOrder })
-      .where(eq(schema.modules.id, m.id));
+      .where(and(eq(schema.modules.id, m.id), eq(schema.modules.tenantId, tctx.tenant.id)));
     for (let i = 0; i < m.lessonIds.length; i++) {
       const lid = m.lessonIds[i]!;
       await db
         .update(schema.lessons)
         .set({ moduleId: m.id, sortOrder: i })
-        .where(eq(schema.lessons.id, lid));
+        .where(and(eq(schema.lessons.id, lid), eq(schema.lessons.tenantId, tctx.tenant.id)));
     }
   }
 

@@ -1,11 +1,15 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db";
 import { Nav } from "@/components/marketing/Nav";
 import { AcercaGallery, type GallerySlide } from "@/components/marketing/AcercaGallery";
 import { Footer } from "@/components/marketing/Footer";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { getSiteSettings, renderMarkdownLight } from "@/lib/site-settings";
+import { renderMarkdownLight } from "@/lib/site-settings";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +29,17 @@ export const dynamic = "force-dynamic";
  *   5. CTA hacia empresas / programas
  */
 export default async function AcercaPage() {
-  const hero = await getSiteSettings();
-  const fullName = hero.heroTitle.replace(/\.$/, "");
-  const role = `${hero.heroSubtitleAccent ?? ""} ${hero.heroSubtitleRest ?? ""}`.trim();
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
+  const { tp } = ctx;
+  const [hero] = await db
+    .select()
+    .from(schema.siteSettings)
+    .where(eq(schema.siteSettings.tenantId, ctx.tenant.id))
+    .limit(1);
+  const fullName = (hero?.heroTitle ?? ctx.branding.siteName).replace(/\.$/, "");
+  const role = `${hero?.heroSubtitleAccent ?? ""} ${hero?.heroSubtitleRest ?? ""}`.trim();
+  const heroStats = hero?.heroStats ?? [];
 
   // Slides del héroe (galería finita). Cada uno: título + subtítulo + descripción
   // + botón que avanza al siguiente. El último entrega el scroll a la biografía.
@@ -76,12 +88,12 @@ export default async function AcercaPage() {
             </h2>
           </div>
           <div className="col" style={{ gap: 24, maxWidth: 680 }}>
-            {hero.heroBio1 && (
+            {hero?.heroBio1 && (
               <p style={{ fontSize: 20, color: "var(--ink)", lineHeight: 1.6 }}>
                 {renderMarkdownLight(hero.heroBio1)}
               </p>
             )}
-            {hero.heroBio2 && (
+            {hero?.heroBio2 && (
               <p style={{ fontSize: 18, color: "var(--ink-2)", lineHeight: 1.65 }}>
                 {renderMarkdownLight(hero.heroBio2)}
               </p>
@@ -93,7 +105,7 @@ export default async function AcercaPage() {
       <div className="rule" />
 
       {/* ───────── TRAYECTORIA (stats reales) ───────── */}
-      {hero.heroStats.length > 0 && (
+      {heroStats.length > 0 && (
         <section className="sec">
           <Eyebrow>Trayectoria</Eyebrow>
           <h2 style={{ fontSize: "clamp(32px, 4vw, 56px)", marginTop: 14, marginBottom: 48 }}>
@@ -103,11 +115,11 @@ export default async function AcercaPage() {
             className="acerca-stats-grid"
             style={{
               display: "grid",
-              gridTemplateColumns: `repeat(${Math.min(hero.heroStats.length, 4)}, 1fr)`,
+              gridTemplateColumns: `repeat(${Math.min(heroStats.length, 4)}, 1fr)`,
               gap: 24,
             }}
           >
-            {hero.heroStats.map((s, i) => (
+            {heroStats.map((s, i) => (
               <div
                 key={i}
                 style={{
@@ -133,14 +145,14 @@ export default async function AcercaPage() {
       )}
 
       {/* ───────── MANIFIESTO / QUOTE ───────── */}
-      {hero.heroQuoteText && (
+      {hero?.heroQuoteText && (
         <section className="sec" style={{ paddingTop: 16 }}>
           <Card style={{ padding: "clamp(40px, 6vw, 80px)", background: "var(--bg-2)", borderLeft: "4px solid var(--accent)" }}>
             <Eyebrow style={{ marginBottom: 24 }}>En lo que creo</Eyebrow>
             <p className="serif" style={{ fontSize: "clamp(28px, 4vw, 48px)", lineHeight: 1.25, color: "var(--ink)", maxWidth: 900 }}>
               &ldquo;{hero.heroQuoteText}&rdquo;
             </p>
-            {hero.heroQuoteAttrib && (
+            {hero?.heroQuoteAttrib && (
               <div className="mono" style={{ fontSize: 12, color: "var(--muted)", marginTop: 24, letterSpacing: "0.1em" }}>
                 {hero.heroQuoteAttrib}
               </div>
@@ -161,7 +173,7 @@ export default async function AcercaPage() {
               SaaS en producción, agencia de software a medida y consultoría. Casos reales que puedes
               usar en tu negocio.
             </p>
-            <Link href="/empresas">
+            <Link href={tp("/empresas")}>
               <Button>Ver empresas →</Button>
             </Link>
           </Card>
@@ -174,7 +186,7 @@ export default async function AcercaPage() {
               Te enseño a hacer negocios y a programar con IA — desde cero hasta entregar productos
               reales. Empieza gratis.
             </p>
-            <Link href="/programas">
+            <Link href={tp("/programas")}>
               <Button variant="ghost">Ver programas →</Button>
             </Link>
           </Card>

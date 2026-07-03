@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 const LEARN_LINKS = [
   { href: "/plataforma", icon: "◎", label: "Mi sendero" },
@@ -17,7 +18,13 @@ const COMMUNITY_LINKS = [
 ];
 
 export function PlataformaSidebar() {
-  const pathname = usePathname() || "/plataforma";
+  const { tp, basePath, siteName, logoUrl } = useTenant();
+  const rawPathname = usePathname() || "/plataforma";
+  // Quitar el prefijo del tenant (mimarca.app/{slug}) para comparar rutas internas.
+  const pathname =
+    basePath && (rawPathname === basePath || rawPathname.startsWith(basePath + "/"))
+      ? rawPathname.slice(basePath.length) || "/"
+      : rawPathname;
 
   const isActive = (href: string) => {
     if (href === "/plataforma") return pathname === "/plataforma";
@@ -27,8 +34,12 @@ export function PlataformaSidebar() {
 
   return (
     <aside className="plat-side">
-      <Link href="/" className="ch-logo" aria-label="Cristian Hernández — Inicio">
-        <img src="/logo.png" alt="Cristian Hernández" style={{ maxWidth: 180 }} />
+      <Link href={tp("/")} className="ch-logo" aria-label={`${siteName} — Inicio`}>
+        {logoUrl ? (
+          <img src={logoUrl} alt={siteName} style={{ maxWidth: 180 }} />
+        ) : (
+          <span>{siteName}</span>
+        )}
       </Link>
       <div className="col" style={{ gap: 4 }}>
         <div className="eyebrow" style={{ padding: "0 12px 8px" }}>
@@ -37,7 +48,7 @@ export function PlataformaSidebar() {
         {LEARN_LINKS.map((l) => (
           <Link
             key={l.href}
-            href={l.href}
+            href={tp(l.href)}
             className={`nav-item ${isActive(l.href) ? "active" : ""}`}
           >
             <span>{l.icon}</span> {l.label}
@@ -51,7 +62,7 @@ export function PlataformaSidebar() {
         {COMMUNITY_LINKS.map((l) => (
           <Link
             key={l.href}
-            href={l.href}
+            href={tp(l.href)}
             className={`nav-item ${isActive(l.href) ? "active" : ""}`}
           >
             <span>{l.icon}</span> {l.label}
@@ -60,7 +71,7 @@ export function PlataformaSidebar() {
       </div>
       <div className="col" style={{ gap: 4, marginTop: "auto" }}>
         <Link
-          href="/cuenta"
+          href={tp("/cuenta")}
           className={`nav-item ${isActive("/cuenta") ? "active" : ""}`}
         >
           <span>⌂</span> Mi cuenta
@@ -72,7 +83,7 @@ export function PlataformaSidebar() {
           <div className="serif" style={{ fontSize: 22, marginTop: 4 }}>
             04 Mar
           </div>
-          <Link href="/programas">
+          <Link href={tp("/programas")}>
             <button
               className="btn btn-primary"
               style={{

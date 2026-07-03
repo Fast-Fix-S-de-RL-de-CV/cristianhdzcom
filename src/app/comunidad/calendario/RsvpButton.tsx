@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 export function RsvpButton({
   eventId,
@@ -9,6 +10,7 @@ export function RsvpButton({
   eventId: string;
   initialAttending?: boolean;
 }) {
+  const { tp } = useTenant();
   const [attending, setAttending] = useState(initialAttending);
   const [pending, setPending] = useState(false);
 
@@ -17,7 +19,7 @@ export function RsvpButton({
     if (pending) return;
     setPending(true);
     try {
-      const res = await fetch(`/api/events/${eventId}/rsvp`, {
+      const res = await fetch(tp(`/api/events/${eventId}/rsvp`), {
         method: "POST",
         credentials: "include",
       });

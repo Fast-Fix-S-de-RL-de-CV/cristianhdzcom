@@ -1,6 +1,8 @@
 import { desc, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { PagosTable } from "./PagosTable";
@@ -8,6 +10,8 @@ import { PagosTable } from "./PagosTable";
 export const dynamic = "force-dynamic";
 
 export default async function PagosPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = (await getCurrentUser())!;
 
   const rows = await db
@@ -24,6 +28,7 @@ export default async function PagosPage() {
     })
     .from(schema.orders)
     .leftJoin(schema.programs, eq(schema.programs.id, schema.orders.programId))
+    .where(eq(schema.orders.tenantId, ctx.tenant.id))
     .orderBy(desc(schema.orders.createdAt));
 
   const data = rows.map((r) => ({

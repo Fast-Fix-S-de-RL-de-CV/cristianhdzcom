@@ -1,6 +1,8 @@
-import { desc, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
+import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { SuscripcionesTable } from "./SuscripcionesTable";
@@ -8,6 +10,8 @@ import { SuscripcionesTable } from "./SuscripcionesTable";
 export const dynamic = "force-dynamic";
 
 export default async function SuscripcionesPage() {
+  const ctx = await getTenantCtx();
+  if (!ctx) notFound();
   const user = (await getCurrentUser())!;
 
   const rows = await db
@@ -24,7 +28,12 @@ export default async function SuscripcionesPage() {
     })
     .from(schema.orders)
     .leftJoin(schema.programs, eq(schema.programs.id, schema.orders.programId))
-    .where(eq(schema.orders.status, "succeeded"))
+    .where(
+      and(
+        eq(schema.orders.status, "succeeded"),
+        eq(schema.orders.tenantId, ctx.tenant.id),
+      ),
+    )
     .orderBy(desc(schema.orders.paidAt));
 
   const data = rows.map((r) => ({

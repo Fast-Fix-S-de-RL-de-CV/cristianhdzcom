@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/auth";
+import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +17,11 @@ const body = z.object({
   sortOrder: z.number().int().optional(),
 });
 
-async function recalcModulesCount(programId: string) {
+async function recalcModulesCount(programId: string, tenantId: string) {
   await db.execute(sql`
     UPDATE ${schema.programs}
     SET modules_count = (SELECT COUNT(*)::int FROM ${schema.modules} WHERE program_id = ${programId})
-    WHERE id = ${programId}
+    WHERE id = ${programId} AND tenant_id = ${tenantId}
   `);
 }
 
@@ -31,12 +32,14 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   try {
     const data = body.parse(await req.json());
     const [row] = await db
       .update(schema.modules)
       .set(data)
-      .where(eq(schema.modules.id, id))
+      .where(and(eq(schema.modules.id, id), eq(schema.modules.tenantId, tctx.tenant.id)))
       .returning();
     if (!row) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.json({ module: row });
@@ -54,13 +57,17 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { id } = await ctx.params;
+  const tctx = await getTenantCtx();
+  if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
   // capture programId before delete so we can recalc
   const [existing] = await db
     .select({ programId: schema.modules.programId })
     .from(schema.modules)
-    .where(eq(schema.modules.id, id))
+    .where(and(eq(schema.modules.id, id), eq(schema.modules.tenantId, tctx.tenant.id)))
     .limit(1);
-  await db.delete(schema.modules).where(eq(schema.modules.id, id));
-  if (existing) await recalcModulesCount(existing.programId);
+  await db
+    .delete(schema.modules)
+    .where(and(eq(schema.modules.id, id), eq(schema.modules.tenantId, tctx.tenant.id)));
+  if (existing) await recalcModulesCount(existing.programId, tctx.tenant.id);
   return NextResponse.json({ ok: true });
 }
