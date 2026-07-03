@@ -45,6 +45,19 @@ export function SaasNav({ active }: { active?: "precios" | "crear" }) {
         >
           Precios
         </Link>
+        <Link
+          href="/login"
+          className="mono"
+          style={{
+            fontSize: 12,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            color: "var(--muted)",
+            fontWeight: 600,
+          }}
+        >
+          Iniciar sesión
+        </Link>
         <Link href="/crear">
           <Button size="sm" shine>
             Crear mi plataforma →
@@ -70,6 +83,9 @@ export function SaasFooter() {
         <div className="row" style={{ gap: 20 }}>
           <Link href="/precios" style={{ color: "var(--muted)", fontSize: 13 }}>
             Precios
+          </Link>
+          <Link href="/login" style={{ color: "var(--muted)", fontSize: 13 }}>
+            Iniciar sesión
           </Link>
           <Link href="/crear" style={{ color: "var(--muted)", fontSize: 13 }}>
             Crear mi plataforma

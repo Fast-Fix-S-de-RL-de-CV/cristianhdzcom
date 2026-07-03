@@ -25,7 +25,7 @@ const ROOT_HOSTS = new Set(
 );
 
 /** Primeros segmentos del host raíz que pertenecen al realm plataforma. */
-const PLATFORM_SEGMENTS = new Set(["saas", "crear", "precios", "superadmin"]);
+const PLATFORM_SEGMENTS = new Set(["saas", "crear", "precios", "superadmin", "login"]);
 
 function hostname(req: NextRequest): string {
   const xfh = req.headers.get("x-tenant-host") || req.headers.get("x-forwarded-host");
