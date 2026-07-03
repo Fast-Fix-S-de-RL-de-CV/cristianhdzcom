@@ -138,7 +138,7 @@ export function ServicesCarousel({ services }: { services: ServiceCard[] }) {
               minWidth: 300,
             }}
           >
-            <ServiceCardItem service={s} staticCover />
+            <ServiceCardItem service={s} />
           </div>
         ))}
       </div>
