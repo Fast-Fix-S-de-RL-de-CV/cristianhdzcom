@@ -16,8 +16,24 @@ import { useEffect, useRef } from "react";
  * Three.js + addons se cargan desde esm.sh en runtime (webpackIgnore) para no
  * pasar por el bundler, igual que el widget original.
  */
-export function Hero3D() {
+/**
+ * Texto grande dentro del 3D. Los defaults son EXACTAMENTE los de cristianhdz;
+ * si no se pasan props, el render es idéntico al actual (garantía de no romper
+ * su home). Otros tenants pasan su propio name/subtitle desde site_settings.
+ */
+export function Hero3D({
+  name = "Cristian Hernández",
+  subtitle = "Arquitecto de Software - Empresario",
+}: {
+  name?: string;
+  subtitle?: string;
+} = {}) {
   const mountRef = useRef<HTMLDivElement>(null);
+  // Refs para leer los valores más recientes dentro del closure async de Three.
+  const nameRef = useRef(name);
+  const subtitleRef = useRef(subtitle);
+  nameRef.current = name;
+  subtitleRef.current = subtitle;
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -273,8 +289,8 @@ export function Hero3D() {
             roughness: 0.3,
             metalness: 0.8,
           });
-          const lineName = mkLine("Cristian Hernández", 0.27, matName);
-          const lineSub = mkLine("Arquitecto de Software - Empresario", 0.14, matSub);
+          const lineName = mkLine(nameRef.current, 0.27, matName);
+          const lineSub = mkLine(subtitleRef.current, 0.14, matSub);
           lineName.position.y = 0.23;
           lineSub.position.y = -0.19;
           const grp = new THREE.Group();

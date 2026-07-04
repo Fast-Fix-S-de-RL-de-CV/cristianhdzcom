@@ -113,13 +113,22 @@ export default async function AjustesPage() {
             landing público. Soporta <code>**negritas**</code> y <code>*cursivas*</code> en los
             párrafos de bio.
           </p>
-          <a
-            href={tp("/admin/ajustes/hero")}
-            className="btn btn-primary"
-            style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}
-          >
-            Editar hero →
-          </a>
+          <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+            <a
+              href={tp("/admin/ajustes/slider")}
+              className="btn btn-primary"
+              style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}
+            >
+              Portada / slider →
+            </a>
+            <a
+              href={tp("/admin/ajustes/hero")}
+              className="btn btn-ghost"
+              style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}
+            >
+              Editar hero (textos) →
+            </a>
+          </div>
         </Card>
 
         {/* Métodos de pago */}

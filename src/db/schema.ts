@@ -1050,8 +1050,54 @@ export const siteSettings = pgTable("site_settings", {
   heroQuoteText: text("hero_quote_text"),
   heroQuoteAttrib: varchar("hero_quote_attrib", { length: 80 }).default("— CRISTIAN H. · 2026"),
 
+  // ── Tipo de hero del home (ver hero_slides) ──
+  /** 'slider' (carrusel de medios) | '3d' (aura 3D) | 'embed' (HTML custom, fase 2). */
+  heroType: varchar("hero_type", { length: 20 }).notNull().default("slider"),
+  /** Override del texto grande del hero 3D (null = default hardcodeado de Cristian). */
+  hero3dName: varchar("hero_3d_name", { length: 60 }),
+  hero3dSubtitle: varchar("hero_3d_subtitle", { length: 80 }),
+  /** Reservado para el modo embed (fase 2). */
+  heroEmbedHtml: text("hero_embed_html"),
+  /** Alto del slider: sm | md | lg | full. */
+  heroHeight: varchar("hero_height", { length: 10 }).notNull().default("full"),
+  /** Ajuste de imagen del slider: cover | contain. */
+  heroImageFit: varchar("hero_image_fit", { length: 10 }).notNull().default("cover"),
+
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/* ─────────── HERO SLIDES (slider del home, por tenant) ───────────
+ * Cada slide es una imagen o un video (mp4/webm subido o URL YouTube/Vimeo) con
+ * título/subtítulo y hasta 2 CTAs. Ver ARCHITECTURE_SAAS.md. El home los renderiza
+ * cuando site_settings.heroType = 'slider'. */
+export const heroSlides = pgTable(
+  "hero_slides",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    /** 'image' | 'video' */
+    mediaType: varchar("media_type", { length: 10 }).notNull().default("image"),
+    /** Imagen del slide o poster del video. */
+    imageUrl: text("image_url"),
+    /** mp4/webm subido (/uploads/…) o URL de YouTube/Vimeo. */
+    videoUrl: text("video_url"),
+    title: varchar("title", { length: 160 }),
+    subtitle: text("subtitle"),
+    ctaLabel: varchar("cta_label", { length: 60 }),
+    ctaHref: text("cta_href"),
+    cta2Label: varchar("cta2_label", { length: 60 }),
+    cta2Href: text("cta2_href"),
+    /** {top|center|bottom}-{left|center|right} */
+    textPosition: varchar("text_position", { length: 20 }).notNull().default("center-center"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index("hero_slides_tenant_idx").on(t.tenantId, t.sortOrder),
+  }),
+);
 
 /**
  * Herramientas · Plan de Marketing (canvas tipo n8n).

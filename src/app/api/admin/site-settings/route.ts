@@ -43,6 +43,13 @@ const Body = z.object({
     .optional(),
   heroQuoteText: z.string().nullable().optional(),
   heroQuoteAttrib: z.string().max(80).nullable().optional(),
+  // ── Tipo de hero + config del slider / 3D ──
+  heroType: z.enum(["slider", "3d", "embed"]).optional(),
+  hero3dName: z.string().max(60).nullable().optional(),
+  hero3dSubtitle: z.string().max(80).nullable().optional(),
+  heroEmbedHtml: z.string().max(20000).nullable().optional(),
+  heroHeight: z.enum(["sm", "md", "lg", "full"]).optional(),
+  heroImageFit: z.enum(["cover", "contain"]).optional(),
 });
 
 export async function PUT(req: Request) {

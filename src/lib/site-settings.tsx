@@ -48,6 +48,12 @@ function defaults(tenantId: string): typeof schema.siteSettings.$inferSelect {
     ],
     heroQuoteText: "Confianza, compromiso y resultados — esa es la promesa.",
     heroQuoteAttrib: "— CRISTIAN H. · 2026",
+    heroType: "slider",
+    hero3dName: null,
+    hero3dSubtitle: null,
+    heroEmbedHtml: null,
+    heroHeight: "full",
+    heroImageFit: "cover",
     updatedAt: new Date(),
   };
 }

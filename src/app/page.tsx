@@ -14,6 +14,7 @@ import { TallerBanner } from "@/components/marketing/TallerBanner";
 import { ProgramsCarousel } from "@/components/marketing/ProgramsCarousel";
 import { ServicesCarousel } from "@/components/marketing/ServicesCarousel";
 import { Hero3D } from "@/components/marketing/Hero3D";
+import { HeroSlider } from "@/components/marketing/HeroSlider";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,7 @@ export default async function HomePage() {
   if (!ctx) notFound();
   const { tp } = ctx;
   const now = new Date();
-  const [user, featured, talleres, services, heroRows] = await Promise.all([
+  const [user, featured, talleres, services, heroRows, slidesRows] = await Promise.all([
     getCurrentUser(),
     // Programas y certificaciones (excluye talleres — esos viven en su propia
     // sección de banners arriba). Trae varios para alimentar el carrusel.
@@ -107,8 +108,28 @@ export default async function HomePage() {
       .from(schema.siteSettings)
       .where(eq(schema.siteSettings.tenantId, ctx.tenant.id))
       .limit(1),
+    // Slides del hero (cuando heroType='slider').
+    db
+      .select()
+      .from(schema.heroSlides)
+      .where(and(eq(schema.heroSlides.tenantId, ctx.tenant.id), eq(schema.heroSlides.isActive, true)))
+      .orderBy(asc(schema.heroSlides.sortOrder)),
   ]);
   const hero = heroRows[0] ?? null;
+  const heroType = hero?.heroType ?? "slider";
+  const heroSlides = slidesRows.map((s) => ({
+    id: s.id,
+    mediaType: s.mediaType,
+    imageUrl: s.imageUrl,
+    videoUrl: s.videoUrl,
+    title: s.title,
+    subtitle: s.subtitle,
+    ctaLabel: s.ctaLabel,
+    ctaHref: s.ctaHref,
+    cta2Label: s.cta2Label,
+    cta2Href: s.cta2Href,
+    textPosition: s.textPosition,
+  }));
 
   // Próximo taller en vivo con fecha real (no evergreen). Si no hay, el CTA
   // final muestra un texto genérico en vez de una fecha inventada.
@@ -128,42 +149,56 @@ export default async function HomePage() {
     <div>
       <Nav />
 
-      {/* HERO — Visual 3D "Modern Visual" (auto-rota; nombre y titulo van en 3D) */}
-      <section
-        className="home-hero-3d"
-        aria-label={`${ctx.branding.siteName} — Inicio`}
-        style={{
-          position: "relative",
-          height: "100svh",
-          minHeight: 560,
-          overflow: "hidden",
-          background: "#050B1A",
-        }}
-      >
-        {/* H1 real (oculto visualmente) para SEO/accesibilidad: el nombre y el
-            titulo se muestran renderizados en 3D dentro del canvas. */}
-        <h1
+      {/* HERO — configurable por tenant (site_settings.heroType).
+          '3d' = markup ORIGINAL sin cambios (cristianhdz). 'slider' = carrusel de medios. */}
+      {heroType === "3d" ? (
+        <section
+          className="home-hero-3d"
+          aria-label={`${ctx.branding.siteName} — Inicio`}
           style={{
-            position: "absolute",
-            width: 1,
-            height: 1,
-            margin: -1,
-            padding: 0,
+            position: "relative",
+            height: "100svh",
+            minHeight: 560,
             overflow: "hidden",
-            clip: "rect(0 0 0 0)",
-            whiteSpace: "nowrap",
-            border: 0,
+            background: "#050B1A",
           }}
         >
-          {hero
-            ? `${hero.heroTitle} ${hero.heroSubtitleAccent ?? ""} ${hero.heroSubtitleRest ?? ""}`.trim()
-            : ctx.branding.siteName}
-        </h1>
+          {/* H1 real (oculto visualmente) para SEO/accesibilidad: el nombre y el
+              titulo se muestran renderizados en 3D dentro del canvas. */}
+          <h1
+            style={{
+              position: "absolute",
+              width: 1,
+              height: 1,
+              margin: -1,
+              padding: 0,
+              overflow: "hidden",
+              clip: "rect(0 0 0 0)",
+              whiteSpace: "nowrap",
+              border: 0,
+            }}
+          >
+            {hero
+              ? `${hero.heroTitle} ${hero.heroSubtitleAccent ?? ""} ${hero.heroSubtitleRest ?? ""}`.trim()
+              : ctx.branding.siteName}
+          </h1>
 
-        {/* Visual 3D interactivo (Three.js, in-page): arrastra para rotar en
-            desktop; la rueda hace scroll normal de la página. Ver Hero3D.tsx. */}
-        <Hero3D />
-      </section>
+          {/* Visual 3D interactivo (Three.js, in-page): arrastra para rotar en
+              desktop; la rueda hace scroll normal de la página. Ver Hero3D.tsx.
+              name/subtitle: null en cristianhdz → defaults idénticos. */}
+          <Hero3D
+            name={hero?.hero3dName ?? undefined}
+            subtitle={hero?.hero3dSubtitle ?? undefined}
+          />
+        </section>
+      ) : (
+        <HeroSlider
+          slides={heroSlides}
+          height={hero?.heroHeight ?? "full"}
+          fit={hero?.heroImageFit ?? "cover"}
+          siteName={ctx.branding.siteName}
+        />
+      )}
 
       <div className="rule" />
 
