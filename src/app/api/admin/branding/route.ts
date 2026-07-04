@@ -52,6 +52,21 @@ const Body = z.object({
     )
     .max(8)
     .optional(),
+  navItems: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(60),
+        href: z
+          .string()
+          .min(1)
+          .max(500)
+          .refine((v) => v.startsWith("/") || /^https?:\/\//i.test(v) || v.startsWith("mailto:") || v.startsWith("tel:"), "URL inválida"),
+        isVisible: z.boolean().optional(),
+        openInNewTab: z.boolean().optional(),
+      }),
+    )
+    .max(12)
+    .optional(),
   social: socialShape.optional(),
   hideMimarcaBadge: z.boolean().optional(),
 });

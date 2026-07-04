@@ -162,6 +162,7 @@ export default async function HomePage() {
           '3d' = markup ORIGINAL sin cambios (cristianhdz). 'slider' = carrusel de medios. */}
       {heroType === "3d" ? (
         <section
+          id="inicio"
           className="home-hero-3d"
           aria-label={`${ctx.branding.siteName} — Inicio`}
           style={{
@@ -202,6 +203,7 @@ export default async function HomePage() {
         </section>
       ) : (
         <HeroSlider
+          id="inicio"
           slides={heroSlides}
           height={hero?.heroHeight ?? "full"}
           fit={hero?.heroImageFit ?? "cover"}

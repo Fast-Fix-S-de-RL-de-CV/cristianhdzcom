@@ -35,7 +35,7 @@ export function MetodoSection({ config }: { config: Cfg | null }) {
   return (
     <>
       <div className="rule" />
-      <section className="sec" style={{ background: "var(--bg-2)", borderRadius: 32, margin: "0 56px" }}>
+      <section id="metodo" className="sec" style={{ background: "var(--bg-2)", borderRadius: 32, margin: "0 56px" }}>
         <div className="between" style={{ marginBottom: 56, alignItems: "flex-end", flexWrap: "wrap", gap: 24 }}>
           <div>
             <Eyebrow>{isOriginal ? "02 · Método CH" : config!.eyebrow}</Eyebrow>

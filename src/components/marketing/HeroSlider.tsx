@@ -92,11 +92,13 @@ export function HeroSlider({
   height = "full",
   fit = "cover",
   siteName,
+  id,
 }: {
   slides: HeroSlide[];
   height?: string;
   fit?: string;
   siteName: string;
+  id?: string;
 }) {
   const { tp } = useTenant();
   const [idx, setIdx] = useState(0);
@@ -123,6 +125,7 @@ export function HeroSlider({
   if (slides.length === 0) {
     return (
       <section
+        id={id}
         aria-label={`${siteName} — Inicio`}
         style={{
           position: "relative",
@@ -155,6 +158,7 @@ export function HeroSlider({
 
   return (
     <section
+      id={id}
       aria-label={`${siteName} — Inicio`}
       style={{ position: "relative", height: containerHeight, minHeight: 420, overflow: "hidden", background: "#050B1A" }}
     >

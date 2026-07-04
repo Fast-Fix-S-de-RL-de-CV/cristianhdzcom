@@ -5,25 +5,12 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { useTenant } from "@/components/tenant/TenantProvider";
-
-// Public-facing nav. Same 5 items para todos los usuarios — la entrada al
-// área privada se hace por el botón "Mi escritorio →" / avatar a la
-// derecha, no como item del menú (de lo contrario quedaba duplicada).
-const NAV_ITEMS: [string, string][] = [
-  ["Inicio", "/"],
-  ["Acerca de", "/acerca"],
-  ["Empresas", "/empresas"],
-  ["Programas", "/programas"],
-  ["Libros", "/libros"],
-  ["Membresía", "/membresia"],
-  ["Comunidad", "/comunidad"],
-  ["Blog", "/blog"],
-];
+import { isExternalHref, resolveNavItems } from "@/lib/nav-items";
 
 type SessionUser = { id: string; name: string; role: string; level: number } | null;
 
 export function Nav() {
-  const { tp, basePath, siteName, logoUrl } = useTenant();
+  const { tp, basePath, siteName, logoUrl, navItems } = useTenant();
   const rawPathname = usePathname() || "/";
   // En mimarca.app/{slug} el pathname del navegador trae el prefijo del
   // tenant; lo quitamos para comparar contra los hrefs internos.
@@ -70,6 +57,7 @@ export function Nav() {
   }, [pathname]);
 
   const dashboardHref = user?.role === "admin" || user?.role === "superadmin" ? "/admin" : "/plataforma";
+  const items = resolveNavItems(navItems);
   const initials = user
     ? user.name
         .split(/\s+/)
@@ -86,13 +74,17 @@ export function Nav() {
         {logoUrl ? <img src={logoUrl} alt={siteName} /> : <span>{siteName}</span>}
       </Link>
       <div className="ch-nav-links">
-        {NAV_ITEMS.map(([label, href]) => {
-          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+        {items.map(({ label, href, openInNewTab }) => {
+          const pathOnly = href.split("#")[0] || "/";
+          const external = isExternalHref(href);
+          const active = !external && (pathOnly === "/" ? pathname === "/" : pathname.startsWith(pathOnly));
           return (
             <Link
-              key={href}
-              href={tp(href)}
+              key={`${label}-${href}`}
+              href={external ? href : tp(href)}
               className={cn(active && "is-active")}
+              target={external || openInNewTab ? "_blank" : undefined}
+              rel={external || openInNewTab ? "noreferrer" : undefined}
             >
               {label}
             </Link>
@@ -163,10 +155,18 @@ export function Nav() {
           </div>
 
           <nav className="ch-mobile-list">
-            {NAV_ITEMS.map(([label, href]) => {
-              const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+            {items.map(({ label, href, openInNewTab }) => {
+              const pathOnly = href.split("#")[0] || "/";
+              const external = isExternalHref(href);
+              const active = !external && (pathOnly === "/" ? pathname === "/" : pathname.startsWith(pathOnly));
               return (
-                <Link key={href} href={tp(href)} className={cn(active && "is-active")}>
+                <Link
+                  key={`${label}-${href}`}
+                  href={external ? href : tp(href)}
+                  className={cn(active && "is-active")}
+                  target={external || openInNewTab ? "_blank" : undefined}
+                  rel={external || openInNewTab ? "noreferrer" : undefined}
+                >
                   {label}
                 </Link>
               );

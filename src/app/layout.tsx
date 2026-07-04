@@ -5,6 +5,7 @@ import { Lightbox } from "@/components/ui/Lightbox";
 import { TenantProvider, type TenantClientInfo } from "@/components/tenant/TenantProvider";
 import { ImpersonationBar } from "@/components/tenant/ImpersonationBar";
 import { getTenantCtx } from "@/lib/tenant";
+import { resolveNavItems } from "@/lib/nav-items";
 
 export const dynamic = "force-dynamic";
 
@@ -72,8 +73,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         siteName: ctx.branding.siteName,
         accent: ctx.branding.accent,
         logoUrl: ctx.branding.logoUrl ?? null,
+        navItems: resolveNavItems(ctx.branding.navItems),
       }
-    : { slug: "", basePath: "", siteName: "mimarca.app", accent: "#C8A951", logoUrl: null };
+    : { slug: "", basePath: "", siteName: "mimarca.app", accent: "#C8A951", logoUrl: null, navItems: [] };
 
   return (
     <html lang="es" style={ctx && !isDefaultBrand ? brandVars(ctx.branding) : undefined}>

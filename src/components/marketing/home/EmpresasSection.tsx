@@ -20,7 +20,7 @@ export function EmpresasSection({
     return (
       <>
         <div className="rule" />
-        <section id="saas" className="sec" style={{ paddingTop: 80 }}>
+        <section id="empresas" className="sec" style={{ paddingTop: 80 }}>
           <div className="between" style={{ alignItems: "flex-end", marginBottom: 56, flexWrap: "wrap", gap: 24 }}>
             <div>
               {config.eyebrow && <Eyebrow>{config.eyebrow}</Eyebrow>}
@@ -45,7 +45,7 @@ export function EmpresasSection({
   return (
     <>
       <div className="rule" />
-      <section id="saas" className="sec" style={{ paddingTop: 80 }}>
+      <section id="empresas" className="sec" style={{ paddingTop: 80 }}>
         <div className="between" style={{ alignItems: "flex-end", marginBottom: 56, flexWrap: "wrap", gap: 24 }}>
           <div>
             <Eyebrow>Estudio · Empresas y Servicios</Eyebrow>

@@ -44,7 +44,7 @@ function PathCardView({ c, tp }: { c: PathCard & { eyebrow?: string }; tp: (p: s
 
 // PATHS original de cristianhdz (idéntico al hardcode anterior de page.tsx).
 const PATHS: Array<PathCard & { eyebrow: string }> = [
-  { eyebrow: "CAMINO · A", tag: "USA MIS SAAS", title: "Mejora tu negocio con nuestros productos.", desc: "Tenemos 5 SaaS en producción para PyMEs: punto de venta, tienda online, rifas, marketing y servicios profesionales. Empieza desde $19/mes.", ctaLabel: "Ver SaaS", kpi: "5 productos · LATAM", color: "warm", href: "/#saas" },
+  { eyebrow: "CAMINO · A", tag: "USA MIS SAAS", title: "Mejora tu negocio con nuestros productos.", desc: "Tenemos 5 SaaS en producción para PyMEs: punto de venta, tienda online, rifas, marketing y servicios profesionales. Empieza desde $19/mes.", ctaLabel: "Ver SaaS", kpi: "5 productos · LATAM", color: "warm", href: "/#empresas" },
   { eyebrow: "CAMINO · B", tag: "APRENDE NEGOCIOS", title: "Aprende a hacer negocios con IA.", desc: "Mis 2 libros y mis programas para empezar sin dinero, validar y escalar por internet. Para empresarios, empleados y profesionales.", ctaLabel: "Ver programas", kpi: "2 libros + generación", color: "accent", href: "/programas" },
   { eyebrow: "CAMINO · C", tag: "APRENDE A PROGRAMAR", title: "Aprende a programar con IA — profesional.", desc: "Sendero estilo Duolingo, mentorías 1:1 y proyectos reales. De cero a entregar productos como un senior — usando agentes y modelos de frontera.", ctaLabel: "Ver plataforma", kpi: "12 módulos · certificación", color: "ink", href: "/programas/programacion-con-ia" },
 ];
@@ -55,7 +55,7 @@ export function PathsSection({ config, tp }: { config: Cfg | null; tp: (p: strin
     return (
       <>
         <div className="rule" />
-        <section className="sec">
+      <section id="bloques" className="sec">
           <div className="paths-header-grid" style={{ display: "grid", gridTemplateColumns: "0.8fr 1fr", gap: 56, marginBottom: 64 }}>
             <div>
               <Eyebrow>Lo que hago</Eyebrow>
@@ -85,7 +85,7 @@ export function PathsSection({ config, tp }: { config: Cfg | null; tp: (p: strin
   return (
     <>
       <div className="rule" />
-      <section className="sec">
+    <section id="bloques" className="sec">
         <div className="paths-header-grid" style={{ display: "grid", gridTemplateColumns: "0.8fr 1fr", gap: 56, marginBottom: 64 }}>
           <div>
             {config.eyebrow && <Eyebrow>{config.eyebrow}</Eyebrow>}

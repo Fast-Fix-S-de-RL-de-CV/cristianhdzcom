@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useMemo } from "react";
+import type { NavItem } from "@/lib/nav-items";
 
 /**
  * Contexto de tenant para CLIENT components (ver ARCHITECTURE_SAAS.md).
@@ -17,6 +18,7 @@ export type TenantClientInfo = {
   siteName: string;
   accent: string;
   logoUrl: string | null;
+  navItems: NavItem[];
 };
 
 type TenantContextValue = TenantClientInfo & {
@@ -29,6 +31,7 @@ const TenantContext = createContext<TenantContextValue>({
   siteName: "",
   accent: "#C8A951",
   logoUrl: null,
+  navItems: [],
   tp: (p) => p,
 });
 

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/ConfirmProvider";
 import { useTenant } from "@/components/tenant/TenantProvider";
 import { apiErrorMessage } from "@/lib/apiError";
+import { NAV_ITEMS_DEFAULT, NAV_TARGETS, type NavItem } from "@/lib/nav-items";
 
 /**
  * Tarjeta "Mi sitio" para /admin/ajustes: branding del tenant (mimarca.app).
@@ -19,6 +20,7 @@ const COLOR_DEFAULTS = { accent: "#C8A951", ink: "#0A1E3A", bg: "#FBFAF5" } as c
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
 type FooterLink = { label: string; href: string };
+type EditableNavItem = NavItem & { linkMode?: "internal" | "external" };
 
 type SocialKey = "instagram" | "facebook" | "youtube" | "tiktok" | "x" | "linkedin";
 type Social = Partial<Record<SocialKey, string>>;
@@ -41,6 +43,7 @@ type Form = {
   faviconUrl: string | null;
   footerText: string;
   footerLinks: FooterLink[];
+  navItems: EditableNavItem[];
   social: Social;
   hideMimarcaBadge: boolean;
 };
@@ -54,6 +57,7 @@ const EMPTY: Form = {
   faviconUrl: null,
   footerText: "",
   footerLinks: [],
+  navItems: NAV_ITEMS_DEFAULT,
   social: {},
   hideMimarcaBadge: false,
 };
@@ -78,6 +82,10 @@ function previewVars(accent: string, ink: string, bg: string): React.CSSProperti
     ["--gold-line" as string]: `color-mix(in srgb, ${accent} 45%, ${bg})`,
     ["--gold-gradient" as string]: `linear-gradient(135deg, color-mix(in srgb, ${accent} 62%, black) 0%, color-mix(in srgb, ${accent} 72%, white) 40%, ${accent} 70%, color-mix(in srgb, ${accent} 55%, black) 100%)`,
   };
+}
+
+function isKnownInternal(href: string) {
+  return NAV_TARGETS.some((target) => target.href === href);
 }
 
 export function MiSitioCard() {
@@ -118,6 +126,9 @@ export function MiSitioCard() {
           faviconUrl: b.faviconUrl ?? null,
           footerText: b.footerText ?? "",
           footerLinks: Array.isArray(b.footerLinks) ? b.footerLinks : [],
+          navItems: Array.isArray(b.navItems)
+            ? b.navItems.map((item: NavItem) => ({ ...item, linkMode: isKnownInternal(item.href) ? "internal" : "external" }))
+            : NAV_ITEMS_DEFAULT.map((item) => ({ ...item, linkMode: "internal" })),
           social: b.social ?? {},
           hideMimarcaBadge: !!b.hideMimarcaBadge,
         });
@@ -151,6 +162,27 @@ export function MiSitioCard() {
   }
   function removeLink(i: number) {
     setForm((p) => ({ ...p, footerLinks: p.footerLinks.filter((_, j) => j !== i) }));
+  }
+  function addNavItem() {
+    setForm((p) => ({ ...p, navItems: [...p.navItems, { label: "", href: "/", isVisible: true, linkMode: "internal" }] }));
+  }
+  function updateNavItem(i: number, patch: Partial<EditableNavItem>) {
+    setForm((p) => ({
+      ...p,
+      navItems: p.navItems.map((item, j) => (j === i ? { ...item, ...patch } : item)),
+    }));
+  }
+  function removeNavItem(i: number) {
+    setForm((p) => ({ ...p, navItems: p.navItems.filter((_, j) => j !== i) }));
+  }
+  function moveNavItem(i: number, direction: -1 | 1) {
+    setForm((p) => {
+      const nextIndex = i + direction;
+      if (nextIndex < 0 || nextIndex >= p.navItems.length) return p;
+      const navItems = [...p.navItems];
+      [navItems[i], navItems[nextIndex]] = [navItems[nextIndex], navItems[i]];
+      return { ...p, navItems };
+    });
   }
 
   function resetColors() {
@@ -203,6 +235,14 @@ export function MiSitioCard() {
           footerText: form.footerText,
           // La API exige label y href: descarta enlaces a medio llenar
           footerLinks: form.footerLinks.filter((l) => l.label.trim() && l.href.trim()),
+          navItems: form.navItems
+            .filter((item) => item.label.trim() && item.href.trim())
+            .map(({ label, href, isVisible, openInNewTab }) => ({
+              label: label.trim(),
+              href: href.trim(),
+              isVisible: isVisible !== false,
+              openInNewTab: !!openInNewTab,
+            })),
           social: form.social,
           ...(meta.hideBadgeAllowed ? { hideMimarcaBadge: form.hideMimarcaBadge } : {}),
         }),
@@ -444,6 +484,125 @@ export function MiSitioCard() {
               </span>
             </div>
           </div>
+        </div>
+      </Section>
+
+      {/* ── Menú principal ── */}
+      <Section title="Menú principal">
+        <div style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
+          Edita los enlaces del menú superior. Puedes apuntar a secciones del home, páginas internas o URLs externas.
+        </div>
+        <div className="col" style={{ gap: 10 }}>
+          {form.navItems.length === 0 && (
+            <div style={{ color: "var(--muted)", fontSize: 12, padding: "4px 0" }}>
+              Sin enlaces. Agrega uno abajo.
+            </div>
+          )}
+          {form.navItems.map((item, i) => {
+            const mode = item.linkMode ?? (isKnownInternal(item.href) ? "internal" : "external");
+            return (
+              <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 12, background: "white" }} className="col">
+                <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <input
+                    value={item.label}
+                    onChange={(e) => updateNavItem(i, { label: e.target.value })}
+                    placeholder="Texto del menú"
+                    maxLength={60}
+                    style={{ ...inputStyle(), width: 190 }}
+                  />
+                  <select
+                    value={mode}
+                    onChange={(e) => {
+                      const nextMode = e.target.value as EditableNavItem["linkMode"];
+                      updateNavItem(i, {
+                        linkMode: nextMode,
+                        href: nextMode === "internal" ? NAV_TARGETS[0].href : item.href.startsWith("http") ? item.href : "",
+                        openInNewTab: nextMode === "external" ? item.openInNewTab : false,
+                      });
+                    }}
+                    style={{ ...inputStyle(), width: 150 }}
+                  >
+                    <option value="internal">Sección / página</option>
+                    <option value="external">URL externa</option>
+                  </select>
+                  {mode === "internal" ? (
+                    <select
+                      value={isKnownInternal(item.href) ? item.href : "/"}
+                      onChange={(e) => updateNavItem(i, { href: e.target.value })}
+                      style={{ ...inputStyle(), flex: 1, minWidth: 220 }}
+                    >
+                      {NAV_TARGETS.map((target) => (
+                        <option key={target.href} value={target.href}>{target.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      value={item.href}
+                      onChange={(e) => updateNavItem(i, { href: e.target.value })}
+                      placeholder="https://…"
+                      maxLength={500}
+                      style={{ ...inputStyle(), flex: 1, minWidth: 220 }}
+                    />
+                  )}
+                </div>
+                <div className="row" style={{ gap: 8, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+                  <div className="row" style={{ gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+                    <label className="row" style={{ gap: 6, alignItems: "center", fontSize: 12, color: "var(--ink-2)", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={item.isVisible !== false}
+                        onChange={(e) => updateNavItem(i, { isVisible: e.target.checked })}
+                      />
+                      Visible
+                    </label>
+                    {mode === "external" && (
+                      <label className="row" style={{ gap: 6, alignItems: "center", fontSize: 12, color: "var(--ink-2)", cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={!!item.openInNewTab}
+                          onChange={(e) => updateNavItem(i, { openInNewTab: e.target.checked })}
+                        />
+                        Abrir en pestaña nueva
+                      </label>
+                    )}
+                  </div>
+                  <div className="row" style={{ gap: 6 }}>
+                    <button type="button" onClick={() => moveNavItem(i, -1)} disabled={i === 0} className="btn btn-ghost" style={{ padding: "6px 10px", fontSize: 11 }}>
+                      Subir
+                    </button>
+                    <button type="button" onClick={() => moveNavItem(i, 1)} disabled={i === form.navItems.length - 1} className="btn btn-ghost" style={{ padding: "6px 10px", fontSize: 11 }}>
+                      Bajar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeNavItem(i)}
+                      style={{
+                        padding: "6px 10px",
+                        background: "white",
+                        color: "var(--red)",
+                        border: "1px solid var(--line)",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        fontSize: 11,
+                      }}
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {form.navItems.length < 12 && (
+            <button
+              type="button"
+              onClick={addNavItem}
+              className="btn btn-ghost"
+              style={{ padding: "8px 14px", fontSize: 12, alignSelf: "flex-start" }}
+            >
+              + Agregar enlace al menú
+            </button>
+          )}
         </div>
       </Section>
 

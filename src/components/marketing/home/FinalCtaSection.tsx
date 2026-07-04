@@ -23,7 +23,7 @@ export function FinalCtaSection({
   const secondaryLabel = isOriginal ? "Ver programas pagos" : config!.secondaryLabel || "Ver más";
 
   return (
-    <section className="sec" style={{ paddingTop: 32 }}>
+    <section id="empezar" className="sec" style={{ paddingTop: 32 }}>
       <Card style={{ padding: 64, position: "relative", overflow: "hidden", background: "var(--bg-2)" }}>
         <div className="mesh" />
         <div className="final-cta-grid" style={{ position: "relative", display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 48, alignItems: "center" }}>

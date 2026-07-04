@@ -31,6 +31,7 @@ export type TenantBranding = {
   faviconUrl?: string | null;
   footerText?: string;
   footerLinks?: Array<{ label: string; href: string }>;
+  navItems?: Array<{ label: string; href: string; isVisible?: boolean; openInNewTab?: boolean }>;
   social?: Partial<Record<"instagram" | "facebook" | "youtube" | "tiktok" | "x" | "linkedin", string>>;
   hideMimarcaBadge?: boolean;
 };

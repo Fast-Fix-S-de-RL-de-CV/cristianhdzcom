@@ -23,7 +23,7 @@ export function ProgramasSection({
   return (
     <>
       <div className="rule" />
-      <section className="sec">
+      <section id="programas" className="sec">
         <div className="between" style={{ alignItems: "flex-end", marginBottom: 40, flexWrap: "wrap", gap: 24 }}>
           <div>
             {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}

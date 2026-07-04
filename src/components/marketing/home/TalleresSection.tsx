@@ -23,7 +23,7 @@ export function TalleresSection({
   return (
     <>
       <div className="rule" />
-      <section className="sec">
+      <section id="talleres" className="sec">
         <div className="between" style={{ alignItems: "flex-end", marginBottom: 32, flexWrap: "wrap", gap: 24 }}>
           <div>
             {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
