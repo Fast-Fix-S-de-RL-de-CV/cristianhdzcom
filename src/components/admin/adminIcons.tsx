@@ -15,6 +15,7 @@ import {
   Megaphone,
   LifeBuoy,
   Settings,
+  Globe,
   MessageCircle,
   CheckCircle2,
   Calendar,
@@ -47,6 +48,7 @@ const MAP: Record<string, (s: number) => ReactNode> = {
   Comunidad: (s) => <MessageSquare size={s} />,
   Marketing: (s) => <Megaphone size={s} />,
   Soporte: (s) => <LifeBuoy size={s} />,
+  "Sitio web": (s) => <Globe size={s} />,
   Ajustes: (s) => <Settings size={s} />,
 };
 

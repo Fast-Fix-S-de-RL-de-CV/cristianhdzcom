@@ -3,9 +3,13 @@ import type { HomeSections, Phase } from "@/lib/home-sections";
 
 type Cfg = NonNullable<HomeSections["metodo"]>;
 
-function PhaseCard({ n, title, desc }: { n: number; title?: string; desc?: string }) {
+function PhaseCard({ n, title, desc, imageUrl }: { n: number; title?: string; desc?: string; imageUrl?: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: 20, background: "white", borderRadius: 14, border: "1px solid var(--line)" }}>
+      {imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imageUrl} alt="" style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 10 }} />
+      )}
       <div className="serif" style={{ fontSize: 56, color: "var(--accent)", lineHeight: 1, opacity: 0.85 }}>0{n}</div>
       <h3 style={{ color: "var(--ink)", fontSize: 24 }}>{title}</h3>
       <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.55 }}>{desc}</p>
@@ -50,7 +54,7 @@ export function MetodoSection({ config }: { config: Cfg | null }) {
           </span>
         </div>
         <div className="grid-4">
-          {phases.map((p, i) => <PhaseCard key={i} n={i + 1} title={p.title} desc={p.desc} />)}
+          {phases.map((p, i) => <PhaseCard key={i} n={i + 1} title={p.title} desc={p.desc} imageUrl={p.imageUrl} />)}
         </div>
       </section>
     </>

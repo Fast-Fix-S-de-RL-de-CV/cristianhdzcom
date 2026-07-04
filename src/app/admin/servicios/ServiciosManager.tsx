@@ -30,6 +30,7 @@ export type ServiceRow = {
   ctaLabel: string;
   ctaUrl: string | null;
   coverVideoUrl: string | null;
+  coverUrl: string | null;
   isCtaCard: boolean;
   showLiveBadge: boolean;
   isActive: boolean;
@@ -341,6 +342,7 @@ function ServiceDialog({
     ctaLabel: service?.ctaLabel || "Ver SaaS →",
     ctaUrl: service?.ctaUrl || "",
     coverVideoUrl: service?.coverVideoUrl || "",
+    coverUrl: service?.coverUrl || "",
     isCtaCard: service?.isCtaCard ?? false,
     showLiveBadge: service?.showLiveBadge ?? true,
     isActive: service?.isActive ?? true,
@@ -367,6 +369,7 @@ function ServiceDialog({
       ctaLabel: form.ctaLabel || "Ver SaaS →",
       ctaUrl: form.ctaUrl || null,
       coverVideoUrl: form.coverVideoUrl || null,
+      coverUrl: form.coverUrl || null,
       isCtaCard: form.isCtaCard,
       showLiveBadge: form.showLiveBadge,
       isActive: form.isActive,
@@ -696,6 +699,39 @@ function ServiceDialog({
               style={inputStyle()}
               placeholder="https://bengalpos.com o mailto:info@cristianhdz.com"
             />
+          </Field>
+
+          <Field label="Imagen de portada (opcional — tiene prioridad sobre el video)">
+            {form.coverUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={form.coverUrl} alt="" style={{ width: "100%", maxHeight: 140, objectFit: "cover", borderRadius: 8, marginBottom: 8 }} />
+            )}
+            <div className="row" style={{ gap: 8 }}>
+              <label className="btn btn-ghost" style={{ padding: "8px 12px", fontSize: 12, cursor: "pointer" }}>
+                {form.coverUrl ? "Cambiar imagen" : "Subir imagen"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    e.target.value = "";
+                    const fd = new FormData();
+                    fd.append("file", f);
+                    const res = await fetch(tp("/api/admin/upload?type=service"), { method: "POST", body: fd });
+                    const j = await res.json().catch(() => ({}));
+                    if (res.ok && j.url) setForm((prev) => ({ ...prev, coverUrl: j.url }));
+                    else setErr("No se pudo subir la imagen");
+                  }}
+                />
+              </label>
+              {form.coverUrl && (
+                <button type="button" onClick={() => setForm((prev) => ({ ...prev, coverUrl: "" }))} className="btn btn-ghost" style={{ padding: "8px 12px", fontSize: 12 }}>
+                  Quitar
+                </button>
+              )}
+            </div>
           </Field>
 
           <Field label="Video de portada (URL Vimeo o YouTube)">

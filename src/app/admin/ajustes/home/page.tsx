@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
+import { SiteTabs } from "@/components/admin/SiteTabs";
 import { HOME_SECTIONS_DEFAULT, SEED_TENANT_SLUG } from "@/lib/home-sections";
 import { HomeContentEditor } from "./HomeContentEditor";
 
@@ -27,10 +28,11 @@ export default async function HomeContentPage() {
   return (
     <AdminPageShell
       user={user}
-      active="/admin/ajustes"
+      active="sitio"
       title="Contenido del Home"
       subtitle="Muestra/oculta y edita las secciones de tu página de inicio"
     >
+      <SiteTabs current="/admin/ajustes/home" />
       <HomeContentEditor initial={initial} isSeed={isSeed} />
     </AdminPageShell>
   );

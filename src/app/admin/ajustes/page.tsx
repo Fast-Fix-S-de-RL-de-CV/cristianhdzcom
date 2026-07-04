@@ -6,7 +6,6 @@ import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
-import { DomainSection } from "@/components/admin/DomainSection";
 import { PaymentMethodsCard } from "./PaymentMethodsCard";
 import { MiSitioCard } from "./MiSitioCard";
 
@@ -90,28 +89,15 @@ export default async function AjustesPage() {
           <MiSitioCard />
         </Card>
 
-        {/* Dominio personalizado */}
+        {/* Sitio web — portada, secciones del home, hero y dominio */}
         <Card style={{ padding: 24 }}>
-          <Eyebrow>Dominio</Eyebrow>
+          <Eyebrow>Sitio web</Eyebrow>
           <h2 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
-            Dominio personalizado
+            Tu página pública
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18 }}>
-            Conecta tu propio dominio (ej. tumarca.com) para que tu plataforma viva ahí.
-          </p>
-          <DomainSection />
-        </Card>
-
-        {/* Hero del Home */}
-        <Card style={{ padding: 24 }}>
-          <Eyebrow>Página de Inicio</Eyebrow>
-          <h2 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
-            Hero del Home
-          </h2>
-          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18 }}>
-            Edita el título, subtítulo, bio, foto de portada, chips, stats flotantes y la quote del
-            landing público. Soporta <code>**negritas**</code> y <code>*cursivas*</code> en los
-            párrafos de bio.
+            Portada (slider o visual 3D), secciones del home (mostrar/ocultar y editar),
+            textos del hero y tu dominio propio — todo en un solo lugar.
           </p>
           <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
             <a
@@ -119,21 +105,7 @@ export default async function AjustesPage() {
               className="btn btn-primary"
               style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}
             >
-              Portada / slider →
-            </a>
-            <a
-              href={tp("/admin/ajustes/home")}
-              className="btn btn-ghost"
-              style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}
-            >
-              Secciones del Home →
-            </a>
-            <a
-              href={tp("/admin/ajustes/hero")}
-              className="btn btn-ghost"
-              style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}
-            >
-              Editar hero (textos) →
+              Ir a Sitio web →
             </a>
           </div>
         </Card>

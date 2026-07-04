@@ -136,6 +136,7 @@ export default async function HomePage() {
     isCtaCard: s.isCtaCard,
     showLiveBadge: s.showLiveBadge,
     coverVideoUrl: s.coverVideoUrl,
+    coverUrl: s.coverUrl,
   }));
 
   // Próximo taller en vivo con fecha real (no evergreen). Si no hay, el CTA

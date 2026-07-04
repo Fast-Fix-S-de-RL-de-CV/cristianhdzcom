@@ -23,6 +23,7 @@ export type ServiceCard = {
   isCtaCard: boolean;
   showLiveBadge: boolean;
   coverVideoUrl: string | null;
+  coverUrl?: string | null;
 };
 
 /**
@@ -63,7 +64,8 @@ export function ServiceCardItem({
   const { tp } = useTenant();
   const isCta = s.isCtaCard;
   const accent = `oklch(42% 0.14 ${s.hue})`;
-  const coverVideo = !isCta && !staticCover ? coverEmbedUrl(s.coverVideoUrl) : null;
+  const coverImg = !isCta ? s.coverUrl || null : null; // imagen tiene prioridad sobre el video
+  const coverVideo = !isCta && !staticCover && !coverImg ? coverEmbedUrl(s.coverVideoUrl) : null;
   const bannerBg = isCta
     ? "repeating-linear-gradient(135deg, var(--bg-2) 0 1px, transparent 1px 10px), var(--bg)"
     : `linear-gradient(135deg, oklch(58% 0.18 ${s.hue}), oklch(42% 0.14 ${s.hue}))`;
@@ -75,7 +77,7 @@ export function ServiceCardItem({
         style={{
           width: "100%",
           aspectRatio: "16 / 9",
-          background: coverVideo ? "#0b1220" : bannerBg,
+          background: coverVideo || coverImg ? "#0b1220" : bannerBg,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -84,6 +86,14 @@ export function ServiceCardItem({
           borderBottom: "1px solid var(--line)",
         }}
       >
+        {coverImg && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={coverImg}
+            alt={s.name}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        )}
         {coverVideo && (
           <>
             <iframe
@@ -152,7 +162,7 @@ export function ServiceCardItem({
                 ● EN VIVO
               </span>
             )}
-            {!coverVideo && (
+            {!coverVideo && !coverImg && (
               <div
                 style={{
                   width: 104,

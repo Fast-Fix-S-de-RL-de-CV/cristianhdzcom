@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
+import { SiteTabs } from "@/components/admin/SiteTabs";
 import { Card } from "@/components/ui/Card";
 import { HeroEditor } from "./HeroEditor";
 
@@ -45,10 +46,11 @@ export default async function HeroAdminPage() {
   return (
     <AdminPageShell
       user={user}
-      active="/admin/ajustes"
+      active="sitio"
       title="Hero del Home"
       subtitle="Título, bio, foto de portada, chips, stats y quote del landing público"
     >
+      <SiteTabs current="/admin/ajustes/hero" />
       <Card style={{ padding: 0, overflow: "hidden" }}>
         <HeroEditor initial={settings} />
       </Card>

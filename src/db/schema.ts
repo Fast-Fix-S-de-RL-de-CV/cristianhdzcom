@@ -729,6 +729,8 @@ export const services = pgTable(
     ctaUrl: text("cta_url"),
     /** Video de portada (Vimeo/YouTube) reproducido en loop mudo sobre el banner. */
     coverVideoUrl: text("cover_video_url"),
+    /** Imagen de portada (sube el tenant). Tiene prioridad sobre el video/glyph. */
+    coverUrl: text("cover_url"),
     /**
      * Si true, la card se renderea como "Tu próximo SaaS / cotiza" — patrón
      * cross-hatched, sin gradiente colorido, CTA distinto. Diseñada para

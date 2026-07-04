@@ -22,6 +22,10 @@ function PathCardView({ c, tp }: { c: PathCard & { eyebrow?: string }; tp: (p: s
         style={{ padding: 28, display: "flex", flexDirection: "column", gap: 16, minHeight: 420, position: "relative", overflow: "hidden", height: "100%" }}
       >
         <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: "50%", background: decoBg }} />
+        {c.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={c.imageUrl} alt="" style={{ position: "relative", width: "100%", height: 150, objectFit: "cover", borderRadius: 12 }} />
+        )}
         <div className="between" style={{ position: "relative" }}>
           <span className="mono" style={{ fontSize: 11, letterSpacing: "0.08em", color: accentColor }}>{c.eyebrow}</span>
           {c.tag && <Chip>{c.tag}</Chip>}

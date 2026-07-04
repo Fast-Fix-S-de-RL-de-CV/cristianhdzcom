@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getTenantCtx } from "@/lib/tenant";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
+import { SiteTabs } from "@/components/admin/SiteTabs";
 import { SliderManager } from "./SliderManager";
 
 export const dynamic = "force-dynamic";
@@ -28,10 +29,11 @@ export default async function SliderAdminPage() {
   return (
     <AdminPageShell
       user={user}
-      active="/admin/ajustes"
+      active="sitio"
       title="Portada del Home"
       subtitle="Elige el tipo de portada y arma tu slider con imágenes y video"
     >
+      <SiteTabs current="/admin/ajustes/slider" />
       <SliderManager
         siteName={ctx.branding.siteName}
         initialSettings={{

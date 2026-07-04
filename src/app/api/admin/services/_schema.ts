@@ -23,6 +23,7 @@ export const serviceBodySchema = z.object({
   ctaLabel: z.string().max(60).optional(),
   ctaUrl: z.string().nullable().optional(),
   coverVideoUrl: z.string().nullable().optional(),
+  coverUrl: z.string().nullable().optional(),
   isCtaCard: z.boolean().optional(),
   showLiveBadge: z.boolean().optional(),
   isActive: z.boolean().optional(),

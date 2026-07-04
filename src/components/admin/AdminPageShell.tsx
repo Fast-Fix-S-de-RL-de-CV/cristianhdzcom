@@ -4,7 +4,8 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { adminIcon } from "./adminIcons";
 import { useTenant } from "@/components/tenant/TenantProvider";
 
-const ITEMS = [
+// [label, href, activeKey?] — activeKey agrupa varias páginas bajo un mismo ítem.
+const ITEMS: readonly (readonly [string, string] | readonly [string, string, string])[] = [
   ["Dashboard", "/admin"],
   ["Prospectos", "/admin/prospectos"],
   ["Alumnos", "/admin/alumnos"],
@@ -19,8 +20,9 @@ const ITEMS = [
   ["Blog", "/admin/blog"],
   ["Comunidad", "/admin/comunidad"],
   ["Soporte", "/admin/soporte"],
+  ["Sitio web", "/admin/ajustes/slider", "sitio"],
   ["Ajustes", "/admin/ajustes"],
-] as const;
+];
 
 export function AdminPageShell({
   user,
@@ -53,8 +55,10 @@ export function AdminPageShell({
         >
           <Eyebrow style={{ padding: "0 12px 12px" }}>Operación</Eyebrow>
           <div className="col" style={{ gap: 2 }}>
-            {ITEMS.map(([label, href]) => {
-              const isActive = href === active;
+            {ITEMS.map((it) => {
+              const [label, href] = it;
+              const activeKey = it[2] ?? href;
+              const isActive = activeKey === active;
               return (
                 <a
                   key={href}

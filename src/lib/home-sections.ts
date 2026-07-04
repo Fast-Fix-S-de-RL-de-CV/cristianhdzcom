@@ -24,9 +24,10 @@ export type PathCard = {
   ctaLabel?: string;
   href?: string;
   color?: PathColor;
+  imageUrl?: string;
 };
 
-export type Phase = { title?: string; desc?: string };
+export type Phase = { title?: string; desc?: string; imageUrl?: string };
 
 export type SectionCopy = {
   show?: boolean;
@@ -108,6 +109,7 @@ const zPathCard = z.object({
   ctaLabel: zStr.optional(),
   href: zStr.optional(),
   color: z.enum(["accent", "warm", "ink"]).optional(),
+  imageUrl: zStr.optional(),
 });
 const zSectionCopy = z.object({
   show: z.boolean().optional(),
@@ -135,7 +137,7 @@ export const homeSectionsSchema = z.object({
       eyebrow: zStr.optional(),
       title: zStr.optional(),
       subtitle: z.string().max(1200).optional(),
-      phases: z.array(z.object({ title: zStr.optional(), desc: z.string().max(1200).optional() })).max(12).optional(),
+      phases: z.array(z.object({ title: zStr.optional(), desc: z.string().max(1200).optional(), imageUrl: zStr.optional() })).max(12).optional(),
     })
     .optional(),
   finalCta: z

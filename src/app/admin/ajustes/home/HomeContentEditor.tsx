@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { Plus, Trash2, TriangleAlert } from "lucide-react";
+import { useRef, useState } from "react";
+import { Loader2, Plus, Trash2, TriangleAlert, Upload } from "lucide-react";
 import { useTenant } from "@/components/tenant/TenantProvider";
 import { useToast } from "@/components/ui/ConfirmProvider";
 import { apiErrorMessage } from "@/lib/apiError";
@@ -38,6 +38,41 @@ function TF({ label, value, onChange, area }: { label: string; value?: string; o
   );
 }
 
+function ImageField({ value, onChange, uploadPath }: { value?: string; onChange: (v: string | undefined) => void; uploadPath: string }) {
+  const toast = useToast();
+  const [up, setUp] = useState(false);
+  const ref = useRef<HTMLInputElement>(null);
+  async function upload(file: File) {
+    setUp(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(uploadPath, { method: "POST", body: fd });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.error(j?.error === "too_large" ? "Imagen muy grande" : "No se pudo subir"); return; }
+      onChange(j.url);
+    } catch { toast.error("Error de red al subir"); } finally { setUp(false); }
+  }
+  return (
+    <div>
+      <div style={lbl}>Imagen (opcional)</div>
+      {value && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={value} alt="" style={{ width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 8, marginBottom: 8 }} />
+      )}
+      <div className="row" style={{ gap: 8 }}>
+        <button type="button" onClick={() => ref.current?.click()} disabled={up} className="btn btn-ghost row" style={{ gap: 6, padding: "7px 12px", fontSize: 12 }}>
+          {up ? <Loader2 size={13} /> : <Upload size={13} />} {value ? "Cambiar" : "Subir imagen"}
+        </button>
+        {value && (
+          <button type="button" onClick={() => onChange(undefined)} className="btn btn-ghost" style={{ padding: "7px 12px", fontSize: 12 }}>Quitar</button>
+        )}
+      </div>
+      <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
+    </div>
+  );
+}
+
 function Block({
   title, show, onToggle, children,
 }: {
@@ -62,6 +97,7 @@ export function HomeContentEditor({ initial, isSeed }: { initial: HomeSections; 
   const toast = useToast();
   const [s, setS] = useState<HomeSections>(initial);
   const [saving, setSaving] = useState(false);
+  const uploadPath = tp("/api/admin/upload?type=section");
 
   function upd<K extends keyof HomeSections>(key: K, patch: Partial<NonNullable<HomeSections[K]>>) {
     setS((prev) => ({ ...prev, [key]: { ...(prev[key] ?? {}), ...patch } }));
@@ -142,6 +178,7 @@ export function HomeContentEditor({ initial, isSeed }: { initial: HomeSections; 
                 </select>
               </label>
             </div>
+            <ImageField value={c.imageUrl} uploadPath={uploadPath} onChange={(url) => setCards((paths.cards ?? []).map((x, j) => j === i ? { ...x, imageUrl: url } : x))} />
           </div>
         ))}
         <button type="button" onClick={() => setCards([...(paths.cards ?? []), { color: "ink" }])} className="btn btn-ghost row" style={{ gap: 6, padding: "8px 14px", fontSize: 13, alignSelf: "flex-start" }}>
@@ -180,6 +217,7 @@ export function HomeContentEditor({ initial, isSeed }: { initial: HomeSections; 
             </div>
             <TF label="Título" value={p.title} onChange={(v) => setPhases((metodo.phases ?? []).map((x, j) => j === i ? { ...x, title: v } : x))} />
             <TF label="Descripción" value={p.desc} onChange={(v) => setPhases((metodo.phases ?? []).map((x, j) => j === i ? { ...x, desc: v } : x))} area />
+            <ImageField value={p.imageUrl} uploadPath={uploadPath} onChange={(url) => setPhases((metodo.phases ?? []).map((x, j) => j === i ? { ...x, imageUrl: url } : x))} />
           </div>
         ))}
         <button type="button" onClick={() => setPhases([...(metodo.phases ?? []), {}])} className="btn btn-ghost row" style={{ gap: 6, padding: "8px 14px", fontSize: 13, alignSelf: "flex-start" }}>
