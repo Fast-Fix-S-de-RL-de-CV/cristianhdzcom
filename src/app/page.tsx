@@ -13,7 +13,7 @@ import { ProgramasSection } from "@/components/marketing/home/ProgramasSection";
 import { EmpresasSection } from "@/components/marketing/home/EmpresasSection";
 import { MetodoSection } from "@/components/marketing/home/MetodoSection";
 import { FinalCtaSection } from "@/components/marketing/home/FinalCtaSection";
-import { resolveHomeSections, HOME_SECTIONS_DEFAULT } from "@/lib/home-sections";
+import { resolveHomeSectionOrder, resolveHomeSections, HOME_SECTIONS_DEFAULT } from "@/lib/home-sections";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +101,7 @@ export default async function HomePage() {
   // objeto = tenant con config (merge con defaults para tener todas las secciones).
   const rawSections = resolveHomeSections(hero?.homeSections, ctx.tenant.slug);
   const sec = rawSections === null ? null : { ...HOME_SECTIONS_DEFAULT, ...rawSections };
+  const sectionOrder = resolveHomeSectionOrder(sec?.order);
 
   const programsMapped = featured.map((p) => ({
     id: p.id,
@@ -208,22 +209,22 @@ export default async function HomePage() {
         />
       )}
 
-      <PathsSection config={sec === null ? null : sec.paths ?? null} tp={tp} />
-
-      <TalleresSection config={sec === null ? null : sec.talleres ?? null} talleres={talleres} tp={tp} />
-
-      <ProgramasSection config={sec === null ? null : sec.programas ?? null} programs={programsMapped} tp={tp} />
-
-      <EmpresasSection config={sec === null ? null : sec.empresas ?? null} services={servicesMapped} tp={tp} />
-
-      <MetodoSection config={sec === null ? null : sec.metodo ?? null} />
-
-      <FinalCtaSection
-        config={sec === null ? null : sec.finalCta ?? null}
-        hasUser={!!user}
-        nextLiveLabel={nextLiveLabel}
-        tp={tp}
-      />
+      {sectionOrder.map((key) => {
+        if (key === "paths") return <PathsSection key={key} config={sec === null ? null : sec.paths ?? null} tp={tp} />;
+        if (key === "talleres") return <TalleresSection key={key} config={sec === null ? null : sec.talleres ?? null} talleres={talleres} tp={tp} />;
+        if (key === "programas") return <ProgramasSection key={key} config={sec === null ? null : sec.programas ?? null} programs={programsMapped} tp={tp} />;
+        if (key === "empresas") return <EmpresasSection key={key} config={sec === null ? null : sec.empresas ?? null} services={servicesMapped} tp={tp} />;
+        if (key === "metodo") return <MetodoSection key={key} config={sec === null ? null : sec.metodo ?? null} />;
+        return (
+          <FinalCtaSection
+            key={key}
+            config={sec === null ? null : sec.finalCta ?? null}
+            hasUser={!!user}
+            nextLiveLabel={nextLiveLabel}
+            tp={tp}
+          />
+        );
+      })}
 
       <Footer />
     </div>

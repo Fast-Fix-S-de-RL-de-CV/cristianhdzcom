@@ -14,6 +14,8 @@
 import { z } from "zod";
 
 export type PathColor = "accent" | "warm" | "ink";
+export const HOME_SECTION_KEYS = ["paths", "talleres", "programas", "empresas", "metodo", "finalCta"] as const;
+export type HomeSectionKey = (typeof HOME_SECTION_KEYS)[number];
 
 export type PathCard = {
   eyebrow?: string;
@@ -38,6 +40,7 @@ export type SectionCopy = {
 };
 
 export type HomeSections = {
+  order?: HomeSectionKey[];
   paths?: { show?: boolean; eyebrow?: string; title?: string; intro?: string; cards?: PathCard[] };
   talleres?: SectionCopy;
   programas?: SectionCopy;
@@ -59,6 +62,7 @@ export type HomeSections = {
  * ocultas por default; el resto visibles con copy neutral.
  */
 export const HOME_SECTIONS_DEFAULT: HomeSections = {
+  order: [...HOME_SECTION_KEYS],
   paths: {
     show: false,
     eyebrow: "Lo que hacemos",
@@ -119,6 +123,7 @@ const zSectionCopy = z.object({
   ctaLabel: zStr.optional(),
 });
 export const homeSectionsSchema = z.object({
+  order: z.array(z.enum(HOME_SECTION_KEYS)).max(HOME_SECTION_KEYS.length).optional(),
   paths: z
     .object({
       show: z.boolean().optional(),
@@ -168,4 +173,15 @@ export function resolveHomeSections(
   if (raw) return raw;
   if (slug === SEED_TENANT_SLUG) return null;
   return HOME_SECTIONS_DEFAULT;
+}
+
+/** Orden válido para render/editor, con compatibilidad para configs viejas sin `order`. */
+export function resolveHomeSectionOrder(order: HomeSections["order"]): HomeSectionKey[] {
+  const seen = new Set<HomeSectionKey>();
+  const valid = (order ?? []).filter((key): key is HomeSectionKey => {
+    if (!HOME_SECTION_KEYS.includes(key as HomeSectionKey) || seen.has(key as HomeSectionKey)) return false;
+    seen.add(key as HomeSectionKey);
+    return true;
+  });
+  return [...valid, ...HOME_SECTION_KEYS.filter((key) => !seen.has(key))];
 }
