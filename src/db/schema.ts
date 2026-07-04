@@ -15,6 +15,7 @@ import {
   date,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
+import type { HomeSections } from "@/lib/home-sections";
 
 /* ─────────── TENANTS (SaaS mimarca.app) ───────────
  * Cada tenant es una plataforma completa (sitio + cursos + comunidad + pagos
@@ -1062,6 +1063,10 @@ export const siteSettings = pgTable("site_settings", {
   heroHeight: varchar("hero_height", { length: 10 }).notNull().default("full"),
   /** Ajuste de imagen del slider: cover | contain. */
   heroImageFit: varchar("hero_image_fit", { length: 10 }).notNull().default("cover"),
+
+  /** Contenido configurable del resto del Home (ver src/lib/home-sections.ts).
+   *  NULL = usar el render por default (JSX original en cristianhdz, genérico en otros). */
+  homeSections: jsonb("home_sections").$type<HomeSections>(),
 
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

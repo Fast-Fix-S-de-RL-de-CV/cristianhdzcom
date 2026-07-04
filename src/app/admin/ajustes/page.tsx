@@ -122,6 +122,13 @@ export default async function AjustesPage() {
               Portada / slider →
             </a>
             <a
+              href={tp("/admin/ajustes/home")}
+              className="btn btn-ghost"
+              style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}
+            >
+              Secciones del Home →
+            </a>
+            <a
               href={tp("/admin/ajustes/hero")}
               className="btn btn-ghost"
               style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}

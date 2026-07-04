@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
 import { getTenantCtx } from "@/lib/tenant";
+import { homeSectionsSchema } from "@/lib/home-sections";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,7 @@ const Body = z.object({
   heroEmbedHtml: z.string().max(20000).nullable().optional(),
   heroHeight: z.enum(["sm", "md", "lg", "full"]).optional(),
   heroImageFit: z.enum(["cover", "contain"]).optional(),
+  homeSections: homeSectionsSchema.nullable().optional(),
 });
 
 export async function PUT(req: Request) {

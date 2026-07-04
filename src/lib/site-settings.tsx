@@ -54,6 +54,7 @@ function defaults(tenantId: string): typeof schema.siteSettings.$inferSelect {
     heroEmbedHtml: null,
     heroHeight: "full",
     heroImageFit: "cover",
+    homeSections: null,
     updatedAt: new Date(),
   };
 }
