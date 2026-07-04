@@ -1,10 +1,17 @@
 "use client";
 import { useRef, useState } from "react";
-import { Loader2, Plus, Trash2, TriangleAlert, Upload } from "lucide-react";
+import { Info, Loader2, Plus, Trash2, TriangleAlert, Upload } from "lucide-react";
 import { useTenant } from "@/components/tenant/TenantProvider";
 import { useToast } from "@/components/ui/ConfirmProvider";
 import { apiErrorMessage } from "@/lib/apiError";
 import type { HomeSections, PathCard, Phase } from "@/lib/home-sections";
+
+// Secciones cuyas tarjetas se administran en otro menú (no aquí).
+const DATA_SECTIONS: { key: "talleres" | "programas" | "empresas"; nombre: string; label: string; route: string; noun: string }[] = [
+  { key: "talleres", nombre: "Talleres / eventos", label: "Talleres", route: "/admin/talleres", noun: "sus banners" },
+  { key: "programas", nombre: "Programas / cursos", label: "Cursos", route: "/admin/cursos", noun: "sus portadas" },
+  { key: "empresas", nombre: "Servicios / empresas", label: "Empresas", route: "/admin/servicios", noun: "sus imágenes" },
+];
 
 const input: React.CSSProperties = {
   width: "100%",
@@ -69,6 +76,45 @@ function ImageField({ value, onChange, uploadPath }: { value?: string; onChange:
         )}
       </div>
       <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
+    </div>
+  );
+}
+
+/** Aviso para secciones data-driven: las tarjetas viven en otro menú. */
+function SectionSourceNote({ noun, label, href }: { noun: string; label: string; href: string }) {
+  return (
+    <div
+      className="row"
+      style={{
+        gap: 10,
+        alignItems: "flex-start",
+        padding: "12px 14px",
+        borderRadius: 10,
+        border: "1px solid color-mix(in srgb, var(--gold-deep) 30%, white)",
+        background: "color-mix(in srgb, var(--gold) 8%, white)",
+        fontSize: 13,
+        lineHeight: 1.5,
+      }}
+    >
+      <Info size={16} style={{ flexShrink: 0, marginTop: 2, color: "var(--gold-deep)" }} />
+      <div className="col" style={{ gap: 8, flex: 1 }}>
+        <span>
+          Aquí solo editas el <strong>encabezado</strong> y si la sección se muestra. Las tarjetas y {noun} se
+          agregan en <strong>{label}</strong>.
+        </span>
+        <a href={href} className="btn btn-ghost" style={{ alignSelf: "flex-start", padding: "6px 12px", fontSize: 12, textDecoration: "none" }}>
+          Ir a {label} →
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/** Micro-nota para secciones cuyas tarjetas se editan aquí mismo. */
+function InPlaceNote({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="row" style={{ gap: 6, alignItems: "center", fontSize: 12, color: "var(--muted)" }}>
+      <Info size={13} style={{ flexShrink: 0 }} /> {children}
     </div>
   );
 }
@@ -143,8 +189,15 @@ export function HomeContentEditor({ initial, isSeed }: { initial: HomeSections; 
         </div>
       )}
 
+      <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.5, padding: "2px 2px 4px" }}>
+        Aquí editas los <strong>encabezados</strong> y la <strong>visibilidad</strong> de cada sección del home. El
+        contenido (las tarjetas) de Talleres, Cursos y Empresas se administra en su propio menú — te lo indicamos en
+        cada sección.
+      </div>
+
       {/* Tres caminos / bloques */}
       <Block title="Bloques destacados (3 caminos)" show={paths.show ?? false} onToggle={(v) => upd("paths", { show: v })}>
+        <InPlaceNote>Las tarjetas de esta sección se crean y editan aquí mismo (más abajo).</InPlaceNote>
         <TF label="Eyebrow" value={paths.eyebrow} onChange={(v) => upd("paths", { eyebrow: v })} />
         <TF label="Título" value={paths.title} onChange={(v) => upd("paths", { title: v })} />
         <TF label="Intro" value={paths.intro} onChange={(v) => upd("paths", { intro: v })} area />
@@ -186,13 +239,12 @@ export function HomeContentEditor({ initial, isSeed }: { initial: HomeSections; 
         </button>
       </Block>
 
-      {/* Data-driven: encabezados */}
-      {(["talleres", "programas", "empresas"] as const).map((key) => {
+      {/* Data-driven: encabezados (las tarjetas viven en otro menú) */}
+      {DATA_SECTIONS.map(({ key, nombre, label, route, noun }) => {
         const c = s[key] ?? {};
-        const nombre = key === "talleres" ? "Talleres / eventos" : key === "programas" ? "Programas / cursos" : "Servicios / empresas";
         return (
           <Block key={key} title={nombre} show={c.show ?? true} onToggle={(v) => upd(key, { show: v })}>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>Las tarjetas salen de tu contenido; aquí editas el encabezado.</div>
+            <SectionSourceNote noun={noun} label={label} href={tp(route)} />
             <TF label="Eyebrow" value={c.eyebrow} onChange={(v) => upd(key, { eyebrow: v })} />
             <TF label="Título" value={c.title} onChange={(v) => upd(key, { title: v })} />
             <TF label="Subtítulo" value={c.subtitle} onChange={(v) => upd(key, { subtitle: v })} area />
@@ -203,6 +255,7 @@ export function HomeContentEditor({ initial, isSeed }: { initial: HomeSections; 
 
       {/* Método / fases */}
       <Block title="Método / fases" show={metodo.show ?? false} onToggle={(v) => upd("metodo", { show: v })}>
+        <InPlaceNote>Las fases de esta sección se crean y editan aquí mismo (más abajo).</InPlaceNote>
         <TF label="Eyebrow" value={metodo.eyebrow} onChange={(v) => upd("metodo", { eyebrow: v })} />
         <TF label="Título" value={metodo.title} onChange={(v) => upd("metodo", { title: v })} />
         <TF label="Subtítulo" value={metodo.subtitle} onChange={(v) => upd("metodo", { subtitle: v })} area />
