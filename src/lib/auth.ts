@@ -68,23 +68,27 @@ export async function getCurrentUser() {
       tier: schema.users.tier,
       tierScore: schema.users.tierScore,
       lifetimeSpendCents: schema.users.lifetimeSpendCents,
+      impersonatorUserId: schema.sessions.impersonatorUserId,
     })
     .from(schema.sessions)
     .innerJoin(schema.users, eq(schema.users.id, schema.sessions.userId))
     .where(and(eq(schema.sessions.id, sid), gt(schema.sessions.expiresAt, new Date())))
     .limit(1);
-  const user = rows[0] ?? null;
-  if (!user) return null;
+  const row = rows[0] ?? null;
+  if (!row) return null;
 
   const ctx = await getTenantCtx();
   if (ctx) {
     // Realm tenant: la sesión solo vale dentro de su tenant.
-    if (user.tenantId !== ctx.tenant.id) return null;
+    if (row.tenantId !== ctx.tenant.id) return null;
   } else {
     // Realm plataforma: solo usuarios de plataforma (superadmin SaaS).
-    if (user.tenantId !== null) return null;
+    if (row.tenantId !== null) return null;
   }
-  return user;
+
+  // Expone isImpersonating; no filtra el id del impersonador al resto de la app.
+  const { impersonatorUserId, ...user } = row;
+  return { ...user, isImpersonating: Boolean(impersonatorUserId) };
 }
 
 export async function requireUser() {
@@ -114,4 +118,46 @@ export async function requireSuperAdmin() {
     throw new Error("forbidden");
   }
   return user;
+}
+
+/**
+ * Impersonación (solo sesión, ver ARCHITECTURE_SAAS.md). La MISMA fila de sesión
+ * pasa a actuar como `targetUserId`; `impersonatorUserId` guarda al usuario real
+ * (superadmin) para poder revertir. La cookie/sid no cambia → transición sin
+ * re-login. getCurrentUser() resuelve al target y pasa el check de realm de su
+ * tenant de forma natural.
+ */
+export async function startImpersonation(targetUserId: string) {
+  const jar = await cookies();
+  const sid = jar.get(COOKIE_NAME)?.value;
+  if (!sid) throw new Error("no_session");
+  const [row] = await db
+    .select({ userId: schema.sessions.userId, impersonatorUserId: schema.sessions.impersonatorUserId })
+    .from(schema.sessions)
+    .where(eq(schema.sessions.id, sid))
+    .limit(1);
+  if (!row) throw new Error("no_session");
+  // Conserva al impersonador original si (defensivamente) ya estuviera impersonando.
+  const impersonator = row.impersonatorUserId ?? row.userId;
+  await db
+    .update(schema.sessions)
+    .set({ userId: targetUserId, impersonatorUserId: impersonator })
+    .where(eq(schema.sessions.id, sid));
+}
+
+/** Revierte la impersonación: la sesión vuelve al impersonador. No-op si no había. */
+export async function stopImpersonation() {
+  const jar = await cookies();
+  const sid = jar.get(COOKIE_NAME)?.value;
+  if (!sid) return;
+  const [row] = await db
+    .select({ impersonatorUserId: schema.sessions.impersonatorUserId })
+    .from(schema.sessions)
+    .where(eq(schema.sessions.id, sid))
+    .limit(1);
+  if (!row?.impersonatorUserId) return;
+  await db
+    .update(schema.sessions)
+    .set({ userId: row.impersonatorUserId, impersonatorUserId: null })
+    .where(eq(schema.sessions.id, sid));
 }

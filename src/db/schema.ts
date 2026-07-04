@@ -135,6 +135,9 @@ export const sessions = pgTable(
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    // Impersonación superadmin → tenant (solo sesión): cuando está seteada, la sesión
+    // actúa como `userId` (el target) e `impersonatorUserId` es el superadmin real.
+    impersonatorUserId: uuid("impersonator_user_id").references(() => users.id, { onDelete: "set null" }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

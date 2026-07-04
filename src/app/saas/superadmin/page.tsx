@@ -37,6 +37,8 @@ export default async function SuperadminPage() {
       createdAt: schema.tenants.createdAt,
       userCount: sql<number>`(select count(*) from ${schema.users} where ${schema.users.tenantId} = ${schema.tenants.id})`.mapWith(Number),
       orderCount: sql<number>`(select count(*) from ${schema.orders} where ${schema.orders.tenantId} = ${schema.tenants.id})`.mapWith(Number),
+      // Admin a impersonar: owner del tenant o, si no hay, el admin más antiguo.
+      adminUserId: sql<string | null>`coalesce(${schema.tenants.ownerUserId}, (select u.id from ${schema.users} u where u.tenant_id = ${schema.tenants.id} and u.role in ('admin','superadmin') order by u.created_at asc limit 1))`,
     })
     .from(schema.tenants)
     .orderBy(desc(schema.tenants.createdAt));

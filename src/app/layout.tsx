@@ -3,6 +3,7 @@ import "./globals.css";
 import { ConfirmProvider } from "@/components/ui/ConfirmProvider";
 import { Lightbox } from "@/components/ui/Lightbox";
 import { TenantProvider, type TenantClientInfo } from "@/components/tenant/TenantProvider";
+import { ImpersonationBar } from "@/components/tenant/ImpersonationBar";
 import { getTenantCtx } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
@@ -85,6 +86,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
+        <ImpersonationBar />
         <TenantProvider value={tenantInfo}>
           <ConfirmProvider>{children}</ConfirmProvider>
         </TenantProvider>

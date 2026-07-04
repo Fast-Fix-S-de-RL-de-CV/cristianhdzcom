@@ -31,6 +31,8 @@ export async function GET() {
         createdAt: schema.tenants.createdAt,
         userCount: sql<number>`(select count(*) from users u where u.tenant_id = tenants.id)`.mapWith(Number),
         orderCount: sql<number>`(select count(*) from orders o where o.tenant_id = tenants.id)`.mapWith(Number),
+        // Admin a impersonar: owner del tenant o, si no hay, el admin más antiguo.
+        adminUserId: sql<string | null>`coalesce(tenants.owner_user_id, (select u.id from users u where u.tenant_id = tenants.id and u.role in ('admin','superadmin') order by u.created_at asc limit 1))`,
       })
       .from(schema.tenants)
       .orderBy(desc(schema.tenants.createdAt));

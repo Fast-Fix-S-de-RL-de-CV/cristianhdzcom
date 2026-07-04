@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, LogOut } from "lucide-react";
+import { BadgeCheck, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -26,6 +26,7 @@ export type TenantAdminRow = {
   createdAt: string;
   userCount: number;
   orderCount: number;
+  adminUserId: string | null;
 };
 
 const PLAN_OPTIONS = ["basico", "pro"] as const;
@@ -214,6 +215,25 @@ export function SuperadminClient({
     router.refresh();
   }
 
+  async function impersonate(adminUserId: string | null) {
+    if (!adminUserId) {
+      setError("Este tenant no tiene un admin para impersonar.");
+      return;
+    }
+    setError(null);
+    try {
+      const res = await fetch(`/api/platform/superadmin/impersonate/${adminUserId}`, { method: "POST" });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError("No se pudo entrar como este tenant. Inténtalo de nuevo.");
+        return;
+      }
+      window.location.href = j.redirectUrl || "/superadmin";
+    } catch {
+      setError("No hay conexión. Revisa tu internet.");
+    }
+  }
+
   return (
     <div style={{ minHeight: "100vh" }}>
       <header className="between" style={{ padding: "18px 40px", borderBottom: "1px solid var(--line)" }}>
@@ -313,15 +333,39 @@ export function SuperadminClient({
                   >
                     <div style={{ flex: 1, minWidth: 190 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2 }}>{t.name}</div>
-                      <a
-                        href={`/${t.slug}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mono"
-                        style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, display: "inline-block" }}
-                      >
-                        mimarca.app/{t.slug}
-                      </a>
+                      <div className="row" style={{ gap: 10, marginTop: 3, alignItems: "center" }}>
+                        <a
+                          href={`/${t.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mono"
+                          style={{ fontSize: 11, color: "var(--muted)", display: "inline-block" }}
+                        >
+                          mimarca.app/{t.slug}
+                        </a>
+                        <button
+                          type="button"
+                          disabled={pending || !t.adminUserId}
+                          onClick={() => impersonate(t.adminUserId)}
+                          title={t.adminUserId ? "Entrar como admin del tenant" : "Sin admin para impersonar"}
+                          className="mono row"
+                          style={{
+                            gap: 4,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: "0.04em",
+                            padding: "3px 8px",
+                            borderRadius: 6,
+                            cursor: pending || !t.adminUserId ? "default" : "pointer",
+                            border: "1px solid var(--line-2)",
+                            background: "white",
+                            color: t.adminUserId ? "var(--ink)" : "var(--muted)",
+                            opacity: t.adminUserId ? 1 : 0.5,
+                          }}
+                        >
+                          <LogIn size={11} /> ENTRAR
+                        </button>
+                      </div>
                     </div>
                     <span style={{ width: 150 }}>
                       {t.customDomain ? (
