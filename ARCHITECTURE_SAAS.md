@@ -81,13 +81,21 @@ checkout con SUS llaves de pago, branding propio. Nosotros somos dueños de la S
 - `pro`: $999 MXN/mes — + dominio propio, miembros ilimitados, sin badge "hecho con mimarca".
 - Constantes en `src/lib/plans.ts` (gates: `canUseCustomDomain(tenant)`, `memberLimit(tenant)`).
 
-## Dominios personalizados (patrón rifabase EXACTO)
-- Admin tenant agrega dominio → API crea zona CF (token `CLOUDFLARE_API_TOKEN`), SSL full,
-  CNAME @/www → mimarca.app (proxied), worker routes → worker `mimarca-proxy`; guarda
-  zoneId+nameservers en tenants; UI muestra los NS para que el cliente los ponga en su
-  registrador. Cron verifica zona active → domainVerified=true.
-- Worker `mimarca-proxy`: proxy transparente a https://mimarca.app preservando path y
-  seteando `X-Tenant-Host: {dominio}`. El middleware confía en ese header.
+## Dominios personalizados (patrón tiendasyscom)
+- Admin tenant agrega dominio → `POST /api/admin/domain` crea zona CF (token
+  `CLOUDFLARE_API_TOKEN`), SSL full, CNAME @/www → mimarca.app (proxied), worker routes →
+  worker `miapp-worker` (env `CLOUDFLARE_WORKER_NAME`); guarda zoneId+nameservers en tenants;
+  UI muestra los NS para que el cliente los ponga en su registrador. `GET` verifica zona
+  active → domainVerified=true. `DELETE` quita las worker routes (conserva la zona) y
+  desvincula.
+- Worker `miapp-worker` (cloudflare-worker/miapp-worker.js, se despliega en CF):
+  - `GET /api/check-domain/{host}` → `{ isLinked, tenantId, slug }`. Si `!isLinked` → 404 en
+    el edge (así rechaza dominios no vinculados / dados de baja).
+  - `GET /api/public/robots-txt/{host}` → robots por dominio (text/plain).
+  - Si está ligado, proxya a https://mimarca.app con el MISMO path, `Host: mimarca.app` y
+    `X-Forwarded-Host: {dominio}`. El middleware resuelve el tenant por ese header
+    (no se reescribe a /{slug}: en Next SSR el slug es virtual y el tenant se resuelve por
+    dominio en TODAS las rutas). Ambos endpoints son públicos (sin auth, CORS `*`).
 - cristianhdz.com NO usa CF: su DNS ya apunta directo al .12 con vhost propio; el
   middleware lo resuelve por Host como cualquier dominio custom (domainVerified=true seed).
 

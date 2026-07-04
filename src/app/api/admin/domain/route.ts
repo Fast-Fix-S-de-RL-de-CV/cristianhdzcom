@@ -12,6 +12,7 @@ import {
   ensureZone,
   getZoneStatus,
   normalizeDomain,
+  removeWorkerRoutes,
   setSslFull,
   upsertCnames,
 } from "@/lib/cloudflare";
@@ -164,11 +165,24 @@ export async function DELETE() {
   const ctx = await getTenantCtx();
   if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
 
+  const t = ctx.tenant;
+
+  // Teardown en Cloudflare: quita las worker routes para que el worker deje de
+  // proxyar este dominio (el check-domain ya devolvería 404, pero además
+  // limpiamos las rutas). La zona se conserva por si lo reconecta.
+  if (t.customDomain && t.cloudflareZoneId && cloudflareConfigured()) {
+    try {
+      await removeWorkerRoutes(t.cloudflareZoneId, t.customDomain);
+    } catch (e) {
+      console.error("[Domain] Error al quitar worker routes:", e);
+    }
+  }
+
   // Solo desvincula: la zona CF se conserva (idempotencia si vuelve a agregarla).
   await db
     .update(schema.tenants)
     .set({ customDomain: null, domainVerified: false })
-    .where(eq(schema.tenants.id, ctx.tenant.id));
+    .where(eq(schema.tenants.id, t.id));
 
   return NextResponse.json({ ok: true });
 }

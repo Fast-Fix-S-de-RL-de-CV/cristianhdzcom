@@ -10,7 +10,7 @@ import "server-only";
  *
  * Env:
  *   CLOUDFLARE_API_TOKEN   — token con permisos Zone.Zone, Zone.DNS, Zone.Workers Routes
- *   CLOUDFLARE_WORKER_NAME — nombre del worker (default "mimarca-proxy")
+ *   CLOUDFLARE_WORKER_NAME — nombre del worker (default "miapp-worker")
  */
 
 const CF_API = "https://api.cloudflare.com/client/v4";
@@ -129,7 +129,7 @@ export async function upsertCnames(zoneId: string, target = "mimarca.app"): Prom
 export async function addWorkerRoutes(
   zoneId: string,
   domain: string,
-  script = process.env.CLOUDFLARE_WORKER_NAME || "mimarca-proxy",
+  script = process.env.CLOUDFLARE_WORKER_NAME || "miapp-worker",
 ): Promise<void> {
   for (const pattern of [domain, `${domain}/*`, `*.${domain}/*`]) {
     const data = await cfFetch<unknown>(`/zones/${zoneId}/workers/routes`, {
@@ -138,6 +138,27 @@ export async function addWorkerRoutes(
     });
     if (!data.success && !hasCode(data.errors, 10020)) {
       console.error(`[Domain] Error Worker Route ${pattern}:`, data.errors);
+    }
+  }
+}
+
+type CfRoute = { id: string; pattern: string; script?: string };
+
+/**
+ * Borra las worker routes de este dominio (teardown al desvincular).
+ * NO borra la zona: si el cliente reconecta el dominio, `ensureZone` la
+ * reutiliza y `addWorkerRoutes` las vuelve a crear.
+ */
+export async function removeWorkerRoutes(zoneId: string, domain: string): Promise<void> {
+  const list = await cfFetch<CfRoute[]>(`/zones/${zoneId}/workers/routes`);
+  const targets = new Set([domain, `${domain}/*`, `*.${domain}/*`]);
+  for (const route of list.result ?? []) {
+    if (!targets.has(route.pattern)) continue;
+    const data = await cfFetch<unknown>(`/zones/${zoneId}/workers/routes/${route.id}`, {
+      method: "DELETE",
+    });
+    if (!data.success) {
+      console.error(`[Domain] Error borrando Worker Route ${route.pattern}:`, data.errors);
     }
   }
 }
