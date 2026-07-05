@@ -49,7 +49,7 @@ export function defaultAboutPageContent(opts: {
       {
         img: "/galeria-infinita/img/01.jpg",
         title: `${opts.fullName}.`,
-        subtitle: opts.role || opts.siteName,
+        subtitle: opts.role || "Programación · IA · Negocio",
         description: "Programador profesional con IA, autor y fundador. Convierto ideas en software y negocios que de verdad funcionan.",
       },
       {
