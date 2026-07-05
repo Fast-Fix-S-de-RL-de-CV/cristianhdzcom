@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { calculateAvailableSlots, hasBookingConflict } from "@/lib/booking";
-import { sendEmail } from "@/lib/email";
+import { sendTenantEmail } from "@/lib/email";
 import { getTenantCtx } from "@/lib/tenant";
 import { formatInZone, resolveTimezone } from "@/lib/timezone";
 
@@ -157,7 +157,8 @@ export async function POST(req: Request, routeCtx: { params: Promise<{ slug: str
   });
 
   if (notifyTo) {
-    sendEmail({
+    sendTenantEmail({
+      tenantId: ctx.tenant.id,
       to: notifyTo,
       replyTo: data.email,
       subject: `Nueva reserva: ${service.title}`,
@@ -177,7 +178,8 @@ export async function POST(req: Request, routeCtx: { params: Promise<{ slug: str
   }
 
   if (data.email) {
-    sendEmail({
+    sendTenantEmail({
+      tenantId: ctx.tenant.id,
       to: data.email,
       subject: `Tu reserva en ${ctx.branding.siteName}`,
       html: `

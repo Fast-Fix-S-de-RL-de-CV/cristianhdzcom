@@ -50,6 +50,14 @@ type Form = {
   bg: string;
   logoUrl: string | null;
   faviconUrl: string | null;
+  seo: {
+    title: string;
+    description: string;
+    keywords: string;
+    ogImageUrl: string | null;
+    canonicalUrl: string;
+    robots: "index,follow" | "noindex,nofollow";
+  };
   footerText: string;
   footerLinks: FooterLink[];
   navItems: EditableNavItem[];
@@ -64,6 +72,14 @@ const EMPTY: Form = {
   bg: COLOR_DEFAULTS.bg,
   logoUrl: null,
   faviconUrl: null,
+  seo: {
+    title: "",
+    description: "",
+    keywords: "",
+    ogImageUrl: null,
+    canonicalUrl: "",
+    robots: "index,follow",
+  },
   footerText: "",
   footerLinks: [],
   navItems: NAV_ITEMS_DEFAULT,
@@ -135,6 +151,14 @@ export function MiSitioCard() {
           bg: b.bg ?? COLOR_DEFAULTS.bg,
           logoUrl: b.logoUrl ?? null,
           faviconUrl: b.faviconUrl ?? null,
+          seo: {
+            title: b.seo?.title ?? "",
+            description: b.seo?.description ?? "",
+            keywords: Array.isArray(b.seo?.keywords) ? b.seo.keywords.join(", ") : "",
+            ogImageUrl: b.seo?.ogImageUrl ?? null,
+            canonicalUrl: b.seo?.canonicalUrl ?? "",
+            robots: b.seo?.robots ?? "index,follow",
+          },
           footerText: b.footerText ?? "",
           footerLinks: Array.isArray(b.footerLinks) ? b.footerLinks : [],
           navItems: Array.isArray(b.navItems)
@@ -160,6 +184,10 @@ export function MiSitioCard() {
 
   function set<K extends keyof Form>(key: K, value: Form[K]) {
     setForm((p) => ({ ...p, [key]: value }));
+  }
+
+  function setSeo<K extends keyof Form["seo"]>(key: K, value: Form["seo"][K]) {
+    setForm((p) => ({ ...p, seo: { ...p.seo, [key]: value } }));
   }
 
   function addLink() {
@@ -286,6 +314,18 @@ export function MiSitioCard() {
           bg: form.bg,
           logoUrl: form.logoUrl ?? "",
           faviconUrl: form.faviconUrl ?? "",
+          seo: {
+            title: form.seo.title.trim(),
+            description: form.seo.description.trim(),
+            keywords: form.seo.keywords
+              .split(",")
+              .map((k) => k.trim())
+              .filter(Boolean)
+              .slice(0, 20),
+            ogImageUrl: form.seo.ogImageUrl ?? "",
+            canonicalUrl: form.seo.canonicalUrl.trim(),
+            robots: form.seo.robots,
+          },
           footerText: form.footerText,
           // La API exige label y href: descarta enlaces a medio llenar
           footerLinks: form.footerLinks.filter((l) => l.label.trim() && l.href.trim()),
@@ -426,6 +466,67 @@ export function MiSitioCard() {
               }}
               style={{ display: "none" }}
             />
+          </div>
+        </div>
+      </Section>
+
+      {/* ── SEO ── */}
+      <Section title="SEO">
+        <div style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
+          Estos datos se renderizan desde el servidor en el HTML inicial para que bots y redes sociales puedan leerlos antes de cargar la app.
+        </div>
+        <Field label="Título SEO">
+          <input
+            value={form.seo.title}
+            onChange={(e) => setSeo("title", e.target.value)}
+            maxLength={120}
+            placeholder={`${form.siteName || "Mi Marca"} — cursos, comunidad y membresías`}
+            style={inputStyle()}
+          />
+        </Field>
+        <Field label="Descripción SEO">
+          <textarea
+            value={form.seo.description}
+            onChange={(e) => setSeo("description", e.target.value)}
+            maxLength={260}
+            placeholder="Describe tu sitio en 140-160 caracteres para Google y redes sociales."
+            style={{ ...inputStyle(), minHeight: 74 }}
+          />
+        </Field>
+        <Field label="Keywords separadas por coma">
+          <input
+            value={form.seo.keywords}
+            onChange={(e) => setSeo("keywords", e.target.value)}
+            maxLength={500}
+            placeholder="curso, comunidad, membresía, consultoría"
+            style={inputStyle()}
+          />
+        </Field>
+        <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 260 }}>
+            <ImageField
+              label="Imagen social / Open Graph"
+              value={form.seo.ogImageUrl}
+              onChange={(v) => setSeo("ogImageUrl", v)}
+              uploading={false}
+              hint="Recomendado 1200×630. Usa /uploads/... o una URL pública."
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: 260 }}>
+            <Field label="URL canonical">
+              <input
+                value={form.seo.canonicalUrl}
+                onChange={(e) => setSeo("canonicalUrl", e.target.value)}
+                placeholder="https://tudominio.com"
+                style={inputStyle()}
+              />
+            </Field>
+            <Field label="Robots">
+              <select value={form.seo.robots} onChange={(e) => setSeo("robots", e.target.value as Form["seo"]["robots"])} style={inputStyle()}>
+                <option value="index,follow">Indexar y seguir enlaces</option>
+                <option value="noindex,nofollow">No indexar</option>
+              </select>
+            </Field>
           </div>
         </div>
       </Section>
@@ -949,7 +1050,7 @@ function ImageField({
   label: string;
   value: string | null;
   onChange: (v: string | null) => void;
-  onPickFile: () => void;
+  onPickFile?: () => void;
   uploading: boolean;
   hint: string;
 }) {
@@ -996,15 +1097,17 @@ function ImageField({
             style={{ ...inputStyle(), marginBottom: 8 }}
           />
           <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={onPickFile}
-              disabled={uploading}
-              className="btn btn-primary"
-              style={{ padding: "6px 12px", fontSize: 12 }}
-            >
-              {uploading ? "Subiendo…" : "Subir imagen"}
-            </button>
+            {onPickFile && (
+              <button
+                type="button"
+                onClick={onPickFile}
+                disabled={uploading}
+                className="btn btn-primary"
+                style={{ padding: "6px 12px", fontSize: 12 }}
+              >
+                {uploading ? "Subiendo…" : "Subir imagen"}
+              </button>
+            )}
             {value && (
               <button
                 type="button"

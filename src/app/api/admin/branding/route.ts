@@ -35,6 +35,15 @@ const socialShape = z.object({
   linkedin: z.string().max(300).optional(),
 });
 
+const seoShape = z.object({
+  title: z.string().max(120).optional(),
+  description: z.string().max(260).optional(),
+  keywords: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
+  ogImageUrl: urlish.nullable().optional(),
+  canonicalUrl: z.string().max(500).nullable().optional(),
+  robots: z.enum(["index,follow", "noindex,nofollow"]).optional(),
+});
+
 const Body = z.object({
   siteName: z.string().min(1).max(80).optional(),
   accent: hexColor.optional(),
@@ -42,6 +51,7 @@ const Body = z.object({
   bg: hexColor.optional(),
   logoUrl: urlish.nullable().optional(),
   faviconUrl: urlish.nullable().optional(),
+  seo: seoShape.optional(),
   footerText: z.string().max(300).optional(),
   footerLinks: z
     .array(
@@ -158,6 +168,17 @@ export async function PUT(req: Request) {
       }
     }
     patch.social = clean;
+  }
+
+  if (data.seo) {
+    patch.seo = {
+      title: data.seo.title?.trim() || undefined,
+      description: data.seo.description?.trim() || undefined,
+      keywords: Array.isArray(data.seo.keywords) ? data.seo.keywords.map((k) => k.trim()).filter(Boolean) : [],
+      ogImageUrl: data.seo.ogImageUrl || null,
+      canonicalUrl: data.seo.canonicalUrl?.trim() || null,
+      robots: data.seo.robots || "index,follow",
+    };
   }
 
   const next: TenantBranding = { ...current, ...patch };

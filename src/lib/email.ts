@@ -1,5 +1,7 @@
 import "server-only";
 import type { Transporter } from "nodemailer";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db";
 
 /**
  * Mail sender. Three backends, picked in order:
@@ -28,6 +30,10 @@ export interface SendEmailInput {
   html: string;
   text?: string;
   replyTo?: string;
+}
+
+export interface TenantEmailInput extends SendEmailInput {
+  tenantId: string;
 }
 
 // Cache the nodemailer Transporter across invocations. Re-using the same TCP
@@ -121,6 +127,65 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean; i
     `[email:stub] would send to ${input.to}\n  subject: ${input.subject}\n  preview: ${input.text?.slice(0, 200) ?? input.html.slice(0, 200).replace(/<[^>]+>/g, " ")}`,
   );
   return { ok: false, reason: "no_sender_configured" };
+}
+
+function cleanEmail(value: string | null | undefined): string | null {
+  const v = String(value ?? "").trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? v : null;
+}
+
+function formatFrom(name: string | null | undefined, email: string): string {
+  const n = String(name ?? "").trim().replaceAll('"', "");
+  return n ? `"${n}" <${email}>` : email;
+}
+
+export async function sendTenantEmail(input: TenantEmailInput): Promise<{ ok: boolean; id?: string; reason?: string }> {
+  const [settings] = await db
+    .select()
+    .from(schema.emailSettings)
+    .where(eq(schema.emailSettings.tenantId, input.tenantId))
+    .limit(1);
+
+  const fromEmail = cleanEmail(settings?.fromEmail);
+  const replyTo = input.replyTo || settings?.replyToEmail || undefined;
+
+  if (
+    settings?.enableSmtp &&
+    settings.smtpHost &&
+    settings.smtpPort &&
+    settings.smtpUser &&
+    settings.smtpPass &&
+    fromEmail
+  ) {
+    try {
+      const nodemailer = await import("nodemailer");
+      const transporter = nodemailer.createTransport({
+        host: settings.smtpHost,
+        port: settings.smtpPort,
+        secure: settings.smtpSecure,
+        auth: { user: settings.smtpUser, pass: settings.smtpPass },
+        pool: true,
+        maxConnections: 2,
+        maxMessages: 20,
+        tls: { rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== "false" },
+      });
+      const info = await transporter.sendMail({
+        from: formatFrom(settings.fromName, fromEmail),
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+        replyTo,
+      });
+      await transporter.close();
+      return { ok: true, id: info.messageId };
+    } catch (err: any) {
+      console.error("[email] tenant SMTP send error:", err?.message ?? err);
+      return { ok: false, reason: "tenant_smtp_error" };
+    }
+  }
+
+  return sendEmail({ ...input, replyTo });
 }
 
 /* ─────────── Templates ─────────── */

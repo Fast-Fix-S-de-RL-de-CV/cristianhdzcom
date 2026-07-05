@@ -26,10 +26,40 @@ export async function generateMetadata(): Promise<Metadata> {
     };
   }
   const b = ctx.branding;
+  const seo = b.seo ?? {};
+  const title = seo.title || b.siteName;
+  const description = seo.description || b.footerText || `${b.siteName} — cursos, comunidad y membresías.`;
+  const requestUrl = ctx.tenant.customDomain
+    ? `https://${ctx.tenant.customDomain}${ctx.basePath || ""}`
+    : process.env.NEXT_PUBLIC_SITE_URL
+      ? `${process.env.NEXT_PUBLIC_SITE_URL}${ctx.basePath || ""}`
+      : undefined;
+  const canonical = seo.canonicalUrl || requestUrl;
+  const ogImage = seo.ogImageUrl || b.logoUrl || undefined;
+  const robots = seo.robots === "noindex,nofollow"
+    ? { index: false, follow: false }
+    : { index: true, follow: true };
+
   return {
-    title: b.siteName,
-    description: b.footerText || `${b.siteName} — cursos, comunidad y membresías.`,
-    openGraph: { title: b.siteName, type: "website" },
+    title,
+    description,
+    keywords: seo.keywords?.length ? seo.keywords : undefined,
+    alternates: canonical ? { canonical } : undefined,
+    robots,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: canonical,
+      siteName: b.siteName,
+      images: ogImage ? [{ url: ogImage, alt: title }] : undefined,
+    },
+    twitter: {
+      card: ogImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
+    },
     icons: {
       icon: [{ url: b.faviconUrl || "/favicon.png", type: "image/png", sizes: "any" }],
     },

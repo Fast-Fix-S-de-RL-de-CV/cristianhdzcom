@@ -30,8 +30,17 @@ export type TenantBranding = {
   bg?: string; // fondo base
   logoUrl?: string | null;
   faviconUrl?: string | null;
+  seo?: {
+    title?: string;
+    description?: string;
+    keywords?: string[];
+    ogImageUrl?: string | null;
+    canonicalUrl?: string | null;
+    robots?: "index,follow" | "noindex,nofollow";
+  };
   footerText?: string;
   footerLinks?: Array<{ label: string; href: string }>;
+  footerColumns?: Array<{ title: string; links: Array<{ label: string; href: string }> }>;
   navItems?: Array<{ label: string; href: string; isVisible?: boolean; openInNewTab?: boolean }>;
   aboutPage?: AboutPageContent;
   social?: Partial<Record<"instagram" | "facebook" | "youtube" | "tiktok" | "x" | "linkedin", string>>;
@@ -815,12 +824,36 @@ export const bookingReservations = pgTable(
     notes: text("notes"),
     answers: jsonb("answers").$type<Array<{ id: string; label: string; answer: string }>>().notNull().default([]),
     status: varchar("status", { length: 30 }).notNull().default("scheduled"),
+    reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     serviceTimeIdx: index("booking_reservations_service_time_idx").on(t.serviceId, t.startsAt),
     tenantIdx: index("booking_reservations_tenant_idx").on(t.tenantId, t.createdAt),
+  }),
+);
+
+/* ─────────── EMAIL SETTINGS (SMTP por tenant) ─────────── */
+export const emailSettings = pgTable(
+  "email_settings",
+  {
+    id: serial("id").primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    fromName: varchar("from_name", { length: 120 }),
+    fromEmail: varchar("from_email", { length: 320 }),
+    replyToEmail: varchar("reply_to_email", { length: 320 }),
+    smtpHost: varchar("smtp_host", { length: 200 }),
+    smtpPort: integer("smtp_port").notNull().default(465),
+    smtpSecure: boolean("smtp_secure").notNull().default(true),
+    smtpUser: varchar("smtp_user", { length: 320 }),
+    smtpPass: text("smtp_pass"),
+    enableSmtp: boolean("enable_smtp").notNull().default(false),
+    enableBookingReminders: boolean("enable_booking_reminders").notNull().default(true),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: uniqueIndex("email_settings_tenant_idx").on(t.tenantId),
   }),
 );
 
