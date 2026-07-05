@@ -36,6 +36,10 @@
   /* Linear gradients used by buttons, chips, decorative lines */
   --gold-gradient: linear-gradient(135deg, #B8860B 0%, #E8C766 35%, #FFD86B 50%, #C8A951 70%, #8B6914 100%);
   --gold-gradient-soft: linear-gradient(135deg, #F4E7B8 0%, #FAF3DC 50%, #E5D29E 100%);
+  --nav-bg: linear-gradient(180deg, #061B36 0%, #0B2548 100%);
+  --nav-text: #FFFFFF;
+  --nav-text-muted: rgba(255, 255, 255, 0.72);
+  --button-text: #0A1E3A;
 
   /* Accent is now navy (was a cool azure) — used for links and "accent" chips */
   --accent: #143257;
@@ -104,11 +108,11 @@ button {
   border-bottom: 1px solid rgba(216, 168, 63, 0.10);
   /* Mismo gradiente que el sidebar alumno — continuidad visual entre el
    * sitio público y la app privada. */
-  background: linear-gradient(180deg, #061B36 0%, #0B2548 100%);
+  background: var(--nav-bg);
   position: sticky;
   top: 0;
   z-index: 40;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--nav-text);
 }
 .ch-logo {
   font-family: var(--font-serif);
@@ -156,21 +160,21 @@ button {
   display: flex;
   gap: 28px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--nav-text-muted);
 }
 .ch-nav-links a {
   cursor: pointer;
   transition: color 0.15s;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--nav-text-muted);
   font-weight: 500;
   padding: 6px 2px;
   position: relative;
 }
 .ch-nav-links a:hover {
-  color: white;
+  color: var(--nav-text);
 }
 .ch-nav-links a.is-active {
-  color: white;
+  color: var(--nav-text);
   font-weight: 700;
 }
 .ch-nav-links a.is-active::after {
@@ -191,7 +195,7 @@ button {
 /* Botones del nav cuando viven en el fondo navy oscuro */
 .ch-nav .btn-primary {
   background: linear-gradient(180deg, #F2C65A 0%, #D8A83F 100%);
-  color: var(--navy);
+  color: var(--button-text);
   border: none;
   box-shadow: 0 3px 0 #B88523;
   font-weight: 700;
@@ -204,19 +208,19 @@ button {
 }
 .ch-nav .btn-ghost {
   background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--nav-text);
   border: 1px solid rgba(255, 255, 255, 0.16);
   font-weight: 600;
 }
 .ch-nav .btn-ghost:hover {
   background: rgba(255, 255, 255, 0.10);
-  color: white;
+  color: var(--nav-text);
   border-color: rgba(216, 168, 63, 0.40);
 }
 /* Avatar circular en el nav */
 .ch-nav .av {
   background: linear-gradient(160deg, #F2C65A 0%, #D8A83F 100%);
-  color: var(--navy);
+  color: var(--button-text);
   font-weight: 800;
   border: 2px solid rgba(216, 168, 63, 0.40);
   box-shadow: 0 3px 0 #B88523, 0 0 0 1px rgba(11, 37, 72, 0.5) inset;

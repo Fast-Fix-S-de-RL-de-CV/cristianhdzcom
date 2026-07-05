@@ -28,6 +28,9 @@ export type TenantBranding = {
   accent?: string; // color principal (botones, acentos) — familia "gold" actual
   ink?: string; // color de texto/navy
   bg?: string; // fondo base
+  navBg?: string; // fondo del menu publico
+  navText?: string; // texto del menu publico
+  buttonText?: string; // texto sobre botones principales
   logoUrl?: string | null;
   faviconUrl?: string | null;
   seo?: {

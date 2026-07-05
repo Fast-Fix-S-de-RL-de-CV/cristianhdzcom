@@ -17,6 +17,9 @@ const Body = z.object({
       accent: z.string().max(20).optional(),
       ink: z.string().max(20).optional(),
       bg: z.string().max(20).optional(),
+      navBg: z.string().max(20).optional(),
+      navText: z.string().max(20).optional(),
+      buttonText: z.string().max(20).optional(),
     })
     .optional(),
 });
@@ -24,6 +27,9 @@ const Suggestion = z.object({
   accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   ink: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   bg: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  navBg: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  navText: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  buttonText: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   fontStyle: z.string().max(80),
   tone: z.string().max(120),
   rationale: z.string().max(800),
@@ -83,7 +89,14 @@ export async function POST(req: Request) {
     const suggestion = await analyzeWithClaude({
       apiKey,
       siteName: ctx.branding.siteName,
-      current: data.current ?? { accent: ctx.branding.accent, ink: ctx.branding.ink, bg: ctx.branding.bg },
+      current: data.current ?? {
+        accent: ctx.branding.accent,
+        ink: ctx.branding.ink,
+        bg: ctx.branding.bg,
+        navBg: ctx.branding.navBg,
+        navText: ctx.branding.navText,
+        buttonText: ctx.branding.buttonText,
+      },
       image,
     });
     return NextResponse.json({ ok: true, suggestion });
@@ -136,7 +149,7 @@ async function analyzeWithClaude({
 }: {
   apiKey: string;
   siteName: string;
-  current: { accent?: string; ink?: string; bg?: string };
+  current: { accent?: string; ink?: string; bg?: string; navBg?: string; navText?: string; buttonText?: string };
   image: { bytes: Buffer; mediaType: string };
 }) {
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
@@ -148,6 +161,9 @@ Devuelve SOLO JSON válido con esta forma exacta:
   "accent": "#RRGGBB",
   "ink": "#RRGGBB",
   "bg": "#RRGGBB",
+  "navBg": "#RRGGBB",
+  "navText": "#RRGGBB",
+  "buttonText": "#RRGGBB",
   "fontStyle": "descripción breve del estilo tipográfico recomendado",
   "tone": "tono visual de la marca",
   "rationale": "explicación breve en español",
@@ -155,14 +171,23 @@ Devuelve SOLO JSON válido con esta forma exacta:
 }
 
 Reglas:
-- Sugiere colores accesibles para UI: accent para botones/detalles, ink para texto/nav, bg para fondo.
+- Sugiere colores accesibles para UI:
+  accent: botones, links activos y detalles de marca.
+  ink: texto principal del sitio.
+  bg: fondo general del sitio.
+  navBg: fondo del menu superior publico.
+  navText: texto del menu superior publico, con contraste alto sobre navBg.
+  buttonText: texto sobre botones principales, con contraste alto sobre accent.
 - Evita fondos demasiado oscuros si el logo ya es oscuro, salvo que la marca claramente lo pida.
-- Mantén buen contraste entre ink y bg.
+- Mantén buen contraste entre ink/bg, navText/navBg y buttonText/accent.
 - El resultado debe ser usable en una plataforma SaaS/cursos/comunidad.
 - Considera los colores actuales solo como contexto, no estás obligado a conservarlos:
   accent actual: ${current.accent ?? "N/A"}
   ink actual: ${current.ink ?? "N/A"}
   bg actual: ${current.bg ?? "N/A"}
+  navBg actual: ${current.navBg ?? "N/A"}
+  navText actual: ${current.navText ?? "N/A"}
+  buttonText actual: ${current.buttonText ?? "N/A"}
 - No incluyas markdown ni texto fuera del JSON.`;
 
   const response = await client.messages.create({
@@ -204,6 +229,9 @@ Reglas:
     accent: result.data.accent.toUpperCase(),
     ink: result.data.ink.toUpperCase(),
     bg: result.data.bg.toUpperCase(),
+    navBg: result.data.navBg.toUpperCase(),
+    navText: result.data.navText.toUpperCase(),
+    buttonText: result.data.buttonText.toUpperCase(),
   };
 }
 
@@ -235,6 +263,9 @@ function normalizeSuggestion(value: unknown): unknown {
     accent: normalizeHex(input.accent, "#C8A951"),
     ink: normalizeHex(input.ink, "#0A1E3A"),
     bg: normalizeHex(input.bg ?? input.background, "#FBFAF5"),
+    navBg: normalizeHex(input.navBg ?? input.nav_bg ?? input.menuBg ?? input.menuBackground, "#0B2548"),
+    navText: normalizeHex(input.navText ?? input.nav_text ?? input.menuText, "#FFFFFF"),
+    buttonText: normalizeHex(input.buttonText ?? input.button_text ?? input.ctaText, "#0A1E3A"),
     fontStyle: text(input.fontStyle ?? input.font_style ?? input.typography, "Tipografia limpia y legible", 80),
     tone: text(input.tone ?? input.styleTone, "Identidad profesional y cercana", 120),
     rationale: text(input.rationale ?? input.reason ?? input.reasoning, "Paleta sugerida a partir de los colores visibles del logo.", 800),

@@ -67,9 +67,19 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/** Deriva la paleta completa a partir de accent/ink/bg del tenant. */
-function brandVars(b: { accent: string; ink: string; bg: string }): React.CSSProperties {
+/** Deriva la paleta completa a partir de los colores del tenant. */
+function brandVars(b: {
+  accent: string;
+  ink: string;
+  bg: string;
+  navBg?: string;
+  navText?: string;
+  buttonText?: string;
+}): React.CSSProperties {
   const { accent, ink, bg } = b;
+  const navBg = b.navBg || ink;
+  const navText = b.navText || "#FFFFFF";
+  const buttonText = b.buttonText || ink;
   return {
     ["--bg" as string]: bg,
     ["--bg-2" as string]: `color-mix(in srgb, ${bg} 96%, ${ink})`,
@@ -87,6 +97,10 @@ function brandVars(b: { accent: string; ink: string; bg: string }): React.CSSPro
     ["--gold-soft" as string]: `color-mix(in srgb, ${accent} 14%, ${bg})`,
     ["--gold-line" as string]: `color-mix(in srgb, ${accent} 45%, ${bg})`,
     ["--gold-gradient" as string]: `linear-gradient(135deg, color-mix(in srgb, ${accent} 62%, black) 0%, color-mix(in srgb, ${accent} 72%, white) 40%, ${accent} 70%, color-mix(in srgb, ${accent} 55%, black) 100%)`,
+    ["--nav-bg" as string]: navBg,
+    ["--nav-text" as string]: navText,
+    ["--nav-text-muted" as string]: `color-mix(in srgb, ${navText} 72%, ${navBg})`,
+    ["--button-text" as string]: buttonText,
   };
 }
 
@@ -100,7 +114,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const isDefaultBrand =
     !ctx ||
-    (ctx.branding.accent === "#C8A951" && ctx.branding.ink === "#0A1E3A" && ctx.branding.bg === "#FBFAF5");
+    (ctx.branding.accent === "#C8A951" &&
+      ctx.branding.ink === "#0A1E3A" &&
+      ctx.branding.bg === "#FBFAF5" &&
+      ctx.branding.navBg === "#0B2548" &&
+      ctx.branding.navText === "#FFFFFF" &&
+      ctx.branding.buttonText === "#0A1E3A");
 
   const tenantInfo: TenantClientInfo = ctx
     ? {

@@ -27,14 +27,17 @@ export type TenantCtx = {
 };
 
 export type ResolvedBranding = Required<
-  Pick<TenantBranding, "siteName" | "accent" | "ink" | "bg" | "footerText">
+  Pick<TenantBranding, "siteName" | "accent" | "ink" | "bg" | "navBg" | "navText" | "buttonText" | "footerText">
 > &
-  Omit<TenantBranding, "siteName" | "accent" | "ink" | "bg" | "footerText">;
+  Omit<TenantBranding, "siteName" | "accent" | "ink" | "bg" | "navBg" | "navText" | "buttonText" | "footerText">;
 
 export const BRANDING_DEFAULTS = {
   accent: "#C8A951",
   ink: "#0A1E3A",
   bg: "#FBFAF5",
+  navBg: "#0B2548",
+  navText: "#FFFFFF",
+  buttonText: "#0A1E3A",
   footerText: "",
 } as const;
 
@@ -46,6 +49,9 @@ export function resolveBranding(t: TenantRow): ResolvedBranding {
     accent: b.accent || BRANDING_DEFAULTS.accent,
     ink: b.ink || BRANDING_DEFAULTS.ink,
     bg: b.bg || BRANDING_DEFAULTS.bg,
+    navBg: b.navBg || BRANDING_DEFAULTS.navBg,
+    navText: b.navText || BRANDING_DEFAULTS.navText,
+    buttonText: b.buttonText || BRANDING_DEFAULTS.buttonText,
     footerText: b.footerText ?? "",
   };
 }

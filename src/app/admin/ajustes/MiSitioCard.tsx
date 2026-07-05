@@ -16,7 +16,14 @@ import { NAV_ITEMS_DEFAULT, NAV_TARGETS, type NavItem } from "@/lib/nav-items";
  * en src/app/layout.tsx (color-mix), para que lo que ves sea lo que sale.
  */
 
-const COLOR_DEFAULTS = { accent: "#C8A951", ink: "#0A1E3A", bg: "#FBFAF5" } as const;
+const COLOR_DEFAULTS = {
+  accent: "#C8A951",
+  ink: "#0A1E3A",
+  bg: "#FBFAF5",
+  navBg: "#0B2548",
+  navText: "#FFFFFF",
+  buttonText: "#0A1E3A",
+} as const;
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
 type FooterLink = { label: string; href: string };
@@ -28,6 +35,9 @@ type LogoSuggestion = {
   accent: string;
   ink: string;
   bg: string;
+  navBg: string;
+  navText: string;
+  buttonText: string;
   fontStyle: string;
   tone: string;
   rationale: string;
@@ -48,6 +58,9 @@ type Form = {
   accent: string;
   ink: string;
   bg: string;
+  navBg: string;
+  navText: string;
+  buttonText: string;
   logoUrl: string | null;
   faviconUrl: string | null;
   seo: {
@@ -70,6 +83,9 @@ const EMPTY: Form = {
   accent: COLOR_DEFAULTS.accent,
   ink: COLOR_DEFAULTS.ink,
   bg: COLOR_DEFAULTS.bg,
+  navBg: COLOR_DEFAULTS.navBg,
+  navText: COLOR_DEFAULTS.navText,
+  buttonText: COLOR_DEFAULTS.buttonText,
   logoUrl: null,
   faviconUrl: null,
   seo: {
@@ -88,7 +104,21 @@ const EMPTY: Form = {
 };
 
 /** Misma derivación de paleta que brandVars() en src/app/layout.tsx. */
-function previewVars(accent: string, ink: string, bg: string): React.CSSProperties {
+function previewVars({
+  accent,
+  ink,
+  bg,
+  navBg,
+  navText,
+  buttonText,
+}: {
+  accent: string;
+  ink: string;
+  bg: string;
+  navBg: string;
+  navText: string;
+  buttonText: string;
+}): React.CSSProperties {
   return {
     ["--bg" as string]: bg,
     ["--bg-2" as string]: `color-mix(in srgb, ${bg} 96%, ${ink})`,
@@ -106,6 +136,10 @@ function previewVars(accent: string, ink: string, bg: string): React.CSSProperti
     ["--gold-soft" as string]: `color-mix(in srgb, ${accent} 14%, ${bg})`,
     ["--gold-line" as string]: `color-mix(in srgb, ${accent} 45%, ${bg})`,
     ["--gold-gradient" as string]: `linear-gradient(135deg, color-mix(in srgb, ${accent} 62%, black) 0%, color-mix(in srgb, ${accent} 72%, white) 40%, ${accent} 70%, color-mix(in srgb, ${accent} 55%, black) 100%)`,
+    ["--nav-bg" as string]: navBg,
+    ["--nav-text" as string]: navText,
+    ["--nav-text-muted" as string]: `color-mix(in srgb, ${navText} 72%, ${navBg})`,
+    ["--button-text" as string]: buttonText,
   };
 }
 
@@ -149,6 +183,9 @@ export function MiSitioCard() {
           accent: b.accent ?? COLOR_DEFAULTS.accent,
           ink: b.ink ?? COLOR_DEFAULTS.ink,
           bg: b.bg ?? COLOR_DEFAULTS.bg,
+          navBg: b.navBg ?? COLOR_DEFAULTS.navBg,
+          navText: b.navText ?? COLOR_DEFAULTS.navText,
+          buttonText: b.buttonText ?? COLOR_DEFAULTS.buttonText,
           logoUrl: b.logoUrl ?? null,
           faviconUrl: b.faviconUrl ?? null,
           seo: {
@@ -263,7 +300,14 @@ export function MiSitioCard() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           logoUrl: form.logoUrl,
-          current: { accent: form.accent, ink: form.ink, bg: form.bg },
+          current: {
+            accent: form.accent,
+            ink: form.ink,
+            bg: form.bg,
+            navBg: form.navBg,
+            navText: form.navText,
+            buttonText: form.buttonText,
+          },
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -287,6 +331,9 @@ export function MiSitioCard() {
       accent: logoSuggestion.accent,
       ink: logoSuggestion.ink,
       bg: logoSuggestion.bg,
+      navBg: logoSuggestion.navBg,
+      navText: logoSuggestion.navText,
+      buttonText: logoSuggestion.buttonText,
     };
     setForm(next);
     if (saveNow) {
@@ -301,6 +348,9 @@ export function MiSitioCard() {
       ["acento", nextForm.accent],
       ["texto", nextForm.ink],
       ["fondo", nextForm.bg],
+      ["fondo del menu", nextForm.navBg],
+      ["texto del menu", nextForm.navText],
+      ["texto de botones", nextForm.buttonText],
     ] as const) {
       if (!HEX_RE.test(value)) {
         toast.error(`El color de ${label} debe ser hex #RRGGBB (ej. #C8A951).`);
@@ -317,6 +367,9 @@ export function MiSitioCard() {
           accent: nextForm.accent,
           ink: nextForm.ink,
           bg: nextForm.bg,
+          navBg: nextForm.navBg,
+          navText: nextForm.navText,
+          buttonText: nextForm.buttonText,
           logoUrl: nextForm.logoUrl ?? "",
           faviconUrl: nextForm.faviconUrl ?? "",
           seo: {
@@ -371,6 +424,9 @@ export function MiSitioCard() {
   const accentOk = HEX_RE.test(form.accent) ? form.accent : COLOR_DEFAULTS.accent;
   const inkOk = HEX_RE.test(form.ink) ? form.ink : COLOR_DEFAULTS.ink;
   const bgOk = HEX_RE.test(form.bg) ? form.bg : COLOR_DEFAULTS.bg;
+  const navBgOk = HEX_RE.test(form.navBg) ? form.navBg : COLOR_DEFAULTS.navBg;
+  const navTextOk = HEX_RE.test(form.navText) ? form.navText : COLOR_DEFAULTS.navText;
+  const buttonTextOk = HEX_RE.test(form.buttonText) ? form.buttonText : COLOR_DEFAULTS.buttonText;
 
   return (
     <div className="col" style={{ gap: 18 }}>
@@ -445,7 +501,14 @@ export function MiSitioCard() {
               <div style={{ marginTop: 12 }}>
                 <LogoSuggestionCard
                   suggestion={logoSuggestion}
-                  current={{ accent: form.accent, ink: form.ink, bg: form.bg }}
+                  current={{
+                    accent: form.accent,
+                    ink: form.ink,
+                    bg: form.bg,
+                    navBg: form.navBg,
+                    navText: form.navText,
+                    buttonText: form.buttonText,
+                  }}
                   onApply={() => applyLogoSuggestion(false)}
                   onApplyAndSave={() => applyLogoSuggestion(true)}
                   onDiscard={() => setLogoSuggestion(null)}
@@ -559,6 +622,9 @@ export function MiSitioCard() {
             <ColorField label="Acento (botones, detalles)" value={form.accent} onChange={(v) => set("accent", v)} />
             <ColorField label="Texto / tinta" value={form.ink} onChange={(v) => set("ink", v)} />
             <ColorField label="Fondo" value={form.bg} onChange={(v) => set("bg", v)} />
+            <ColorField label="Fondo del menú" value={form.navBg} onChange={(v) => set("navBg", v)} />
+            <ColorField label="Texto del menú" value={form.navText} onChange={(v) => set("navText", v)} />
+            <ColorField label="Texto de botones" value={form.buttonText} onChange={(v) => set("buttonText", v)} />
             <button
               type="button"
               onClick={resetColors}
@@ -572,7 +638,14 @@ export function MiSitioCard() {
           {/* Preview en vivo con los mismos CSS vars que el layout */}
           <div
             style={{
-              ...previewVars(accentOk, inkOk, bgOk),
+              ...previewVars({
+                accent: accentOk,
+                ink: inkOk,
+                bg: bgOk,
+                navBg: navBgOk,
+                navText: navTextOk,
+                buttonText: buttonTextOk,
+              }),
               border: "1px solid var(--line)",
               borderRadius: 12,
               overflow: "hidden",
@@ -587,7 +660,8 @@ export function MiSitioCard() {
                 gap: 10,
                 padding: "10px 14px",
                 borderBottom: "1px solid var(--gold-line)",
-                background: "var(--bg-2)",
+                background: "var(--nav-bg)",
+                color: "var(--nav-text)",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -595,11 +669,12 @@ export function MiSitioCard() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={form.logoUrl} alt="" style={{ height: 20, maxWidth: 90, objectFit: "contain" }} />
                 ) : (
-                  <span className="serif" style={{ fontSize: 14, fontWeight: 700, color: "var(--navy)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <span className="serif" style={{ fontSize: 14, fontWeight: 700, color: "var(--nav-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {form.siteName || "Mi sitio"}
                   </span>
                 )}
               </div>
+              <span style={{ fontSize: 10, color: "var(--nav-text-muted)", fontWeight: 600 }}>Inicio</span>
               <span
                 style={{
                   fontSize: 10,
@@ -607,7 +682,7 @@ export function MiSitioCard() {
                   padding: "4px 10px",
                   borderRadius: 999,
                   background: "var(--gold)",
-                  color: "var(--navy)",
+                  color: "var(--button-text)",
                   whiteSpace: "nowrap",
                 }}
               >
@@ -927,7 +1002,14 @@ function LogoSuggestionCard({
   saving = false,
 }: {
   suggestion: LogoSuggestion;
-  current: { accent: string; ink: string; bg: string };
+  current: {
+    accent: string;
+    ink: string;
+    bg: string;
+    navBg: string;
+    navText: string;
+    buttonText: string;
+  };
   onApply: () => void;
   onApplyAndSave?: () => void;
   onDiscard: () => void;
@@ -962,16 +1044,33 @@ function LogoSuggestionCard({
 
       <div
         style={{
-          ...previewVars(suggestion.accent, suggestion.ink, suggestion.bg),
+          ...previewVars(suggestion),
           border: "1px solid var(--gold-line)",
           background: "var(--bg)",
           borderRadius: 10,
           padding: 12,
         }}
       >
+        <div
+          style={{
+            background: "var(--nav-bg)",
+            color: "var(--nav-text)",
+            borderRadius: 8,
+            padding: "8px 10px",
+            marginBottom: 10,
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 10,
+            fontSize: 11,
+            fontWeight: 700,
+          }}
+        >
+          <span>Menu</span>
+          <span style={{ color: "var(--nav-text-muted)" }}>Inicio</span>
+        </div>
         <div className="between" style={{ gap: 10, alignItems: "center" }}>
           <span className="serif" style={{ fontSize: 15, color: "var(--ink)", fontWeight: 700 }}>Preview</span>
-          <span style={{ fontSize: 11, padding: "6px 10px", borderRadius: 8, background: "var(--gold-gradient)", color: "var(--navy)", fontWeight: 700 }}>
+          <span style={{ fontSize: 11, padding: "6px 10px", borderRadius: 8, background: "var(--gold-gradient)", color: "var(--button-text)", fontWeight: 700 }}>
             Botón
           </span>
         </div>
@@ -997,17 +1096,33 @@ function LogoSuggestionCard({
   );
 }
 
-function PalettePreview({ title, colors }: { title: string; colors: { accent: string; ink: string; bg: string } }) {
+function PalettePreview({
+  title,
+  colors,
+}: {
+  title: string;
+  colors: {
+    accent: string;
+    ink: string;
+    bg: string;
+    navBg: string;
+    navText: string;
+    buttonText: string;
+  };
+}) {
   return (
     <div style={{ border: "1px solid var(--line)", background: "white", borderRadius: 10, padding: 10 }}>
       <div className="mono" style={{ fontSize: 9, color: "var(--muted)", letterSpacing: "0.08em", marginBottom: 8 }}>{title}</div>
-      <div className="row" style={{ gap: 6 }}>
+      <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
         {[
           ["Acento", colors.accent],
           ["Texto", colors.ink],
           ["Fondo", colors.bg],
+          ["Menu", colors.navBg],
+          ["Menu texto", colors.navText],
+          ["Boton texto", colors.buttonText],
         ].map(([label, color]) => (
-          <div key={label} style={{ flex: 1, minWidth: 0 }}>
+          <div key={label} style={{ flex: "1 1 62px", minWidth: 0 }}>
             <div style={{ height: 28, borderRadius: 7, background: color, border: "1px solid var(--line)" }} />
             <div style={{ fontSize: 9, color: "var(--muted)", marginTop: 4 }}>{color}</div>
           </div>
