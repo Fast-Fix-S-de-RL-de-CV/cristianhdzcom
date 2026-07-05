@@ -54,12 +54,15 @@ function monthDays(month: Date) {
 export function BookingWizard({
   services,
   tenant,
+  initialServiceSlug,
 }: {
   services: PublicService[];
   tenant: { siteName: string; logoUrl: string | null; accent: string };
+  initialServiceSlug?: string;
 }) {
   const { tp } = useTenant();
-  const [serviceSlug, setServiceSlug] = useState(services[0]?.slug ?? "");
+  const initialService = services.find((s) => s.slug === initialServiceSlug) ?? services[0];
+  const [serviceSlug, setServiceSlug] = useState(initialService?.slug ?? "");
   const selectedService = services.find((s) => s.slug === serviceSlug) ?? services[0];
   const today = useMemo(() => new Date(), []);
   const [month, setMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));

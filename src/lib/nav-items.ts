@@ -28,7 +28,7 @@ export const NAV_TARGETS: Array<{ label: string; href: string }> = [
   { label: "Acerca de", href: "/acerca" },
   { label: "Programas", href: "/programas" },
   { label: "Libros", href: "/libros" },
-  { label: "Reservas / consultorías", href: "/reservas" },
+  { label: "Servicios / consultorías", href: "/reservas" },
   { label: "Membresía", href: "/membresia" },
   { label: "Comunidad", href: "/comunidad" },
   { label: "Blog", href: "/blog" },
