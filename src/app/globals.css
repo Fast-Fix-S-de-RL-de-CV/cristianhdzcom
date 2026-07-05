@@ -1992,5 +1992,30 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
   .mk-palette { width: 160px; }
 }
 
+.booking-shell { width: 100%; }
+@media (max-width: 980px) {
+  .booking-shell {
+    grid-template-columns: 1fr !important;
+    border-radius: 16px !important;
+  }
+  .booking-info,
+  .booking-calendar,
+  .booking-times {
+    border-left: 0 !important;
+    border-right: 0 !important;
+  }
+  .booking-info,
+  .booking-calendar {
+    border-bottom: 1px solid var(--line);
+  }
+}
+@media (max-width: 560px) {
+  .booking-info,
+  .booking-calendar,
+  .booking-times {
+    padding: 22px !important;
+  }
+}
+
 /* Prevent body horizontal scroll always */
 html, body { overflow-x: hidden; }

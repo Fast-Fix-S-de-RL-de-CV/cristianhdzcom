@@ -749,6 +749,81 @@ export const services = pgTable(
   (t) => ({ slugIdx: uniqueIndex("services_tenant_slug_idx").on(t.tenantId, t.slug) }),
 );
 
+/* ─────────── BOOKING SERVICES / RESERVATIONS ─────────── */
+export type BookingAvailability = Array<{
+  day: number; // 0 Domingo, 6 Sabado
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  enabled?: boolean;
+}>;
+
+export type BookingQuestion = {
+  id: string;
+  label: string;
+  type: "text" | "textarea" | "select";
+  options?: string[];
+  required?: boolean;
+};
+
+export const bookingServices = pgTable(
+  "booking_services",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    slug: varchar("slug", { length: 80 }).notNull(),
+    title: varchar("title", { length: 160 }).notNull(),
+    subtitle: varchar("subtitle", { length: 220 }),
+    description: text("description"),
+    hostName: varchar("host_name", { length: 120 }),
+    hostAvatarUrl: text("host_avatar_url"),
+    durationMinutes: integer("duration_minutes").notNull().default(30),
+    bufferMinutes: integer("buffer_minutes").notNull().default(10),
+    minNoticeHours: integer("min_notice_hours").notNull().default(2),
+    maxDaysAhead: integer("max_days_ahead").notNull().default(30),
+    timezone: varchar("timezone", { length: 80 }).notNull().default("America/Mazatlan"),
+    locationType: varchar("location_type", { length: 30 }).notNull().default("virtual"),
+    locationLabel: varchar("location_label", { length: 200 }),
+    confirmationText: text("confirmation_text"),
+    notificationEmail: varchar("notification_email", { length: 320 }),
+    requirePhone: boolean("require_phone").notNull().default(true),
+    requireEmail: boolean("require_email").notNull().default(true),
+    availability: jsonb("availability").$type<BookingAvailability>().notNull().default([]),
+    questions: jsonb("questions").$type<BookingQuestion[]>().notNull().default([]),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    slugIdx: uniqueIndex("booking_services_tenant_slug_idx").on(t.tenantId, t.slug),
+    tenantIdx: index("booking_services_tenant_idx").on(t.tenantId, t.sortOrder),
+  }),
+);
+
+export const bookingReservations = pgTable(
+  "booking_reservations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    serviceId: uuid("service_id").notNull().references(() => bookingServices.id, { onDelete: "cascade" }),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    timezone: varchar("timezone", { length: 80 }).notNull().default("America/Mazatlan"),
+    customerName: varchar("customer_name", { length: 160 }).notNull(),
+    customerEmail: varchar("customer_email", { length: 320 }),
+    customerPhone: varchar("customer_phone", { length: 60 }),
+    notes: text("notes"),
+    answers: jsonb("answers").$type<Array<{ id: string; label: string; answer: string }>>().notNull().default([]),
+    status: varchar("status", { length: 30 }).notNull().default("scheduled"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    serviceTimeIdx: index("booking_reservations_service_time_idx").on(t.serviceId, t.startsAt),
+    tenantIdx: index("booking_reservations_tenant_idx").on(t.tenantId, t.createdAt),
+  }),
+);
+
 /* ─────────── BOOKS + BUNDLES ─────────── */
 /**
  * Catálogo de productos editoriales. Una sola tabla cubre dos tipos:

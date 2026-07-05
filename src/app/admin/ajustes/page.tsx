@@ -110,6 +110,25 @@ export default async function AjustesPage() {
           </div>
         </Card>
 
+        {/* Reservas */}
+        <Card style={{ padding: 24 }}>
+          <Eyebrow>Reservas</Eyebrow>
+          <h2 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
+            Servicios y citas
+          </h2>
+          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18 }}>
+            Configura servicios de consultoría, horarios disponibles y revisa las reservas que
+            lleguen desde tu sitio.
+          </p>
+          <a
+            href={tp("/admin/reservas")}
+            className="btn btn-primary"
+            style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}
+          >
+            Configurar reservas →
+          </a>
+        </Card>
+
         {/* Métodos de pago */}
         <Card style={{ padding: 24 }}>
           <Eyebrow>Pagos</Eyebrow>

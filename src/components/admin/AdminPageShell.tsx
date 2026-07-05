@@ -17,6 +17,7 @@ const ITEMS: readonly (readonly [string, string] | readonly [string, string, str
   ["Talleres", "/admin/talleres"],
   ["Libros", "/admin/libros"],
   ["Empresas", "/admin/servicios"],
+  ["Reservas", "/admin/reservas"],
   ["Blog", "/admin/blog"],
   ["Comunidad", "/admin/comunidad"],
   ["Soporte", "/admin/soporte"],
