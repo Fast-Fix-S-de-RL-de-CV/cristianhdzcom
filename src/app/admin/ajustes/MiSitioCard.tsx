@@ -24,6 +24,15 @@ type EditableNavItem = NavItem & { linkMode?: "internal" | "external" };
 
 type SocialKey = "instagram" | "facebook" | "youtube" | "tiktok" | "x" | "linkedin";
 type Social = Partial<Record<SocialKey, string>>;
+type LogoSuggestion = {
+  accent: string;
+  ink: string;
+  bg: string;
+  fontStyle: string;
+  tone: string;
+  rationale: string;
+  confidence: number;
+};
 
 const SOCIAL_FIELDS: Array<{ key: SocialKey; label: string; placeholder: string }> = [
   { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/tumarca" },
@@ -105,6 +114,8 @@ export function MiSitioCard() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<"logo" | "favicon" | null>(null);
+  const [analyzingLogo, setAnalyzingLogo] = useState(false);
+  const [logoSuggestion, setLogoSuggestion] = useState<LogoSuggestion | null>(null);
 
   function load() {
     setLoading(true);
@@ -187,6 +198,7 @@ export function MiSitioCard() {
 
   function resetColors() {
     setForm((p) => ({ ...p, ...COLOR_DEFAULTS }));
+    setLogoSuggestion(null);
   }
 
   async function upload(kind: "logo" | "favicon", file: File) {
@@ -201,12 +213,54 @@ export function MiSitioCard() {
         return;
       }
       set(kind === "logo" ? "logoUrl" : "faviconUrl", json.url);
+      if (kind === "logo") setLogoSuggestion(null);
       toast.success(kind === "logo" ? "Logo subido." : "Favicon subido.");
     } catch {
       toast.error("Error de red al subir.");
     } finally {
       setUploading(null);
     }
+  }
+
+  async function analyzeLogo() {
+    if (!form.logoUrl) {
+      toast.error("Primero sube o pega la URL de un logo.");
+      return;
+    }
+    setAnalyzingLogo(true);
+    setLogoSuggestion(null);
+    try {
+      const res = await fetch(tp("/api/admin/branding/analyze-logo"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          logoUrl: form.logoUrl,
+          current: { accent: form.accent, ink: form.ink, bg: form.bg },
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(apiErrorMessage(j, "No se pudo analizar el logo"));
+        return;
+      }
+      setLogoSuggestion(j.suggestion);
+      toast.success("Sugerencia generada. Revísala antes de aplicarla.");
+    } catch {
+      toast.error("Error de red al analizar el logo.");
+    } finally {
+      setAnalyzingLogo(false);
+    }
+  }
+
+  function applyLogoSuggestion() {
+    if (!logoSuggestion) return;
+    setForm((p) => ({
+      ...p,
+      accent: logoSuggestion.accent,
+      ink: logoSuggestion.ink,
+      bg: logoSuggestion.bg,
+    }));
+    toast.success("Paleta aplicada al formulario. Guarda para publicarla.");
   }
 
   async function save() {
@@ -326,6 +380,20 @@ export function MiSitioCard() {
               uploading={uploading === "logo"}
               hint="PNG/SVG con fondo transparente, ~200×48"
             />
+            <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={analyzeLogo}
+                disabled={analyzingLogo || !form.logoUrl}
+                className="btn btn-ghost"
+                style={{ padding: "8px 12px", fontSize: 12 }}
+              >
+                {analyzingLogo ? "Analizando logo…" : "Analizar logo con IA"}
+              </button>
+              <span style={{ fontSize: 11, color: "var(--muted)" }}>
+                Genera sugerencias de color y estilo. No aplica cambios automáticamente.
+              </span>
+            </div>
             <input
               ref={logoInputRef}
               type="file"
@@ -369,6 +437,14 @@ export function MiSitioCard() {
             <ColorField label="Acento (botones, detalles)" value={form.accent} onChange={(v) => set("accent", v)} />
             <ColorField label="Texto / tinta" value={form.ink} onChange={(v) => set("ink", v)} />
             <ColorField label="Fondo" value={form.bg} onChange={(v) => set("bg", v)} />
+            {logoSuggestion && (
+              <LogoSuggestionCard
+                suggestion={logoSuggestion}
+                current={{ accent: form.accent, ink: form.ink, bg: form.bg }}
+                onApply={applyLogoSuggestion}
+                onDiscard={() => setLogoSuggestion(null)}
+              />
+            )}
             <button
               type="button"
               onClick={resetColors}
@@ -727,6 +803,94 @@ export function MiSitioCard() {
 }
 
 /* ─────────── Helpers ─────────── */
+
+function LogoSuggestionCard({
+  suggestion,
+  current,
+  onApply,
+  onDiscard,
+}: {
+  suggestion: LogoSuggestion;
+  current: { accent: string; ink: string; bg: string };
+  onApply: () => void;
+  onDiscard: () => void;
+}) {
+  return (
+    <div
+      style={{
+        border: "1px solid color-mix(in srgb, var(--gold-deep) 28%, white)",
+        background: "color-mix(in srgb, var(--gold) 7%, white)",
+        borderRadius: 12,
+        padding: 14,
+      }}
+      className="col"
+    >
+      <div className="between" style={{ alignItems: "flex-start", gap: 12 }}>
+        <div>
+          <div className="mono" style={{ fontSize: 10, color: "var(--gold-deep)", letterSpacing: "0.08em", marginBottom: 4 }}>
+            SUGERENCIA IA · {Math.round(suggestion.confidence * 100)}%
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{suggestion.tone}</div>
+        </div>
+        <button type="button" onClick={onDiscard} className="btn btn-ghost" style={{ padding: "5px 9px", fontSize: 11 }}>
+          Descartar
+        </button>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <PalettePreview title="Actual" colors={current} />
+        <PalettePreview title="Sugerida" colors={suggestion} />
+      </div>
+
+      <div
+        style={{
+          ...previewVars(suggestion.accent, suggestion.ink, suggestion.bg),
+          border: "1px solid var(--gold-line)",
+          background: "var(--bg)",
+          borderRadius: 10,
+          padding: 12,
+        }}
+      >
+        <div className="between" style={{ gap: 10, alignItems: "center" }}>
+          <span className="serif" style={{ fontSize: 15, color: "var(--ink)", fontWeight: 700 }}>Preview</span>
+          <span style={{ fontSize: 11, padding: "6px 10px", borderRadius: 8, background: "var(--gold-gradient)", color: "var(--navy)", fontWeight: 700 }}>
+            Botón
+          </span>
+        </div>
+        <p style={{ color: "var(--ink-2)", fontSize: 12, lineHeight: 1.45, marginTop: 8 }}>
+          {suggestion.rationale}
+        </p>
+      </div>
+
+      <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.45 }}>
+        <strong>Tipografía sugerida:</strong> {suggestion.fontStyle}
+      </div>
+      <button type="button" onClick={onApply} className="btn btn-primary" style={{ padding: "8px 14px", fontSize: 12, alignSelf: "flex-start" }}>
+        Aplicar colores sugeridos
+      </button>
+    </div>
+  );
+}
+
+function PalettePreview({ title, colors }: { title: string; colors: { accent: string; ink: string; bg: string } }) {
+  return (
+    <div style={{ border: "1px solid var(--line)", background: "white", borderRadius: 10, padding: 10 }}>
+      <div className="mono" style={{ fontSize: 9, color: "var(--muted)", letterSpacing: "0.08em", marginBottom: 8 }}>{title}</div>
+      <div className="row" style={{ gap: 6 }}>
+        {[
+          ["Acento", colors.accent],
+          ["Texto", colors.ink],
+          ["Fondo", colors.bg],
+        ].map(([label, color]) => (
+          <div key={label} style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ height: 28, borderRadius: 7, background: color, border: "1px solid var(--line)" }} />
+            <div style={{ fontSize: 9, color: "var(--muted)", marginTop: 4 }}>{color}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ColorField({
   label,
