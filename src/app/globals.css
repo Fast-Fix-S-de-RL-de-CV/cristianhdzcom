@@ -2017,17 +2017,8 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
   }
 }
 
-@media (max-width: 1100px) {
-  .settings-layout {
-    grid-template-columns: 1fr !important;
-  }
-  .settings-aside {
-    position: static !important;
-  }
-}
 @media (max-width: 760px) {
-  .settings-layout main > section:first-child > div,
-  .settings-layout main > div[style*="grid-template-columns"] {
+  .settings-two-col {
     grid-template-columns: 1fr !important;
   }
 }

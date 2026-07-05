@@ -12,13 +12,43 @@ import { EmailSettingsCard } from "./EmailSettingsCard";
 
 export const dynamic = "force-dynamic";
 
+type SettingsTab = "sitio" | "operacion" | "pagos" | "comunidad" | "datos" | "infra";
+
+const BASE_TABS: Array<{ key: SettingsTab; label: string; title: string; subtitle: string }> = [
+  {
+    key: "sitio",
+    label: "Sitio y marca",
+    title: "Identidad pública",
+    subtitle: "Nombre, logo, colores, SEO, menú, footer y redes.",
+  },
+  {
+    key: "operacion",
+    label: "Reservas y correo",
+    title: "Reservas y comunicación",
+    subtitle: "Servicios de cita, SMTP propio y recordatorios automáticos.",
+  },
+  {
+    key: "pagos",
+    label: "Pagos",
+    title: "Métodos de pago",
+    subtitle: "Proveedores y métodos que el tenant puede ofrecer a alumnos o compradores.",
+  },
+  {
+    key: "comunidad",
+    label: "Comunidad",
+    title: "Experiencia de miembros",
+    subtitle: "Configuración base de la comunidad del tenant.",
+  },
+  {
+    key: "datos",
+    label: "Datos",
+    title: "Exportación y respaldo",
+    subtitle: "Descargas operativas para respaldo, análisis externo o conciliación.",
+  },
+];
+
 /**
- * Resuelve el modo efectivo de Stripe combinando dos fuentes:
- *   1. Tabla `payment_settings` (gestionada desde la UI más abajo).
- *   2. Variables de entorno `STRIPE_SECRET_KEY` (cableo de servidor).
- *
- * Se considera "LIVE" sólo si una de las dos tiene una secret_key real con
- * prefijo `sk_live_` Y el toggle enableStripe está activo (o existe en .env).
+ * Resuelve el modo efectivo de Stripe combinando tabla payment_settings + env.
  */
 function detectStripeMode(opts: {
   dbKey: string | null;
@@ -34,30 +64,47 @@ function detectStripeMode(opts: {
   return "—";
 }
 
-export default async function AjustesPage() {
+export default async function AjustesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tab?: string }>;
+}) {
   const ctx = await getTenantCtx();
   if (!ctx) notFound();
   const tp = ctx.tp;
   const user = (await getCurrentUser())!;
 
-  // Single source of truth para el indicador: combinar .env + DB (del tenant).
   const [pay] = await db
     .select()
     .from(schema.paymentSettings)
     .where(eq(schema.paymentSettings.tenantId, ctx.tenant.id))
     .limit(1);
 
+  const tabs = ctx.tenant.slug === "cristianhdz"
+    ? [
+        ...BASE_TABS,
+        {
+          key: "infra" as SettingsTab,
+          label: "Infraestructura",
+          title: "Valores globales de plataforma",
+          subtitle: "Solo lectura para el tenant principal.",
+        },
+      ]
+    : BASE_TABS;
+  const sp = await searchParams;
+  const requestedTab = sp?.tab as SettingsTab | undefined;
+  const current = tabs.some((tab) => tab.key === requestedTab) ? requestedTab! : "sitio";
+  const currentMeta = tabs.find((tab) => tab.key === current) ?? tabs[0];
+
   const env = {
     smtpHost: process.env.SMTP_HOST || "",
     smtpUser: process.env.SMTP_USER || "",
     smtpPort: process.env.SMTP_PORT || "",
     mailFrom: process.env.MAIL_FROM || "",
-    appUrl: process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || "",
     stripeMode: detectStripeMode({
       dbKey: pay?.stripeSecretKey ?? null,
       dbMode: pay?.stripeMode ?? null,
       dbEnabled: !!pay?.enableStripe,
-      // El fallback a la llave env (plataforma) solo aplica al tenant de la casa.
       envKey: ctx.tenant.slug === "cristianhdz" ? process.env.STRIPE_SECRET_KEY : undefined,
     }),
     databaseHost: (() => {
@@ -76,69 +123,34 @@ export default async function AjustesPage() {
       title="Ajustes"
       subtitle="Centro de configuración del tenant"
     >
-      <div className="settings-layout" style={{ display: "grid", gap: 24, gridTemplateColumns: "260px minmax(0, 1fr)", maxWidth: 1180 }}>
-        <aside className="settings-aside" style={{ alignSelf: "start", position: "sticky", top: 20 }}>
-          <Card style={{ padding: 18 }}>
-            <Eyebrow>Tenant</Eyebrow>
-            <h2 className="serif" style={{ fontSize: 22, marginTop: 8, marginBottom: 4 }}>
-              {ctx.branding.siteName}
-            </h2>
-            <div className="mono" style={{ fontSize: 11, color: "var(--muted)", marginBottom: 16 }}>
-              /{ctx.tenant.slug} · {ctx.tenant.plan.toUpperCase()}
-            </div>
-            <div className="col" style={{ gap: 6 }}>
-              <SettingsAnchor href="#sitio">Sitio, marca y SEO</SettingsAnchor>
-              <SettingsAnchor href="#operacion">Reservas y correo</SettingsAnchor>
-              <SettingsAnchor href="#pagos">Pagos</SettingsAnchor>
-              <SettingsAnchor href="#comunidad">Comunidad</SettingsAnchor>
-              <SettingsAnchor href="#datos">Datos y exportación</SettingsAnchor>
-              {ctx.tenant.slug === "cristianhdz" && <SettingsAnchor href="#infra">Infraestructura</SettingsAnchor>}
-            </div>
-          </Card>
-        </aside>
+      <div style={{ maxWidth: 1040 }}>
+        <SettingsTabs tabs={tabs} current={current} tp={tp} />
 
-        <main className="col" style={{ gap: 22, minWidth: 0 }}>
-          <section>
+        <div style={{ marginBottom: 20 }}>
+          <Eyebrow>{currentMeta.label}</Eyebrow>
+          <h2 className="serif" style={{ fontSize: 32, marginTop: 8, marginBottom: 6 }}>
+            {currentMeta.title}
+          </h2>
+          <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.55, maxWidth: 760 }}>
+            {currentMeta.subtitle}
+          </p>
+        </div>
+
+        {current === "sitio" && (
+          <div className="col" style={{ gap: 16 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
-              <QuickLink
-                eyebrow="Sitio web"
-                title="Editar páginas"
-                body="Portada, secciones, slider, Acerca de y dominio."
-                href={tp("/admin/ajustes/slider")}
-              />
-              <QuickLink
-                eyebrow="Reservas"
-                title="Servicios y citas"
-                body="Horarios, servicios, reservas recibidas y vista pública."
-                href={tp("/admin/reservas")}
-              />
-              <QuickLink
-                eyebrow="Vista pública"
-                title="Abrir sitio"
-                body="Revisa cómo se ve el tenant para visitantes."
-                href={tp("/")}
-                external
-              />
+              <QuickLink title="Editar páginas" body="Portada, secciones, Acerca de y dominio." href={tp("/admin/ajustes/slider")} />
+              <QuickLink title="Vista pública" body="Revisa cómo se ve el tenant para visitantes." href={tp("/")} external />
+              <QuickLink title="Reservas públicas" body="Abre la página pública de citas." href={tp("/reservas")} external />
             </div>
-          </section>
+            <Card style={{ padding: 24 }}>
+              <MiSitioCard />
+            </Card>
+          </div>
+        )}
 
-          <SectionHeader
-            id="sitio"
-            eyebrow="Sitio y marca"
-            title="Identidad pública"
-            body="Todo lo que afecta la presentación del tenant: nombre, logo, colores, SEO, menú, footer y redes."
-          />
-          <Card style={{ padding: 24 }}>
-            <MiSitioCard />
-          </Card>
-
-          <SectionHeader
-            id="operacion"
-            eyebrow="Operación"
-            title="Reservas y comunicación"
-            body="Configura cómo llegan las citas y desde qué correo se envían confirmaciones, avisos y recordatorios."
-          />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, .8fr) minmax(0, 1.2fr)", gap: 16 }}>
+        {current === "operacion" && (
+          <div className="settings-two-col" style={{ display: "grid", gridTemplateColumns: "minmax(0, .82fr) minmax(0, 1.18fr)", gap: 16 }}>
             <Card style={{ padding: 24 }}>
               <Eyebrow>Reservas</Eyebrow>
               <h3 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
@@ -147,11 +159,7 @@ export default async function AjustesPage() {
               <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18, lineHeight: 1.55 }}>
                 Administra servicios de consultoría, horarios disponibles y reservas entrantes.
               </p>
-              <a
-                href={tp("/admin/reservas")}
-                className="btn btn-primary"
-                style={{ padding: "10px 18px", fontSize: 13, textDecoration: "none", display: "inline-block" }}
-              >
+              <a href={tp("/admin/reservas")} className="btn btn-primary" style={buttonLinkStyle()}>
                 Configurar reservas →
               </a>
             </Card>
@@ -161,169 +169,135 @@ export default async function AjustesPage() {
                 SMTP y recordatorios
               </h3>
               <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18, lineHeight: 1.55 }}>
-                Remitente propio del tenant y recordatorios automáticos una hora antes de cada reserva.
+                Remitente propio del tenant y recordatorios una hora antes de cada reserva.
               </p>
               <EmailSettingsCard />
             </Card>
           </div>
+        )}
 
-          <SectionHeader
-            id="pagos"
-            eyebrow="Cobros"
-            title="Métodos de pago"
-            body="Proveedores y métodos que el tenant puede ofrecer a sus alumnos o compradores."
-          />
+        {current === "pagos" && (
           <Card style={{ padding: 24 }}>
             <PaymentMethodsCard />
           </Card>
+        )}
 
-          <SectionHeader
-            id="comunidad"
-            eyebrow="Comunidad"
-            title="Experiencia de miembros"
-            body="Configuración base de la comunidad del tenant. Algunas opciones avanzadas quedarán disponibles en próximas iteraciones."
-          />
+        {current === "comunidad" && (
           <Card style={{ padding: 24 }}>
             <div className="col" style={{ gap: 14 }}>
               <Field label="Nombre">
                 <input disabled value={ctx.branding.siteName} style={inputStyle()} />
               </Field>
               <Field label="Descripción">
-                <textarea
-                  disabled
-                  value={`Comunidad de ${ctx.branding.siteName}.`}
-                  style={{ ...inputStyle(), minHeight: 64 }}
-                />
+                <textarea disabled value={`Comunidad de ${ctx.branding.siteName}.`} style={{ ...inputStyle(), minHeight: 64 }} />
               </Field>
               <Field label="Privacidad">
                 <input disabled value="Pública (requiere registro)" style={inputStyle()} />
               </Field>
             </div>
           </Card>
+        )}
 
-          <SectionHeader
-            id="datos"
-            eyebrow="Datos"
-            title="Exportación y respaldo"
-            body="Descargas operativas para respaldo, análisis externo o conciliación."
-          />
+        {current === "datos" && (
           <Card style={{ padding: 24 }}>
             <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
-              <a href={tp("/api/admin/export?type=orders")} className="btn btn-primary" style={exportBtnStyle()}>
+              <a href={tp("/api/admin/export?type=orders")} className="btn btn-primary" style={buttonLinkStyle()}>
                 Exportar pedidos
               </a>
-              <a href={tp("/api/admin/export?type=users")} className="btn btn-ghost" style={exportBtnStyle()}>
+              <a href={tp("/api/admin/export?type=users")} className="btn btn-ghost" style={buttonLinkStyle()}>
                 Exportar usuarios
               </a>
-              <a href={tp("/api/admin/export?type=leaderboard")} className="btn btn-ghost" style={exportBtnStyle()}>
+              <a href={tp("/api/admin/export?type=leaderboard")} className="btn btn-ghost" style={buttonLinkStyle()}>
                 Exportar ranking
               </a>
             </div>
           </Card>
+        )}
 
-          {ctx.tenant.slug === "cristianhdz" && (
-            <>
-              <SectionHeader
-                id="infra"
-                eyebrow="Infraestructura"
-                title="Valores globales de plataforma"
-                body="Solo lectura para el tenant principal. Los demás tenants ven únicamente su configuración propia."
-              />
-              <Card style={{ padding: 24 }}>
-                <div className="col" style={{ gap: 14 }}>
-                  <Field label="SMTP Host">
-                    <input disabled value={env.smtpHost || "— no configurado"} style={inputStyle()} />
-                  </Field>
-                  <div className="row" style={{ gap: 12 }}>
-                    <div style={{ flex: 1 }}>
-                      <Field label="SMTP User">
-                        <input disabled value={env.smtpUser || "—"} style={inputStyle()} />
-                      </Field>
-                    </div>
-                    <div style={{ width: 120 }}>
-                      <Field label="SMTP Port">
-                        <input disabled value={env.smtpPort || "—"} style={inputStyle()} />
-                      </Field>
-                    </div>
-                  </div>
-                  <Field label="MAIL_FROM">
-                    <input disabled value={env.mailFrom || "—"} style={inputStyle()} />
-                  </Field>
-                  <Field label="Stripe">
-                    <input
-                      disabled
-                      value={env.stripeMode}
-                      style={{
-                        ...inputStyle(),
-                        color: env.stripeMode === "LIVE" ? "var(--green-strong)" : env.stripeMode === "TEST" ? "var(--warm)" : "var(--muted)",
-                        fontWeight: 600,
-                      }}
-                    />
-                  </Field>
-                  <Field label="Database Host">
-                    <input disabled value={env.databaseHost || "—"} style={inputStyle()} />
+        {current === "infra" && ctx.tenant.slug === "cristianhdz" && (
+          <Card style={{ padding: 24 }}>
+            <div className="col" style={{ gap: 14 }}>
+              <Field label="SMTP Host">
+                <input disabled value={env.smtpHost || "— no configurado"} style={inputStyle()} />
+              </Field>
+              <div className="row" style={{ gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <Field label="SMTP User">
+                    <input disabled value={env.smtpUser || "—"} style={inputStyle()} />
                   </Field>
                 </div>
-              </Card>
-            </>
-          )}
-        </main>
+                <div style={{ width: 120 }}>
+                  <Field label="SMTP Port">
+                    <input disabled value={env.smtpPort || "—"} style={inputStyle()} />
+                  </Field>
+                </div>
+              </div>
+              <Field label="MAIL_FROM">
+                <input disabled value={env.mailFrom || "—"} style={inputStyle()} />
+              </Field>
+              <Field label="Stripe">
+                <input
+                  disabled
+                  value={env.stripeMode}
+                  style={{
+                    ...inputStyle(),
+                    color: env.stripeMode === "LIVE" ? "var(--green-strong)" : env.stripeMode === "TEST" ? "var(--warm)" : "var(--muted)",
+                    fontWeight: 600,
+                  }}
+                />
+              </Field>
+              <Field label="Database Host">
+                <input disabled value={env.databaseHost || "—"} style={inputStyle()} />
+              </Field>
+            </div>
+          </Card>
+        )}
       </div>
     </AdminPageShell>
   );
 }
 
-function SettingsAnchor({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <a
-      href={href}
-      style={{
-        display: "block",
-        padding: "9px 10px",
-        borderRadius: 8,
-        color: "var(--ink-2)",
-        textDecoration: "none",
-        fontSize: 13,
-        fontWeight: 600,
-      }}
-    >
-      {children}
-    </a>
-  );
-}
-
-function SectionHeader({
-  id,
-  eyebrow,
-  title,
-  body,
+function SettingsTabs({
+  tabs,
+  current,
+  tp,
 }: {
-  id: string;
-  eyebrow: string;
-  title: string;
-  body: string;
+  tabs: Array<{ key: SettingsTab; label: string }>;
+  current: SettingsTab;
+  tp: (path: string) => string;
 }) {
   return (
-    <div id={id} style={{ scrollMarginTop: 24, paddingTop: 4 }}>
-      <Eyebrow>{eyebrow}</Eyebrow>
-      <h2 className="serif" style={{ fontSize: 30, marginTop: 8, marginBottom: 6 }}>
-        {title}
-      </h2>
-      <p style={{ color: "var(--muted)", fontSize: 14, maxWidth: 720, lineHeight: 1.55 }}>
-        {body}
-      </p>
+    <div className="row" style={{ gap: 4, marginBottom: 22, flexWrap: "wrap", borderBottom: "1px solid var(--line)" }}>
+      {tabs.map((tab) => {
+        const active = tab.key === current;
+        return (
+          <a
+            key={tab.key}
+            href={tp(`/admin/ajustes?tab=${tab.key}`)}
+            style={{
+              padding: "9px 14px",
+              fontSize: 13,
+              fontWeight: active ? 700 : 500,
+              color: active ? "var(--ink)" : "var(--muted)",
+              borderBottom: `2px solid ${active ? "var(--gold-deep)" : "transparent"}`,
+              textDecoration: "none",
+              marginBottom: -1,
+            }}
+          >
+            {tab.label}
+          </a>
+        );
+      })}
     </div>
   );
 }
 
 function QuickLink({
-  eyebrow,
   title,
   body,
   href,
   external,
 }: {
-  eyebrow: string;
   title: string;
   body: string;
   href: string;
@@ -344,10 +318,7 @@ function QuickLink({
         color: "var(--ink)",
       }}
     >
-      <div className="mono" style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-        {eyebrow}
-      </div>
-      <strong style={{ display: "block", fontSize: 15, marginTop: 8 }}>{title}</strong>
+      <strong style={{ display: "block", fontSize: 15 }}>{title}</strong>
       <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.45, marginTop: 6 }}>{body}</p>
     </a>
   );
@@ -377,7 +348,7 @@ function inputStyle(): React.CSSProperties {
   };
 }
 
-function exportBtnStyle(): React.CSSProperties {
+function buttonLinkStyle(): React.CSSProperties {
   return {
     padding: "10px 16px",
     fontSize: 13,
