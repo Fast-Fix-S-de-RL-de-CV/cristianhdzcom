@@ -189,8 +189,16 @@ Reglas:
   const textBlock = response.content.find((block) => block.type === "text");
   const raw = textBlock?.type === "text" ? textBlock.text : "";
   const parsed = extractJson(raw);
-  const result = Suggestion.safeParse(parsed);
-  if (!result.success) throw new Error("La IA devolvió una sugerencia inválida.");
+  const normalized = normalizeSuggestion(parsed);
+  const result = Suggestion.safeParse(normalized);
+  if (!result.success) {
+    console.error("[analyze-logo-invalid]", {
+      issues: result.error.issues,
+      parsed,
+      raw: raw.slice(0, 1200),
+    });
+    throw new Error("La IA devolvió una sugerencia inválida.");
+  }
   return {
     ...result.data,
     accent: result.data.accent.toUpperCase(),
@@ -218,4 +226,47 @@ function extractJson(text: string): unknown {
     } catch {}
   }
   return null;
+}
+
+function normalizeSuggestion(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const input = value as Record<string, unknown>;
+  return {
+    accent: normalizeHex(input.accent, "#C8A951"),
+    ink: normalizeHex(input.ink, "#0A1E3A"),
+    bg: normalizeHex(input.bg ?? input.background, "#FBFAF5"),
+    fontStyle: text(input.fontStyle ?? input.font_style ?? input.typography, "Tipografia limpia y legible", 80),
+    tone: text(input.tone ?? input.styleTone, "Identidad profesional y cercana", 120),
+    rationale: text(input.rationale ?? input.reason ?? input.reasoning, "Paleta sugerida a partir de los colores visibles del logo.", 800),
+    confidence: normalizeConfidence(input.confidence),
+  };
+}
+
+function normalizeHex(value: unknown, fallback: string) {
+  if (typeof value !== "string") return fallback;
+  const cleaned = value.trim().replace(/^0x/i, "#");
+  const withHash = cleaned.startsWith("#") ? cleaned : `#${cleaned}`;
+  const short = withHash.match(/^#([0-9a-fA-F]{3})$/);
+  if (short) {
+    const [r, g, b] = short[1].split("");
+    return `#${r}${r}${g}${g}${b}${b}`.toUpperCase();
+  }
+  const full = withHash.match(/^#[0-9a-fA-F]{6}$/);
+  return full ? withHash.toUpperCase() : fallback;
+}
+
+function normalizeConfidence(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 1 ? Math.min(1, value / 100) : Math.max(0, Math.min(1, value));
+  }
+  if (typeof value === "string") {
+    const n = Number(value.replace("%", "").trim());
+    if (Number.isFinite(n)) return n > 1 ? Math.min(1, n / 100) : Math.max(0, Math.min(1, n));
+  }
+  return 0.75;
+}
+
+function text(value: unknown, fallback: string, max: number) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  return (raw || fallback).slice(0, max);
 }
