@@ -12,6 +12,17 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = { servicio?: string };
 
+const BOOKING_PAGE_DEFAULTS = {
+  eyebrow: "Servicios y consultorias",
+  title: "Agenda el servicio que necesitas.",
+  description:
+    "Explora las opciones disponibles, revisa la informacion de cada servicio y elige el horario que mejor se acomode a tu calendario.",
+  primaryCtaLabel: "Agendar ahora",
+  secondaryCtaLabel: "Ver servicios",
+  catalogEyebrow: "Catalogo",
+  catalogTitle: "Servicios disponibles",
+};
+
 export default async function ReservasPage({
   searchParams,
 }: {
@@ -65,6 +76,7 @@ export default async function ReservasPage({
       ) : (
         <BookingServicesLanding
           services={publicServices}
+          content={{ ...BOOKING_PAGE_DEFAULTS, ...(ctx.branding.bookingPage ?? {}) }}
           tenant={{
             basePath: ctx.basePath,
             siteName: ctx.branding.siteName,
@@ -79,6 +91,7 @@ export default async function ReservasPage({
 
 function BookingServicesLanding({
   services,
+  content,
   tenant,
 }: {
   services: Array<{
@@ -94,6 +107,7 @@ function BookingServicesLanding({
     locationType: string;
     locationLabel: string | null;
   }>;
+  content: typeof BOOKING_PAGE_DEFAULTS;
   tenant: { basePath: string; siteName: string; logoUrl: string | null };
 }) {
   const hrefFor = (slug: string) => `${tenant.basePath}/reservas?servicio=${encodeURIComponent(slug)}`;
@@ -106,7 +120,7 @@ function BookingServicesLanding({
             <img src={tenant.logoUrl} alt={tenant.siteName} style={{ maxWidth: 190, maxHeight: 58, objectFit: "contain", marginBottom: 26 }} />
           ) : null}
           <p className="mono" style={{ color: "var(--gold-deep)", fontSize: 12, fontWeight: 700, textTransform: "uppercase" }}>
-            Servicios y consultorias
+            {content.eyebrow}
           </p>
           <h1 className="serif" style={{ fontSize: "clamp(34px, 5vw, 58px)", lineHeight: 1.04, marginTop: 10, color: "var(--navy)" }}>
             Reservas no disponibles
@@ -135,20 +149,20 @@ function BookingServicesLanding({
         >
           <div>
             <p className="mono" style={{ color: "var(--gold-deep)", fontSize: 12, fontWeight: 700, textTransform: "uppercase" }}>
-              Servicios y consultorias
+              {content.eyebrow}
             </p>
             <h1 className="serif" style={{ fontSize: "clamp(38px, 6vw, 72px)", lineHeight: 0.98, marginTop: 12, color: "var(--navy)" }}>
-              Agenda el servicio que necesitas.
+              {content.title}
             </h1>
             <p style={{ color: "var(--ink-2)", marginTop: 18, fontSize: 18, lineHeight: 1.7, maxWidth: 680 }}>
-              Explora las opciones disponibles, revisa la informacion de cada servicio y elige el horario que mejor se acomode a tu calendario.
+              {content.description}
             </p>
             <div className="row" style={{ gap: 10, flexWrap: "wrap", marginTop: 28 }}>
               <Link href={hrefFor(featured.slug)} className="btn btn-primary" style={{ textDecoration: "none", padding: "13px 18px" }}>
-                Agendar ahora <ArrowRight size={16} />
+                {content.primaryCtaLabel} <ArrowRight size={16} />
               </Link>
               <a href="#servicios" className="btn btn-ghost" style={{ textDecoration: "none", padding: "13px 18px" }}>
-                Ver servicios
+                {content.secondaryCtaLabel}
               </a>
             </div>
           </div>
@@ -188,10 +202,10 @@ function BookingServicesLanding({
         <div className="between" style={{ gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
           <div>
             <p className="mono" style={{ color: "var(--muted)", fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>
-              Catalogo
+              {content.catalogEyebrow}
             </p>
             <h2 className="serif" style={{ fontSize: 34, color: "var(--navy)", marginTop: 4 }}>
-              Servicios disponibles
+              {content.catalogTitle}
             </h2>
           </div>
           <span style={{ color: "var(--muted)", fontSize: 14 }}>

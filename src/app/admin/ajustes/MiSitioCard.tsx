@@ -21,6 +21,15 @@ const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
 type FooterLink = { label: string; href: string };
 type EditableNavItem = NavItem & { linkMode?: "internal" | "external" };
+type BookingPageContent = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  primaryCtaLabel: string;
+  secondaryCtaLabel: string;
+  catalogEyebrow: string;
+  catalogTitle: string;
+};
 
 type SocialKey = "instagram" | "facebook" | "youtube" | "tiktok" | "x" | "linkedin";
 type Social = Partial<Record<SocialKey, string>>;
@@ -61,8 +70,19 @@ type Form = {
   footerText: string;
   footerLinks: FooterLink[];
   navItems: EditableNavItem[];
+  bookingPage: BookingPageContent;
   social: Social;
   hideMimarcaBadge: boolean;
+};
+
+const BOOKING_PAGE_DEFAULTS: BookingPageContent = {
+  eyebrow: "Servicios y consultorias",
+  title: "Agenda el servicio que necesitas.",
+  description: "Explora las opciones disponibles, revisa la informacion de cada servicio y elige el horario que mejor se acomode a tu calendario.",
+  primaryCtaLabel: "Agendar ahora",
+  secondaryCtaLabel: "Ver servicios",
+  catalogEyebrow: "Catalogo",
+  catalogTitle: "Servicios disponibles",
 };
 
 const EMPTY: Form = {
@@ -83,6 +103,7 @@ const EMPTY: Form = {
   footerText: "",
   footerLinks: [],
   navItems: NAV_ITEMS_DEFAULT,
+  bookingPage: BOOKING_PAGE_DEFAULTS,
   social: {},
   hideMimarcaBadge: false,
 };
@@ -164,6 +185,7 @@ export function MiSitioCard() {
           navItems: Array.isArray(b.navItems)
             ? b.navItems.map((item: NavItem) => ({ ...item, linkMode: isKnownInternal(item.href) ? "internal" : "external" }))
             : NAV_ITEMS_DEFAULT.map((item) => ({ ...item, linkMode: "internal" })),
+          bookingPage: { ...BOOKING_PAGE_DEFAULTS, ...(b.bookingPage ?? {}) },
           social: b.social ?? {},
           hideMimarcaBadge: !!b.hideMimarcaBadge,
         });
@@ -188,6 +210,10 @@ export function MiSitioCard() {
 
   function setSeo<K extends keyof Form["seo"]>(key: K, value: Form["seo"][K]) {
     setForm((p) => ({ ...p, seo: { ...p.seo, [key]: value } }));
+  }
+
+  function setBookingPage<K extends keyof BookingPageContent>(key: K, value: BookingPageContent[K]) {
+    setForm((p) => ({ ...p, bookingPage: { ...p.bookingPage, [key]: value } }));
   }
 
   function addLink() {
@@ -337,6 +363,15 @@ export function MiSitioCard() {
               isVisible: isVisible !== false,
               openInNewTab: !!openInNewTab,
             })),
+          bookingPage: {
+            eyebrow: form.bookingPage.eyebrow.trim(),
+            title: form.bookingPage.title.trim(),
+            description: form.bookingPage.description.trim(),
+            primaryCtaLabel: form.bookingPage.primaryCtaLabel.trim(),
+            secondaryCtaLabel: form.bookingPage.secondaryCtaLabel.trim(),
+            catalogEyebrow: form.bookingPage.catalogEyebrow.trim(),
+            catalogTitle: form.bookingPage.catalogTitle.trim(),
+          },
           social: form.social,
           ...(meta.hideBadgeAllowed ? { hideMimarcaBadge: form.hideMimarcaBadge } : {}),
         }),
@@ -660,6 +695,104 @@ export function MiSitioCard() {
                 ))}
               </span>
             </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* ── Página pública de reservas ── */}
+      <Section title="Página de reservas">
+        <div style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
+          Personaliza los textos principales de la página pública <strong>/reservas</strong>. Útil si tus reservas son servicios, consultorías, clases, visitas, demos o sesiones.
+        </div>
+        <Field label="Etiqueta superior">
+          <input
+            value={form.bookingPage.eyebrow}
+            onChange={(e) => setBookingPage("eyebrow", e.target.value)}
+            maxLength={80}
+            placeholder="Servicios y consultorías"
+            style={inputStyle()}
+          />
+        </Field>
+        <Field label="Título principal">
+          <input
+            value={form.bookingPage.title}
+            onChange={(e) => setBookingPage("title", e.target.value)}
+            maxLength={140}
+            placeholder="Agenda el servicio que necesitas."
+            style={inputStyle()}
+          />
+        </Field>
+        <Field label="Descripción">
+          <textarea
+            value={form.bookingPage.description}
+            onChange={(e) => setBookingPage("description", e.target.value)}
+            maxLength={360}
+            placeholder="Explica qué pueden reservar tus visitantes."
+            style={{ ...inputStyle(), minHeight: 74 }}
+          />
+        </Field>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+          <Field label="Botón principal">
+            <input
+              value={form.bookingPage.primaryCtaLabel}
+              onChange={(e) => setBookingPage("primaryCtaLabel", e.target.value)}
+              maxLength={50}
+              placeholder="Agendar ahora"
+              style={inputStyle()}
+            />
+          </Field>
+          <Field label="Botón secundario">
+            <input
+              value={form.bookingPage.secondaryCtaLabel}
+              onChange={(e) => setBookingPage("secondaryCtaLabel", e.target.value)}
+              maxLength={50}
+              placeholder="Ver servicios"
+              style={inputStyle()}
+            />
+          </Field>
+          <Field label="Etiqueta del catálogo">
+            <input
+              value={form.bookingPage.catalogEyebrow}
+              onChange={(e) => setBookingPage("catalogEyebrow", e.target.value)}
+              maxLength={80}
+              placeholder="Catálogo"
+              style={inputStyle()}
+            />
+          </Field>
+          <Field label="Título del catálogo">
+            <input
+              value={form.bookingPage.catalogTitle}
+              onChange={(e) => setBookingPage("catalogTitle", e.target.value)}
+              maxLength={120}
+              placeholder="Servicios disponibles"
+              style={inputStyle()}
+            />
+          </Field>
+        </div>
+        <div
+          style={{
+            border: "1px solid var(--line)",
+            borderRadius: 12,
+            padding: 16,
+            background: "color-mix(in srgb, var(--bg) 82%, white)",
+          }}
+        >
+          <div className="mono" style={{ fontSize: 10, color: "var(--gold-deep)", fontWeight: 700, textTransform: "uppercase" }}>
+            {form.bookingPage.eyebrow || BOOKING_PAGE_DEFAULTS.eyebrow}
+          </div>
+          <div className="serif" style={{ fontSize: 26, lineHeight: 1.08, marginTop: 8, color: "var(--navy)", fontWeight: 700 }}>
+            {form.bookingPage.title || BOOKING_PAGE_DEFAULTS.title}
+          </div>
+          <p style={{ color: "var(--ink-2)", fontSize: 13, lineHeight: 1.55, marginTop: 8, maxWidth: 620 }}>
+            {form.bookingPage.description || BOOKING_PAGE_DEFAULTS.description}
+          </p>
+          <div className="row" style={{ gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+            <span className="btn btn-primary" style={{ padding: "8px 12px", fontSize: 12 }}>
+              {form.bookingPage.primaryCtaLabel || BOOKING_PAGE_DEFAULTS.primaryCtaLabel}
+            </span>
+            <span className="btn btn-ghost" style={{ padding: "8px 12px", fontSize: 12 }}>
+              {form.bookingPage.secondaryCtaLabel || BOOKING_PAGE_DEFAULTS.secondaryCtaLabel}
+            </span>
           </div>
         </div>
       </Section>

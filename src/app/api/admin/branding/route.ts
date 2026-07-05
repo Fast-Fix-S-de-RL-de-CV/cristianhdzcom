@@ -44,6 +44,16 @@ const seoShape = z.object({
   robots: z.enum(["index,follow", "noindex,nofollow"]).optional(),
 });
 
+const bookingPageShape = z.object({
+  eyebrow: z.string().max(80).optional(),
+  title: z.string().max(140).optional(),
+  description: z.string().max(360).optional(),
+  primaryCtaLabel: z.string().max(50).optional(),
+  secondaryCtaLabel: z.string().max(50).optional(),
+  catalogEyebrow: z.string().max(80).optional(),
+  catalogTitle: z.string().max(120).optional(),
+});
+
 const Body = z.object({
   siteName: z.string().min(1).max(80).optional(),
   accent: hexColor.optional(),
@@ -77,6 +87,7 @@ const Body = z.object({
     )
     .max(12)
     .optional(),
+  bookingPage: bookingPageShape.optional(),
   aboutPage: z
     .object({
       gallerySlides: z

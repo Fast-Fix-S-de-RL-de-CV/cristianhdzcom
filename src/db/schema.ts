@@ -42,6 +42,15 @@ export type TenantBranding = {
   footerLinks?: Array<{ label: string; href: string }>;
   footerColumns?: Array<{ title: string; links: Array<{ label: string; href: string }> }>;
   navItems?: Array<{ label: string; href: string; isVisible?: boolean; openInNewTab?: boolean }>;
+  bookingPage?: {
+    eyebrow?: string;
+    title?: string;
+    description?: string;
+    primaryCtaLabel?: string;
+    secondaryCtaLabel?: string;
+    catalogEyebrow?: string;
+    catalogTitle?: string;
+  };
   aboutPage?: AboutPageContent;
   social?: Partial<Record<"instagram" | "facebook" | "youtube" | "tiktok" | "x" | "linkedin", string>>;
   hideMimarcaBadge?: boolean;
