@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTenant } from "@/components/tenant/TenantProvider";
 import { useConfirm, useToast } from "@/components/ui/ConfirmProvider";
 import { DEFAULT_BOOKING_AVAILABILITY, slugifyBookingTitle } from "@/lib/booking-shared";
+import { BOOKING_PAGE_DEFAULTS, resolveBookingPageContent, type BookingPageContent } from "@/lib/booking-page";
 import { TIMEZONE_OPTIONS } from "@/lib/timezone";
 import type { BookingAvailability, BookingQuestion } from "@/db/schema";
 
@@ -105,9 +106,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export function ReservasManager({
   services,
   reservations,
+  bookingPage,
 }: {
   services: BookingServiceAdminRow[];
   reservations: BookingReservationAdminRow[];
+  bookingPage?: Partial<BookingPageContent> | null;
 }) {
   const router = useRouter();
   const { tp } = useTenant();
@@ -115,6 +118,8 @@ export function ReservasManager({
   const confirm = useConfirm();
   const [selectedId, setSelectedId] = useState<string>(services[0]?.id ?? "new");
   const [draft, setDraft] = useState<BookingServiceAdminRow>(services[0] ?? emptyService());
+  const [pageDraft, setPageDraft] = useState<BookingPageContent>(resolveBookingPageContent(bookingPage));
+  const [savingPage, setSavingPage] = useState(false);
   const selected = useMemo(() => services.find((s) => s.id === selectedId), [services, selectedId]);
 
   function selectService(row: BookingServiceAdminRow) {
@@ -149,6 +154,41 @@ export function ReservasManager({
   function addQuestion() {
     const id = `q_${Date.now().toString(36)}`;
     patch("questions", [...(draft.questions || []), { id, label: "Pregunta", type: "text", required: false }]);
+  }
+
+  function patchPage<K extends keyof BookingPageContent>(key: K, value: BookingPageContent[K]) {
+    setPageDraft((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function savePage() {
+    setSavingPage(true);
+    try {
+      const res = await fetch(tp("/api/admin/branding"), {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          bookingPage: {
+            eyebrow: pageDraft.eyebrow.trim(),
+            title: pageDraft.title.trim(),
+            description: pageDraft.description.trim(),
+            primaryCtaLabel: pageDraft.primaryCtaLabel.trim(),
+            secondaryCtaLabel: pageDraft.secondaryCtaLabel.trim(),
+            catalogEyebrow: pageDraft.catalogEyebrow.trim(),
+            catalogTitle: pageDraft.catalogTitle.trim(),
+          },
+        }),
+      });
+      if (!res.ok) {
+        toast.error("No se pudo guardar la pagina publica.");
+        return;
+      }
+      toast.success("Pagina publica de reservas guardada.");
+      router.refresh();
+    } catch {
+      toast.error("Error de red al guardar.");
+    } finally {
+      setSavingPage(false);
+    }
   }
 
   async function save() {
@@ -258,6 +298,80 @@ export function ReservasManager({
       </aside>
 
       <main style={{ padding: 24, display: "grid", gap: 24 }}>
+        <section style={{ display: "grid", gap: 14, border: "1px solid var(--line)", borderRadius: 12, padding: 18, background: "white" }}>
+          <div className="between" style={{ gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <h2 style={{ fontSize: 22 }}>Pagina publica de reservas</h2>
+              <p style={{ color: "var(--muted)", fontSize: 13 }}>
+                Personaliza el encabezado de /reservas segun lo que ofrezca este tenant: servicios, consultorias, clases, visitas, demos o sesiones.
+              </p>
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <a href={tp("/reservas")} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ fontSize: 12, textDecoration: "none" }}>
+                Ver pagina publica
+              </a>
+              <button className="btn btn-primary" onClick={savePage} disabled={savingPage} style={{ fontSize: 12 }}>
+                {savingPage ? "Guardando..." : "Guardar pagina"}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
+            <Field label="Etiqueta superior">
+              <input value={pageDraft.eyebrow} onChange={(e) => patchPage("eyebrow", e.target.value)} maxLength={80} placeholder={BOOKING_PAGE_DEFAULTS.eyebrow} style={inputStyle} />
+            </Field>
+            <Field label="Titulo principal">
+              <input value={pageDraft.title} onChange={(e) => patchPage("title", e.target.value)} maxLength={140} placeholder={BOOKING_PAGE_DEFAULTS.title} style={inputStyle} />
+            </Field>
+          </div>
+
+          <Field label="Descripcion">
+            <textarea value={pageDraft.description} onChange={(e) => patchPage("description", e.target.value)} maxLength={360} placeholder={BOOKING_PAGE_DEFAULTS.description} style={{ ...inputStyle, minHeight: 78 }} />
+          </Field>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+            <Field label="Boton principal">
+              <input value={pageDraft.primaryCtaLabel} onChange={(e) => patchPage("primaryCtaLabel", e.target.value)} maxLength={50} placeholder={BOOKING_PAGE_DEFAULTS.primaryCtaLabel} style={inputStyle} />
+            </Field>
+            <Field label="Boton secundario">
+              <input value={pageDraft.secondaryCtaLabel} onChange={(e) => patchPage("secondaryCtaLabel", e.target.value)} maxLength={50} placeholder={BOOKING_PAGE_DEFAULTS.secondaryCtaLabel} style={inputStyle} />
+            </Field>
+            <Field label="Etiqueta catalogo">
+              <input value={pageDraft.catalogEyebrow} onChange={(e) => patchPage("catalogEyebrow", e.target.value)} maxLength={80} placeholder={BOOKING_PAGE_DEFAULTS.catalogEyebrow} style={inputStyle} />
+            </Field>
+            <Field label="Titulo catalogo">
+              <input value={pageDraft.catalogTitle} onChange={(e) => patchPage("catalogTitle", e.target.value)} maxLength={120} placeholder={BOOKING_PAGE_DEFAULTS.catalogTitle} style={inputStyle} />
+            </Field>
+          </div>
+
+          <div
+            style={{
+              border: "1px solid var(--line)",
+              borderRadius: 12,
+              padding: 16,
+              background: "color-mix(in srgb, var(--bg) 82%, white)",
+            }}
+          >
+            <div className="mono" style={{ fontSize: 10, color: "var(--gold-deep)", fontWeight: 700, textTransform: "uppercase" }}>
+              {pageDraft.eyebrow || BOOKING_PAGE_DEFAULTS.eyebrow}
+            </div>
+            <div className="serif" style={{ fontSize: 26, lineHeight: 1.08, marginTop: 8, color: "var(--navy)", fontWeight: 700 }}>
+              {pageDraft.title || BOOKING_PAGE_DEFAULTS.title}
+            </div>
+            <p style={{ color: "var(--ink-2)", fontSize: 13, lineHeight: 1.55, marginTop: 8, maxWidth: 620 }}>
+              {pageDraft.description || BOOKING_PAGE_DEFAULTS.description}
+            </p>
+            <div className="row" style={{ gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+              <span className="btn btn-primary" style={{ padding: "8px 12px", fontSize: 12 }}>
+                {pageDraft.primaryCtaLabel || BOOKING_PAGE_DEFAULTS.primaryCtaLabel}
+              </span>
+              <span className="btn btn-ghost" style={{ padding: "8px 12px", fontSize: 12 }}>
+                {pageDraft.secondaryCtaLabel || BOOKING_PAGE_DEFAULTS.secondaryCtaLabel}
+              </span>
+            </div>
+          </div>
+        </section>
+
         <section style={{ display: "grid", gap: 16 }}>
           <div className="between" style={{ gap: 12, flexWrap: "wrap" }}>
             <div>

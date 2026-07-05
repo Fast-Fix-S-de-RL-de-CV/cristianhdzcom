@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, CalendarDays, Clock, MapPin, Sparkles } from "lucide-react";
 import { db, schema } from "@/db";
 import { getTenantCtx } from "@/lib/tenant";
+import { resolveBookingPageContent, type BookingPageContent } from "@/lib/booking-page";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { BookingWizard } from "./BookingWizard";
@@ -11,17 +12,6 @@ import { BookingWizard } from "./BookingWizard";
 export const dynamic = "force-dynamic";
 
 type SearchParams = { servicio?: string };
-
-const BOOKING_PAGE_DEFAULTS = {
-  eyebrow: "Servicios y consultorias",
-  title: "Agenda el servicio que necesitas.",
-  description:
-    "Explora las opciones disponibles, revisa la informacion de cada servicio y elige el horario que mejor se acomode a tu calendario.",
-  primaryCtaLabel: "Agendar ahora",
-  secondaryCtaLabel: "Ver servicios",
-  catalogEyebrow: "Catalogo",
-  catalogTitle: "Servicios disponibles",
-};
 
 export default async function ReservasPage({
   searchParams,
@@ -76,7 +66,7 @@ export default async function ReservasPage({
       ) : (
         <BookingServicesLanding
           services={publicServices}
-          content={{ ...BOOKING_PAGE_DEFAULTS, ...(ctx.branding.bookingPage ?? {}) }}
+          content={resolveBookingPageContent(ctx.branding.bookingPage)}
           tenant={{
             basePath: ctx.basePath,
             siteName: ctx.branding.siteName,
@@ -107,7 +97,7 @@ function BookingServicesLanding({
     locationType: string;
     locationLabel: string | null;
   }>;
-  content: typeof BOOKING_PAGE_DEFAULTS;
+  content: BookingPageContent;
   tenant: { basePath: string; siteName: string; logoUrl: string | null };
 }) {
   const hrefFor = (slug: string) => `${tenant.basePath}/reservas?servicio=${encodeURIComponent(slug)}`;

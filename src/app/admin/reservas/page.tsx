@@ -50,6 +50,7 @@ export default async function ReservasAdminPage() {
     >
       <Card style={{ padding: 0, overflow: "hidden" }}>
         <ReservasManager
+          bookingPage={ctx.branding.bookingPage ?? null}
           services={services.map((s) => ({
             ...s,
             createdAt: s.createdAt.toISOString(),
