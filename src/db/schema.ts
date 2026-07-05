@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import type { HomeSections } from "@/lib/home-sections";
+import type { AboutPageContent } from "@/lib/about-page";
 
 /* ─────────── TENANTS (SaaS mimarca.app) ───────────
  * Cada tenant es una plataforma completa (sitio + cursos + comunidad + pagos
@@ -32,6 +33,7 @@ export type TenantBranding = {
   footerText?: string;
   footerLinks?: Array<{ label: string; href: string }>;
   navItems?: Array<{ label: string; href: string; isVisible?: boolean; openInNewTab?: boolean }>;
+  aboutPage?: AboutPageContent;
   social?: Partial<Record<"instagram" | "facebook" | "youtube" | "tiktok" | "x" | "linkedin", string>>;
   hideMimarcaBadge?: boolean;
 };

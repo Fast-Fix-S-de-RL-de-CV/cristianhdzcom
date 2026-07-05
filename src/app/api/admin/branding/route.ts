@@ -67,6 +67,33 @@ const Body = z.object({
     )
     .max(12)
     .optional(),
+  aboutPage: z
+    .object({
+      gallerySlides: z
+        .array(
+          z.object({
+            img: z.string().max(500).optional(),
+            title: z.string().max(160).optional(),
+            subtitle: z.string().max(160).optional(),
+            description: z.string().max(1200).optional(),
+            cta: z.string().max(60).optional(),
+          }),
+        )
+        .max(8)
+        .optional(),
+      storyEyebrow: z.string().max(80).optional(),
+      storyTitle: z.string().max(180).optional(),
+      storyBody1: z.string().max(4000).optional(),
+      storyBody2: z.string().max(4000).optional(),
+      statsEyebrow: z.string().max(80).optional(),
+      statsTitle: z.string().max(180).optional(),
+      quoteEyebrow: z.string().max(80).optional(),
+      quoteText: z.string().max(2000).optional(),
+      quoteAttrib: z.string().max(120).optional(),
+      extraSections: z.array(z.object({ eyebrow: z.string().max(80).optional(), title: z.string().max(180).optional(), body: z.string().max(4000).optional() })).max(8).optional(),
+      ctaCards: z.array(z.object({ eyebrow: z.string().max(80).optional(), title: z.string().max(180).optional(), body: z.string().max(1200).optional(), label: z.string().max(80).optional(), href: z.string().max(500).optional() })).max(4).optional(),
+    })
+    .optional(),
   social: socialShape.optional(),
   hideMimarcaBadge: z.boolean().optional(),
 });

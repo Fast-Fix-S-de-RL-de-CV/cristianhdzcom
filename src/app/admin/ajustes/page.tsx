@@ -96,7 +96,7 @@ export default async function AjustesPage() {
             Tu página pública
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18 }}>
-            Portada (slider o visual 3D), secciones del home (mostrar/ocultar y editar),
+            Portada (slider o visual 3D), secciones del home, página Acerca de,
             textos del hero y tu dominio propio — todo en un solo lugar.
           </p>
           <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>

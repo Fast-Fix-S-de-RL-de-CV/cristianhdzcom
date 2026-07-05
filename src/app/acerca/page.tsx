@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { renderMarkdownLight } from "@/lib/site-settings";
 import { getTenantCtx } from "@/lib/tenant";
+import { defaultAboutPageContent } from "@/lib/about-page";
 
 export const dynamic = "force-dynamic";
 
@@ -41,33 +42,27 @@ export default async function AcercaPage() {
   const role = `${hero?.heroSubtitleAccent ?? ""} ${hero?.heroSubtitleRest ?? ""}`.trim();
   const heroStats = hero?.heroStats ?? [];
 
-  // Slides del héroe (galería finita). Cada uno: título + subtítulo + descripción
-  // + botón que avanza al siguiente. El último entrega el scroll a la biografía.
-  // TODO: reemplazar imágenes/copys por los reales de Cristian cuando los mande.
-  const gallerySlides: GallerySlide[] = [
-    {
-      img: "/galeria-infinita/img/01.jpg",
-      title: `${fullName}.`,
-      subtitle: role || "Programación · IA · Negocio",
-      description:
-        "Programador profesional con IA, autor y fundador. Convierto ideas en software y negocios que de verdad funcionan.",
-    },
-    {
-      img: "/galeria-infinita/img/02.jpg",
-      title: "De código a empresa.",
-      subtitle: "Productos, apps y sistemas a la medida",
-      description:
-        "Empecé escribiendo código y terminé construyendo empresas. Hoy creo plataformas, apps y automatizaciones para que otros también crezcan.",
-    },
-    {
-      img: "/galeria-infinita/img/03.jpg",
-      title: "Aprende conmigo.",
-      subtitle: "Programas · Libros · Comunidad",
-      description:
-        "Comparto todo lo que sé para que construyas con inteligencia artificial: cursos, libros y una comunidad que avanza contigo.",
-      cta: "Seguir leyendo",
-    },
-  ];
+  const aboutDefaults = defaultAboutPageContent({
+    siteName: ctx.branding.siteName,
+    fullName,
+    role,
+    bio1: hero?.heroBio1,
+    bio2: hero?.heroBio2,
+    quoteText: hero?.heroQuoteText,
+    quoteAttrib: hero?.heroQuoteAttrib,
+  });
+  const about = { ...aboutDefaults, ...(ctx.branding.aboutPage ?? {}) };
+  const fallbackSlides = aboutDefaults.gallerySlides ?? [];
+  const gallerySlides: GallerySlide[] = (about.gallerySlides?.length ? about.gallerySlides : fallbackSlides).map((s, i) => {
+    const fallback = fallbackSlides[i] ?? fallbackSlides[0]!;
+    return {
+      img: s.img || fallback.img || "/galeria-infinita/img/01.jpg",
+      title: s.title || fallback.title || ctx.branding.siteName,
+      subtitle: s.subtitle || fallback.subtitle || "",
+      description: s.description || fallback.description || "",
+      cta: s.cta || fallback.cta,
+    };
+  });
 
   return (
     <div>
@@ -82,20 +77,20 @@ export default async function AcercaPage() {
       <section id="acerca-historia" className="sec" style={{ scrollMarginTop: 80 }}>
         <div className="acerca-bio-grid" style={{ display: "grid", gridTemplateColumns: "0.5fr 1fr", gap: 56 }}>
           <div>
-            <Eyebrow>Mi historia</Eyebrow>
+            <Eyebrow>{about.storyEyebrow || "Mi historia"}</Eyebrow>
             <h2 className="serif" style={{ fontSize: "clamp(32px, 4vw, 52px)", marginTop: 14, lineHeight: 1.05 }}>
-              De código a empresa.
+              {about.storyTitle || "De código a empresa."}
             </h2>
           </div>
           <div className="col" style={{ gap: 24, maxWidth: 680 }}>
-            {hero?.heroBio1 && (
+            {about.storyBody1 && (
               <p style={{ fontSize: 20, color: "var(--ink)", lineHeight: 1.6 }}>
-                {renderMarkdownLight(hero.heroBio1)}
+                {renderMarkdownLight(about.storyBody1)}
               </p>
             )}
-            {hero?.heroBio2 && (
+            {about.storyBody2 && (
               <p style={{ fontSize: 18, color: "var(--ink-2)", lineHeight: 1.65 }}>
-                {renderMarkdownLight(hero.heroBio2)}
+                {renderMarkdownLight(about.storyBody2)}
               </p>
             )}
           </div>
@@ -107,9 +102,9 @@ export default async function AcercaPage() {
       {/* ───────── TRAYECTORIA (stats reales) ───────── */}
       {heroStats.length > 0 && (
         <section className="sec">
-          <Eyebrow>Trayectoria</Eyebrow>
+          <Eyebrow>{about.statsEyebrow || "Trayectoria"}</Eyebrow>
           <h2 style={{ fontSize: "clamp(32px, 4vw, 56px)", marginTop: 14, marginBottom: 48 }}>
-            En números.
+            {about.statsTitle || "En números."}
           </h2>
           <div
             className="acerca-stats-grid"
@@ -145,51 +140,53 @@ export default async function AcercaPage() {
       )}
 
       {/* ───────── MANIFIESTO / QUOTE ───────── */}
-      {hero?.heroQuoteText && (
+      {about.quoteText && (
         <section className="sec" style={{ paddingTop: 16 }}>
           <Card style={{ padding: "clamp(40px, 6vw, 80px)", background: "var(--bg-2)", borderLeft: "4px solid var(--accent)" }}>
-            <Eyebrow style={{ marginBottom: 24 }}>En lo que creo</Eyebrow>
+            <Eyebrow style={{ marginBottom: 24 }}>{about.quoteEyebrow || "En lo que creo"}</Eyebrow>
             <p className="serif" style={{ fontSize: "clamp(28px, 4vw, 48px)", lineHeight: 1.25, color: "var(--ink)", maxWidth: 900 }}>
-              &ldquo;{hero.heroQuoteText}&rdquo;
+              &ldquo;{about.quoteText}&rdquo;
             </p>
-            {hero?.heroQuoteAttrib && (
+            {about.quoteAttrib && (
               <div className="mono" style={{ fontSize: 12, color: "var(--muted)", marginTop: 24, letterSpacing: "0.1em" }}>
-                {hero.heroQuoteAttrib}
+                {about.quoteAttrib}
               </div>
             )}
           </Card>
         </section>
       )}
 
+      {(about.extraSections ?? []).filter((s) => s.title || s.body).map((section, i) => (
+        <section key={i} className="sec" style={{ paddingTop: 16 }}>
+          <div className="acerca-bio-grid" style={{ display: "grid", gridTemplateColumns: "0.5fr 1fr", gap: 56 }}>
+            <div>
+              {section.eyebrow && <Eyebrow>{section.eyebrow}</Eyebrow>}
+              {section.title && <h2 className="serif" style={{ fontSize: "clamp(32px, 4vw, 52px)", marginTop: 14, lineHeight: 1.05 }}>{section.title}</h2>}
+            </div>
+            {section.body && (
+              <p style={{ fontSize: 18, color: "var(--ink-2)", lineHeight: 1.65, maxWidth: 680 }}>
+                {renderMarkdownLight(section.body)}
+              </p>
+            )}
+          </div>
+        </section>
+      ))}
+
       {/* ───────── CTA ───────── */}
       <section className="sec" style={{ paddingTop: 16 }}>
         <div className="acerca-cta-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-          <Card hover style={{ padding: 40 }}>
-            <Eyebrow>Trabajemos juntos</Eyebrow>
-            <h3 className="serif" style={{ fontSize: 30, marginTop: 12, marginBottom: 12 }}>
-              Conoce mis empresas.
-            </h3>
-            <p style={{ color: "var(--muted)", lineHeight: 1.55, marginBottom: 24 }}>
-              SaaS en producción, agencia de software a medida y consultoría. Casos reales que puedes
-              usar en tu negocio.
-            </p>
-            <Link href={tp("/empresas")}>
-              <Button>Ver empresas →</Button>
-            </Link>
-          </Card>
-          <Card hover style={{ padding: 40 }}>
-            <Eyebrow>Aprende conmigo</Eyebrow>
-            <h3 className="serif" style={{ fontSize: 30, marginTop: 12, marginBottom: 12 }}>
-              Programas y libros.
-            </h3>
-            <p style={{ color: "var(--muted)", lineHeight: 1.55, marginBottom: 24 }}>
-              Te enseño a hacer negocios y a programar con IA — desde cero hasta entregar productos
-              reales. Empieza gratis.
-            </p>
-            <Link href={tp("/programas")}>
-              <Button variant="ghost">Ver programas →</Button>
-            </Link>
-          </Card>
+          {(about.ctaCards ?? []).filter((card) => card.title || card.body).map((card, i) => (
+            <Card key={i} hover style={{ padding: 40 }}>
+              {card.eyebrow && <Eyebrow>{card.eyebrow}</Eyebrow>}
+              {card.title && <h3 className="serif" style={{ fontSize: 30, marginTop: 12, marginBottom: 12 }}>{card.title}</h3>}
+              {card.body && <p style={{ color: "var(--muted)", lineHeight: 1.55, marginBottom: 24 }}>{card.body}</p>}
+              {card.href && card.label && (
+                <Link href={card.href.startsWith("/") ? tp(card.href) : card.href}>
+                  <Button variant={i === 0 ? "primary" : "ghost"}>{card.label}</Button>
+                </Link>
+              )}
+            </Card>
+          ))}
         </div>
       </section>
 

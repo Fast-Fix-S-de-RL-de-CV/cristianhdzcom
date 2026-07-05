@@ -5,6 +5,7 @@ import { useTenant } from "@/components/tenant/TenantProvider";
 const TABS: [string, string][] = [
   ["Portada", "/admin/ajustes/slider"],
   ["Secciones", "/admin/ajustes/home"],
+  ["Acerca de", "/admin/ajustes/acerca"],
   ["Hero (textos)", "/admin/ajustes/hero"],
   ["Dominio", "/admin/ajustes/dominio"],
 ];
