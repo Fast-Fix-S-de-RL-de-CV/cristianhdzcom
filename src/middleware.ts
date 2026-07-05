@@ -36,12 +36,14 @@ function hostname(req: NextRequest): string {
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const path = url.pathname;
+  const slugUploadPath = /^\/[^/]+\/uploads\//.test(path);
 
   // Assets / internals: nunca tenant-rewrite
   if (
-    path.startsWith("/_next") ||
-    path.startsWith("/uploads") ||
-    /\.[a-zA-Z0-9]+$/.test(path) // archivos con extensión (logo.png, favicon…)
+    !slugUploadPath &&
+    (path.startsWith("/_next") ||
+      path.startsWith("/uploads") ||
+      /\.[a-zA-Z0-9]+$/.test(path)) // archivos con extensión (logo.png, favicon…)
   ) {
     return NextResponse.next();
   }

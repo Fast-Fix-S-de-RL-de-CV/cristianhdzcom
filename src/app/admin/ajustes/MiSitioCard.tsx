@@ -420,6 +420,7 @@ export function MiSitioCard() {
               uploading={uploading === "logo"}
               hint="PNG/JPG/WebP con fondo transparente, ~200x48"
               preview="logo"
+              resolveSrc={tp}
             />
             <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
               <button
@@ -456,6 +457,7 @@ export function MiSitioCard() {
               uploading={uploading === "favicon"}
               hint="Cuadrado, PNG/JPG/WebP 64x64 o mas"
               preview="favicon"
+              resolveSrc={tp}
             />
             <input
               ref={faviconInputRef}
@@ -1049,6 +1051,7 @@ function ImageField({
   uploading,
   hint,
   preview = "square",
+  resolveSrc,
 }: {
   label: string;
   value: string | null;
@@ -1057,6 +1060,7 @@ function ImageField({
   uploading: boolean;
   hint: string;
   preview?: "logo" | "favicon" | "square";
+  resolveSrc?: (path: string) => string;
 }) {
   const [previewFailed, setPreviewFailed] = useState(false);
   const isLogo = preview === "logo";
@@ -1097,7 +1101,7 @@ function ImageField({
           {value && !previewFailed ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={value}
+              src={value.startsWith("/uploads/") && resolveSrc ? resolveSrc(value) : value}
               alt=""
               onError={() => setPreviewFailed(true)}
               style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}

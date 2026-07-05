@@ -35,7 +35,8 @@ export async function generateMetadata(): Promise<Metadata> {
       ? `${process.env.NEXT_PUBLIC_SITE_URL}${ctx.basePath || ""}`
       : undefined;
   const canonical = seo.canonicalUrl || requestUrl;
-  const ogImage = seo.ogImageUrl || b.logoUrl || undefined;
+  const ogImage = tenantAssetUrl(ctx, seo.ogImageUrl || b.logoUrl) || undefined;
+  const faviconUrl = tenantAssetUrl(ctx, b.faviconUrl) || "/favicon.png";
   const robots = seo.robots === "noindex,nofollow"
     ? { index: false, follow: false }
     : { index: true, follow: true };
@@ -61,7 +62,7 @@ export async function generateMetadata(): Promise<Metadata> {
       images: ogImage ? [ogImage] : undefined,
     },
     icons: {
-      icon: [{ url: b.faviconUrl || "/favicon.png", type: "image/png", sizes: "any" }],
+      icon: [{ url: faviconUrl, type: "image/png", sizes: "any" }],
     },
   };
 }
@@ -89,6 +90,11 @@ function brandVars(b: { accent: string; ink: string; bg: string }): React.CSSPro
   };
 }
 
+function tenantAssetUrl(ctx: NonNullable<Awaited<ReturnType<typeof getTenantCtx>>>, url: string | null | undefined) {
+  if (!url) return null;
+  return url.startsWith("/uploads/") ? ctx.tp(url) : url;
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getTenantCtx();
 
@@ -102,7 +108,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         basePath: ctx.basePath,
         siteName: ctx.branding.siteName,
         accent: ctx.branding.accent,
-        logoUrl: ctx.branding.logoUrl ?? null,
+        logoUrl: tenantAssetUrl(ctx, ctx.branding.logoUrl),
         navItems: resolveNavItems(ctx.branding.navItems),
       }
     : { slug: "", basePath: "", siteName: "mimarca.app", accent: "#C8A951", logoUrl: null, navItems: [] };
