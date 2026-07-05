@@ -4,7 +4,8 @@ import { desc, sql, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { getTenantCtx } from "@/lib/tenant";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { adminIcon, activityIcon } from "@/components/admin/adminIcons";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { activityIcon } from "@/components/admin/adminIcons";
 import { PenLine, BookOpen, Radio, Megaphone, GraduationCap, Wallet, Rocket, Repeat } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -134,79 +135,44 @@ export default async function AdminDashboard() {
   // No cancellations table yet → churn 0 until we wire enrollment.status='cancelled' over a window.
   const churnPct = 0;
 
-  const sidebarItems = [
-    ["Dashboard", true, "/admin"],
-    ["Prospectos", false, "/admin/prospectos"],
-    ["Alumnos", false, "/admin/alumnos", String(counts.users)],
-    ["Clientes", false, "/admin/clientes", String(counts.users)],
-    ["Suscripciones", false, "/admin/suscripciones", String(counts.orders)],
-    ["Pagos", false, "/admin/pagos", `$${Math.round((counts.revenueCents || 0) / 100)}`],
-    ["Cursos", false, "/admin/cursos", String(counts.programs)],
-    ["Blog", false, "/admin/blog", String(counts.blog || 0)],
-    ["Talleres", false, "/admin/talleres", String(counts.events || 0)],
-    ["Comunidad", false, "/admin/comunidad", String(counts.posts)],
-    ["Marketing", false, "/admin/marketing"],
-    ["Soporte", false, "/admin/soporte", String(counts.leads || 0)],
-    ["Ajustes", false, "/admin/ajustes"],
-  ] as const;
+  const adminCounts = {
+    Prospectos: counts.leads || 0,
+    Alumnos: counts.users,
+    Clientes: counts.users,
+    Suscripciones: counts.orders,
+    Pagos: `$${Math.round((counts.revenueCents || 0) / 100)}`,
+    Cursos: counts.programs,
+    Talleres: counts.events || 0,
+    Blog: counts.blog || 0,
+    Comunidad: counts.posts,
+    Soporte: counts.leads || 0,
+  };
 
   return (
     <AdminShell user={user}>
       <div className="admin-layout" style={{ display: "grid", gridTemplateColumns: "240px 1fr", minHeight: "calc(100vh - 130px)" }}>
-        {/* Sidebar */}
-        <aside style={{ padding: "24px 16px", background: "var(--bg)", borderRight: "1px solid var(--line)" }}>
-          <Eyebrow style={{ padding: "0 12px 12px" }}>Operación</Eyebrow>
-          <div className="col" style={{ gap: 2 }}>
-            {sidebarItems.map(([label, active, href, count]) => (
-              <a
-                key={String(label)}
-                href={tp(String(href))}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "10px 12px",
-                  borderRadius: 8,
-                  background: active ? "var(--ink)" : "transparent",
-                  color: active ? "var(--bg)" : "var(--ink-2)",
-                  fontWeight: active ? 600 : 500,
-                  fontSize: 13,
-                  textDecoration: "none",
-                }}
-              >
-                <span style={{ width: 18, display: "inline-flex", alignItems: "center" }}>
-                  {adminIcon(String(label))}
-                </span>
-                <span style={{ flex: 1 }}>{String(label)}</span>
-                {count ? (
-                  <span
-                    className="mono"
-                    style={{ fontSize: 10, color: active ? "rgba(255,255,255,0.6)" : "var(--muted)" }}
-                  >
-                    {String(count)}
-                  </span>
-                ) : null}
-              </a>
-            ))}
-          </div>
-          <div className="rule" style={{ margin: "20px 8px" }} />
-          <Card style={{ padding: 14 }}>
-            <div className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>
-              MES ACTUAL
-            </div>
-            <div className="serif" style={{ fontSize: 28, marginTop: 4 }}>
-              $ {Math.round(revThis / 100).toLocaleString("es-MX")}
-            </div>
-            <div className="row" style={{ gap: 4, fontSize: 11, color: monthDeltaPct >= 0 ? "oklch(48% 0.13 155)" : "var(--red)", marginTop: 4 }}>
-              <span>{monthDeltaLabel}</span>
-              <span style={{ color: "var(--muted)" }}>vs. mes anterior</span>
-            </div>
-            <ProgressBar value={goalPct} className="!mt-3" />
-            <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 6 }}>
-              {goalLabel}
-            </div>
-          </Card>
-        </aside>
+        <AdminSidebar
+          active="/admin"
+          counts={adminCounts}
+          extra={
+            <Card style={{ padding: 14 }}>
+              <div className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>
+                MES ACTUAL
+              </div>
+              <div className="serif" style={{ fontSize: 28, marginTop: 4 }}>
+                $ {Math.round(revThis / 100).toLocaleString("es-MX")}
+              </div>
+              <div className="row" style={{ gap: 4, fontSize: 11, color: monthDeltaPct >= 0 ? "oklch(48% 0.13 155)" : "var(--red)", marginTop: 4 }}>
+                <span>{monthDeltaLabel}</span>
+                <span style={{ color: "var(--muted)" }}>vs. mes anterior</span>
+              </div>
+              <ProgressBar value={goalPct} className="!mt-3" />
+              <div className="mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 6 }}>
+                {goalLabel}
+              </div>
+            </Card>
+          }
+        />
 
         {/* Main */}
         <main style={{ padding: "28px 32px" }}>

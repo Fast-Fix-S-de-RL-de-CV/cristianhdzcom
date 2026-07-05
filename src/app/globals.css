@@ -972,7 +972,8 @@ html { scroll-behavior: smooth; }
     border-bottom: 1px solid var(--line);
     padding: 16px 24px !important;
   }
-  .admin-layout > aside .col { flex-direction: row !important; flex-wrap: wrap; gap: 6px !important; }
+  .admin-sidebar-groups { gap: 14px !important; }
+  .admin-sidebar-items { flex-direction: row !important; flex-wrap: wrap; gap: 6px !important; }
   .admin-layout > main { padding: 24px !important; }
 
   /* Admin KPI / 2-col charts stack */
@@ -1002,7 +1003,7 @@ html { scroll-behavior: smooth; }
   .plat-side { display: none; }
 
   .admin-kpi-grid { grid-template-columns: 1fr !important; }
-  .admin-layout > aside .col { flex-direction: column !important; }
+  .admin-sidebar-items { flex-direction: column !important; }
 
   /* Smaller h1s on mobile so they don't clip — only break when truly needed */
   h1 {

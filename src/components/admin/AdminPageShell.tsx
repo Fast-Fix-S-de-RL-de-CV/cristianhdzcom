@@ -1,29 +1,6 @@
 "use client";
 import { AdminShell } from "./AdminShell";
-import { Eyebrow } from "@/components/ui/Eyebrow";
-import { adminIcon } from "./adminIcons";
-import { useTenant } from "@/components/tenant/TenantProvider";
-
-// [label, href, activeKey?] — activeKey agrupa varias páginas bajo un mismo ítem.
-const ITEMS: readonly (readonly [string, string] | readonly [string, string, string])[] = [
-  ["Dashboard", "/admin"],
-  ["Prospectos", "/admin/prospectos"],
-  ["Alumnos", "/admin/alumnos"],
-  ["Clientes", "/admin/clientes"],
-  ["Membresías", "/admin/membresias"],
-  ["Suscripciones", "/admin/suscripciones"],
-  ["Pagos", "/admin/pagos"],
-  ["Cursos", "/admin/cursos"],
-  ["Talleres", "/admin/talleres"],
-  ["Libros", "/admin/libros"],
-  ["Empresas", "/admin/servicios"],
-  ["Reservas", "/admin/reservas"],
-  ["Blog", "/admin/blog"],
-  ["Comunidad", "/admin/comunidad"],
-  ["Soporte", "/admin/soporte"],
-  ["Sitio web", "/admin/ajustes/slider", "sitio"],
-  ["Ajustes", "/admin/ajustes"],
-];
+import { AdminSidebar } from "./AdminSidebar";
 
 export function AdminPageShell({
   user,
@@ -40,52 +17,13 @@ export function AdminPageShell({
   actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const { tp } = useTenant();
   return (
     <AdminShell user={user}>
       <div
         className="admin-layout"
         style={{ display: "grid", gridTemplateColumns: "240px 1fr", minHeight: "calc(100vh - 130px)" }}
       >
-        <aside
-          style={{
-            padding: "24px 16px",
-            background: "var(--bg)",
-            borderRight: "1px solid var(--line)",
-          }}
-        >
-          <Eyebrow style={{ padding: "0 12px 12px" }}>Operación</Eyebrow>
-          <div className="col" style={{ gap: 2 }}>
-            {ITEMS.map((it) => {
-              const [label, href] = it;
-              const activeKey = it[2] ?? href;
-              const isActive = activeKey === active;
-              return (
-                <a
-                  key={href}
-                  href={tp(href)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 12px",
-                    borderRadius: 8,
-                    background: isActive ? "var(--ink)" : "transparent",
-                    color: isActive ? "var(--bg)" : "var(--ink-2)",
-                    fontWeight: isActive ? 600 : 500,
-                    fontSize: 13,
-                    textDecoration: "none",
-                  }}
-                >
-                  <span style={{ width: 18, display: "inline-flex", alignItems: "center" }}>
-                    {adminIcon(label)}
-                  </span>
-                  <span style={{ flex: 1 }}>{label}</span>
-                </a>
-              );
-            })}
-          </div>
-        </aside>
+        <AdminSidebar active={active} />
 
         <main style={{ padding: "28px 32px" }}>
           <div className="between" style={{ marginBottom: 20, flexWrap: "wrap", gap: 16 }}>
