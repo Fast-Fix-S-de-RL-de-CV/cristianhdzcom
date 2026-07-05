@@ -2028,11 +2028,5 @@ textarea.tf-input { resize: vertical; min-height: 84px; }
   }
 }
 
-@media (max-width: 760px) {
-  .settings-two-col {
-    grid-template-columns: 1fr !important;
-  }
-}
-
 /* Prevent body horizontal scroll always */
 html, body { overflow-x: hidden; }

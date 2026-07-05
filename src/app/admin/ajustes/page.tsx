@@ -12,7 +12,7 @@ import { EmailSettingsCard } from "./EmailSettingsCard";
 
 export const dynamic = "force-dynamic";
 
-type SettingsTab = "sitio" | "operacion" | "pagos" | "comunidad" | "datos" | "infra";
+type SettingsTab = "sitio" | "correo" | "pagos" | "datos" | "infra";
 
 const BASE_TABS: Array<{ key: SettingsTab; label: string; title: string; subtitle: string }> = [
   {
@@ -22,22 +22,16 @@ const BASE_TABS: Array<{ key: SettingsTab; label: string; title: string; subtitl
     subtitle: "Nombre, logo, colores, SEO, menú, footer y redes.",
   },
   {
-    key: "operacion",
-    label: "Reservas y correo",
-    title: "Reservas y comunicación",
-    subtitle: "Servicios de cita, SMTP propio y recordatorios automáticos.",
+    key: "correo",
+    label: "Correo",
+    title: "Correo y notificaciones",
+    subtitle: "SMTP propio del tenant, remitente y recordatorios automáticos.",
   },
   {
     key: "pagos",
     label: "Pagos",
     title: "Métodos de pago",
     subtitle: "Proveedores y métodos que el tenant puede ofrecer a alumnos o compradores.",
-  },
-  {
-    key: "comunidad",
-    label: "Comunidad",
-    title: "Experiencia de miembros",
-    subtitle: "Configuración base de la comunidad del tenant.",
   },
   {
     key: "datos",
@@ -138,10 +132,9 @@ export default async function AjustesPage({
 
         {current === "sitio" && (
           <div className="col" style={{ gap: 16 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
               <QuickLink title="Editar páginas" body="Portada, secciones, Acerca de y dominio." href={tp("/admin/ajustes/slider")} />
               <QuickLink title="Vista pública" body="Revisa cómo se ve el tenant para visitantes." href={tp("/")} external />
-              <QuickLink title="Reservas públicas" body="Abre la página pública de citas." href={tp("/reservas")} external />
             </div>
             <Card style={{ padding: 24 }}>
               <MiSitioCard />
@@ -149,52 +142,22 @@ export default async function AjustesPage({
           </div>
         )}
 
-        {current === "operacion" && (
-          <div className="settings-two-col" style={{ display: "grid", gridTemplateColumns: "minmax(0, .82fr) minmax(0, 1.18fr)", gap: 16 }}>
-            <Card style={{ padding: 24 }}>
-              <Eyebrow>Reservas</Eyebrow>
-              <h3 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
-                Servicios y citas
-              </h3>
-              <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18, lineHeight: 1.55 }}>
-                Administra servicios de consultoría, horarios disponibles y reservas entrantes.
-              </p>
-              <a href={tp("/admin/reservas")} className="btn btn-primary" style={buttonLinkStyle()}>
-                Configurar reservas →
-              </a>
-            </Card>
-            <Card style={{ padding: 24 }}>
-              <Eyebrow>Email</Eyebrow>
-              <h3 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
-                SMTP y recordatorios
-              </h3>
-              <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18, lineHeight: 1.55 }}>
-                Remitente propio del tenant y recordatorios una hora antes de cada reserva.
-              </p>
-              <EmailSettingsCard />
-            </Card>
-          </div>
+        {current === "correo" && (
+          <Card style={{ padding: 24 }}>
+            <Eyebrow>Email</Eyebrow>
+            <h3 className="serif" style={{ fontSize: 24, marginTop: 6, marginBottom: 4 }}>
+              SMTP y recordatorios
+            </h3>
+            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18, lineHeight: 1.55 }}>
+              Remitente propio del tenant y recordatorios una hora antes de cada reserva.
+            </p>
+            <EmailSettingsCard />
+          </Card>
         )}
 
         {current === "pagos" && (
           <Card style={{ padding: 24 }}>
             <PaymentMethodsCard />
-          </Card>
-        )}
-
-        {current === "comunidad" && (
-          <Card style={{ padding: 24 }}>
-            <div className="col" style={{ gap: 14 }}>
-              <Field label="Nombre">
-                <input disabled value={ctx.branding.siteName} style={inputStyle()} />
-              </Field>
-              <Field label="Descripción">
-                <textarea disabled value={`Comunidad de ${ctx.branding.siteName}.`} style={{ ...inputStyle(), minHeight: 64 }} />
-              </Field>
-              <Field label="Privacidad">
-                <input disabled value="Pública (requiere registro)" style={inputStyle()} />
-              </Field>
-            </div>
           </Card>
         )}
 
