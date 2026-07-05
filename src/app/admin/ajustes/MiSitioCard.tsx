@@ -280,22 +280,27 @@ export function MiSitioCard() {
     }
   }
 
-  function applyLogoSuggestion() {
+  async function applyLogoSuggestion(saveNow = false) {
     if (!logoSuggestion) return;
-    setForm((p) => ({
-      ...p,
+    const next = {
+      ...form,
       accent: logoSuggestion.accent,
       ink: logoSuggestion.ink,
       bg: logoSuggestion.bg,
-    }));
+    };
+    setForm(next);
+    if (saveNow) {
+      await save(next);
+      return;
+    }
     toast.success("Paleta aplicada al formulario. Guarda para publicarla.");
   }
 
-  async function save() {
+  async function save(nextForm = form) {
     for (const [label, value] of [
-      ["acento", form.accent],
-      ["texto", form.ink],
-      ["fondo", form.bg],
+      ["acento", nextForm.accent],
+      ["texto", nextForm.ink],
+      ["fondo", nextForm.bg],
     ] as const) {
       if (!HEX_RE.test(value)) {
         toast.error(`El color de ${label} debe ser hex #RRGGBB (ej. #C8A951).`);
@@ -308,28 +313,28 @@ export function MiSitioCard() {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          siteName: form.siteName.trim() || undefined,
-          accent: form.accent,
-          ink: form.ink,
-          bg: form.bg,
-          logoUrl: form.logoUrl ?? "",
-          faviconUrl: form.faviconUrl ?? "",
+          siteName: nextForm.siteName.trim() || undefined,
+          accent: nextForm.accent,
+          ink: nextForm.ink,
+          bg: nextForm.bg,
+          logoUrl: nextForm.logoUrl ?? "",
+          faviconUrl: nextForm.faviconUrl ?? "",
           seo: {
-            title: form.seo.title.trim(),
-            description: form.seo.description.trim(),
-            keywords: form.seo.keywords
+            title: nextForm.seo.title.trim(),
+            description: nextForm.seo.description.trim(),
+            keywords: nextForm.seo.keywords
               .split(",")
               .map((k) => k.trim())
               .filter(Boolean)
               .slice(0, 20),
-            ogImageUrl: form.seo.ogImageUrl ?? "",
-            canonicalUrl: form.seo.canonicalUrl.trim(),
-            robots: form.seo.robots,
+            ogImageUrl: nextForm.seo.ogImageUrl ?? "",
+            canonicalUrl: nextForm.seo.canonicalUrl.trim(),
+            robots: nextForm.seo.robots,
           },
-          footerText: form.footerText,
+          footerText: nextForm.footerText,
           // La API exige label y href: descarta enlaces a medio llenar
-          footerLinks: form.footerLinks.filter((l) => l.label.trim() && l.href.trim()),
-          navItems: form.navItems
+          footerLinks: nextForm.footerLinks.filter((l) => l.label.trim() && l.href.trim()),
+          navItems: nextForm.navItems
             .filter((item) => item.label.trim() && item.href.trim())
             .map(({ label, href, isVisible, openInNewTab }) => ({
               label: label.trim(),
@@ -337,8 +342,8 @@ export function MiSitioCard() {
               isVisible: isVisible !== false,
               openInNewTab: !!openInNewTab,
             })),
-          social: form.social,
-          ...(meta.hideBadgeAllowed ? { hideMimarcaBadge: form.hideMimarcaBadge } : {}),
+          social: nextForm.social,
+          ...(meta.hideBadgeAllowed ? { hideMimarcaBadge: nextForm.hideMimarcaBadge } : {}),
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -436,6 +441,18 @@ export function MiSitioCard() {
                 Genera sugerencias de color y estilo. No aplica cambios automáticamente.
               </span>
             </div>
+            {logoSuggestion && (
+              <div style={{ marginTop: 12 }}>
+                <LogoSuggestionCard
+                  suggestion={logoSuggestion}
+                  current={{ accent: form.accent, ink: form.ink, bg: form.bg }}
+                  onApply={() => applyLogoSuggestion(false)}
+                  onApplyAndSave={() => applyLogoSuggestion(true)}
+                  onDiscard={() => setLogoSuggestion(null)}
+                  saving={saving}
+                />
+              </div>
+            )}
             <input
               ref={logoInputRef}
               type="file"
@@ -542,14 +559,6 @@ export function MiSitioCard() {
             <ColorField label="Acento (botones, detalles)" value={form.accent} onChange={(v) => set("accent", v)} />
             <ColorField label="Texto / tinta" value={form.ink} onChange={(v) => set("ink", v)} />
             <ColorField label="Fondo" value={form.bg} onChange={(v) => set("bg", v)} />
-            {logoSuggestion && (
-              <LogoSuggestionCard
-                suggestion={logoSuggestion}
-                current={{ accent: form.accent, ink: form.ink, bg: form.bg }}
-                onApply={applyLogoSuggestion}
-                onDiscard={() => setLogoSuggestion(null)}
-              />
-            )}
             <button
               type="button"
               onClick={resetColors}
@@ -895,7 +904,7 @@ export function MiSitioCard() {
       <div className="row" style={{ justifyContent: "flex-end", gap: 12, alignItems: "center" }}>
         <button
           type="button"
-          onClick={save}
+          onClick={() => save()}
           disabled={saving || loadFailed}
           className="btn btn-primary"
           style={{ padding: "10px 18px", fontSize: 13 }}
@@ -913,12 +922,16 @@ function LogoSuggestionCard({
   suggestion,
   current,
   onApply,
+  onApplyAndSave,
   onDiscard,
+  saving = false,
 }: {
   suggestion: LogoSuggestion;
   current: { accent: string; ink: string; bg: string };
   onApply: () => void;
+  onApplyAndSave?: () => void;
   onDiscard: () => void;
+  saving?: boolean;
 }) {
   return (
     <div
@@ -970,9 +983,16 @@ function LogoSuggestionCard({
       <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.45 }}>
         <strong>Tipografía sugerida:</strong> {suggestion.fontStyle}
       </div>
-      <button type="button" onClick={onApply} className="btn btn-primary" style={{ padding: "8px 14px", fontSize: 12, alignSelf: "flex-start" }}>
-        Aplicar colores sugeridos
-      </button>
+      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        <button type="button" onClick={onApply} className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: 12 }}>
+          Aplicar al formulario
+        </button>
+        {onApplyAndSave && (
+          <button type="button" onClick={onApplyAndSave} disabled={saving} className="btn btn-primary" style={{ padding: "8px 14px", fontSize: 12 }}>
+            {saving ? "Guardando..." : "Aplicar y guardar"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
