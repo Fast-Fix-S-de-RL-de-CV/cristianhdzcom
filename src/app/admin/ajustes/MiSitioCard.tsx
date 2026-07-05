@@ -418,7 +418,8 @@ export function MiSitioCard() {
               onChange={(v) => set("logoUrl", v)}
               onPickFile={() => logoInputRef.current?.click()}
               uploading={uploading === "logo"}
-              hint="PNG/SVG con fondo transparente, ~200×48"
+              hint="PNG/JPG/WebP con fondo transparente, ~200x48"
+              preview="logo"
             />
             <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
               <button
@@ -453,7 +454,8 @@ export function MiSitioCard() {
               onChange={(v) => set("faviconUrl", v)}
               onPickFile={() => faviconInputRef.current?.click()}
               uploading={uploading === "favicon"}
-              hint="Cuadrado, PNG 64×64 o más"
+              hint="Cuadrado, PNG/JPG/WebP 64x64 o mas"
+              preview="favicon"
             />
             <input
               ref={faviconInputRef}
@@ -1046,6 +1048,7 @@ function ImageField({
   onPickFile,
   uploading,
   hint,
+  preview = "square",
 }: {
   label: string;
   value: string | null;
@@ -1053,24 +1056,34 @@ function ImageField({
   onPickFile?: () => void;
   uploading: boolean;
   hint: string;
+  preview?: "logo" | "favicon" | "square";
 }) {
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const isLogo = preview === "logo";
+  const boxStyle = isLogo
+    ? { width: 128, height: 64, borderRadius: 10 }
+    : { width: 56, height: 56, borderRadius: 8 };
+
+  useEffect(() => {
+    setPreviewFailed(false);
+  }, [value]);
+
   return (
     <Field label={label}>
       <div
         style={{
           display: "flex",
           gap: 12,
-          alignItems: "center",
+          alignItems: isLogo ? "flex-start" : "center",
           padding: 12,
           border: "1px dashed var(--line-2)",
           borderRadius: 10,
+          flexWrap: "wrap",
         }}
       >
         <div
           style={{
-            width: 56,
-            height: 56,
-            borderRadius: 8,
+            ...boxStyle,
             overflow: "hidden",
             flexShrink: 0,
             background: "var(--bg-2)",
@@ -1078,14 +1091,29 @@ function ImageField({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            padding: isLogo ? 10 : 0,
           }}
         >
-          {value ? (
+          {value && !previewFailed ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={value} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            <img
+              src={value}
+              alt=""
+              onError={() => setPreviewFailed(true)}
+              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+            />
           ) : (
-            <span className="mono" style={{ fontSize: 8, color: "var(--muted)", letterSpacing: "0.06em" }}>
-              SIN IMAGEN
+            <span
+              className="mono"
+              style={{
+                fontSize: isLogo ? 9 : 8,
+                color: previewFailed ? "var(--red)" : "var(--muted)",
+                letterSpacing: "0.06em",
+                textAlign: "center",
+                lineHeight: 1.2,
+              }}
+            >
+              {previewFailed ? "NO CARGA" : "SIN IMAGEN"}
             </span>
           )}
         </div>

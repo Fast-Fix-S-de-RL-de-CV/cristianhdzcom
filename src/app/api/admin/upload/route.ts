@@ -68,19 +68,36 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "missing_file" }, { status: 400 });
   }
 
+  const uploadType = new URL(req.url).searchParams.get("type") || "";
   const mime = file.type || "application/octet-stream";
   const isImage = ALLOWED_IMAGE.has(mime);
   const isVideo = ALLOWED_VIDEO.has(mime);
   if (!isImage && !isVideo) {
     return NextResponse.json(
-      { error: "unsupported_mime", mime, allowed: [...ALLOWED_IMAGE, ...ALLOWED_VIDEO] },
+      {
+        error: "unsupported_mime",
+        message: "Formato no soportado. Usa PNG, JPG, WebP, GIF o AVIF.",
+        mime,
+        allowed: [...ALLOWED_IMAGE, ...ALLOWED_VIDEO],
+      },
+      { status: 415 },
+    );
+  }
+  if ((uploadType === "logo" || uploadType === "favicon") && !isImage) {
+    return NextResponse.json(
+      { error: "unsupported_mime", message: "El logo y favicon deben ser archivos de imagen." },
       { status: 415 },
     );
   }
   const sizeLimit = isImage ? MAX_IMAGE : MAX_VIDEO;
   if (file.size > sizeLimit) {
     return NextResponse.json(
-      { error: "too_large", maxBytes: sizeLimit, gotBytes: file.size },
+      {
+        error: "too_large",
+        message: `El archivo supera el limite de ${Math.round(sizeLimit / 1024 / 1024)}MB.`,
+        maxBytes: sizeLimit,
+        gotBytes: file.size,
+      },
       { status: 413 },
     );
   }

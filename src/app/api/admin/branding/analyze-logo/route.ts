@@ -69,7 +69,12 @@ export async function POST(req: Request) {
   }
   if (!SUPPORTED_MEDIA.has(image.mediaType)) {
     return NextResponse.json(
-      { error: "unsupported_logo_type", mediaType: image.mediaType, accepted: [...SUPPORTED_MEDIA] },
+      {
+        error: "unsupported_logo_type",
+        message: "La IA puede analizar PNG, JPG, WebP o GIF. Convierte el logo a uno de esos formatos.",
+        mediaType: image.mediaType,
+        accepted: [...SUPPORTED_MEDIA],
+      },
       { status: 415 },
     );
   }
@@ -89,18 +94,27 @@ export async function POST(req: Request) {
 }
 
 async function loadImage(url: string): Promise<{ bytes: Buffer; mediaType: string }> {
-  if (url.startsWith("/")) {
-    const safe = normalize(url).replace(/^(\.\.(\/|\\|$))+/, "");
+  const cleanUrl = url.trim();
+  if (cleanUrl.startsWith("/")) {
+    const withoutQuery = cleanUrl.split(/[?#]/)[0] || cleanUrl;
+    const decoded = decodeURIComponent(withoutQuery);
+    const uploadIndex = decoded.indexOf("/uploads/");
+    const uploadPath = uploadIndex >= 0 ? decoded.slice(uploadIndex) : decoded;
+    const safe = normalize(uploadPath).replace(/^(\.\.(\/|\\|$))+/, "");
     if (!safe.startsWith("/uploads/")) throw new Error("Solo se pueden analizar logos subidos al sitio o URLs https.");
     const full = join(process.cwd(), "public", safe);
-    const bytes = await readFile(full);
-    return { bytes, mediaType: mimeFromPath(url) };
+    try {
+      const bytes = await readFile(full);
+      return { bytes, mediaType: mimeFromPath(safe) };
+    } catch {
+      throw new Error("No se encontro el archivo del logo en uploads. Vuelve a subirlo y guarda los cambios.");
+    }
   }
 
-  if (!/^https?:\/\//i.test(url)) throw new Error("URL de logo inválida.");
-  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  if (!/^https?:\/\//i.test(cleanUrl)) throw new Error("URL de logo inválida.");
+  const res = await fetch(cleanUrl, { signal: AbortSignal.timeout(10_000) });
   if (!res.ok) throw new Error("No se pudo descargar el logo.");
-  const mediaType = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() || mimeFromPath(url);
+  const mediaType = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() || mimeFromPath(cleanUrl);
   const bytes = Buffer.from(await res.arrayBuffer());
   return { bytes, mediaType };
 }
