@@ -34,7 +34,8 @@ import { hashPassword } from "@/lib/auth";
 import { recomputeUserTier } from "@/lib/experience";
 import { accrueCredit, type PlanSlug } from "@/lib/membership";
 import { basePrice } from "@/lib/book-bumps";
-import { bookPurchaseEmailHtml, purchaseAccessEmailHtml, sendEmail } from "@/lib/email";
+import { bookPurchaseEmailHtml, purchaseAccessEmailHtml, sendEmail, sendTenantEmail } from "@/lib/email";
+import { formatInZone } from "@/lib/timezone";
 
 const ENV_SECRET_KEY = process.env.STRIPE_SECRET_KEY ?? "";
 const STRIPE_API_VERSION = "2025-02-24.acacia" as const;
@@ -171,6 +172,16 @@ export type MembershipCheckoutMeta = {
   buyerEmail: string;
 };
 
+export type BookingCheckoutMeta = {
+  kind: "booking";
+  tenantId: string;
+  bookingReservationId: string;
+  bookingServiceId: string;
+  buyerName: string;
+  buyerEmail: string;
+  serviceTitle: string;
+};
+
 /* ─────────── Resolver / crear user desde un email (scoped al tenant) ─────────── */
 /**
  * Obtiene o crea un user por email DENTRO del tenant. Devuelve
@@ -233,7 +244,7 @@ export async function finalizeCheckoutSession(
   tenantId: string,
 ): Promise<{
   orderId: string;
-  kind: "program" | "book" | "membership";
+  kind: "program" | "book" | "membership" | "booking";
   createdNewAccount: boolean;
 }> {
   // Si la session no está pagada (cancel/expired/incomplete), no procesar.
@@ -263,7 +274,7 @@ export async function finalizeCheckoutSession(
     // ¿Ya se procesó? (re-check DENTRO del lock)
     const existing = await findOrderBySessionId(tenantId, session.id);
     if (existing) {
-      const meta = (existing.metadata ?? {}) as { kind?: "program" | "book" | "membership" };
+      const meta = (existing.metadata ?? {}) as { kind?: "program" | "book" | "membership" | "booking" };
       return {
         orderId: existing.id,
         kind: meta.kind ?? "program",
@@ -272,12 +283,13 @@ export async function finalizeCheckoutSession(
     }
 
     const meta = session.metadata ?? {};
-    const kind = meta.kind as "program" | "book" | "membership" | undefined;
+    const kind = meta.kind as "program" | "book" | "membership" | "booking" | undefined;
     if (!kind) throw new Error("session_missing_metadata_kind");
 
     if (kind === "program") return finalizeProgramOrder(session, tenantId);
     if (kind === "book") return finalizeBookOrder(session, tenantId);
     if (kind === "membership") return finalizeMembershipOrder(session, tenantId);
+    if (kind === "booking") return finalizeBookingOrder(session, tenantId);
     throw new Error(`unknown_kind_${kind}`);
   });
 }
@@ -434,6 +446,181 @@ async function finalizeProgramOrder(session: Stripe.Checkout.Session, tenantId: 
     orderId: order.id,
     kind: "program" as const,
     createdNewAccount: resolved.createdNewAccount,
+  };
+}
+
+/* ────────────────── BOOKING ────────────────── */
+function esc(value: unknown): string {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+async function finalizeBookingOrder(session: Stripe.Checkout.Session, tenantId: string) {
+  const m = (session.metadata ?? {}) as Record<string, string>;
+  const reservationId = m.bookingReservationId;
+  if (!reservationId) throw new Error("booking_reservation_missing");
+
+  const [reservation] = await db
+    .select()
+    .from(schema.bookingReservations)
+    .where(and(eq(schema.bookingReservations.id, reservationId), eq(schema.bookingReservations.tenantId, tenantId)))
+    .limit(1);
+  if (!reservation) throw new Error("booking_reservation_not_found");
+
+  const [service] = await db
+    .select()
+    .from(schema.bookingServices)
+    .where(and(eq(schema.bookingServices.id, reservation.serviceId), eq(schema.bookingServices.tenantId, tenantId)))
+    .limit(1);
+  if (!service) throw new Error("booking_service_not_found");
+
+  const buyerEmail = (reservation.customerEmail ?? m.buyerEmail ?? "").toLowerCase();
+  if (!buyerEmail) throw new Error("booking_buyer_email_missing");
+
+  const [user] = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(and(sql`lower(${schema.users.email}) = ${buyerEmail}`, eq(schema.users.tenantId, tenantId)))
+    .limit(1);
+
+  const totalCents = service.priceUsd * 100;
+  const now = new Date();
+  const [order] = await db
+    .insert(schema.orders)
+    .values({
+      tenantId,
+      userId: user?.id ?? null,
+      email: buyerEmail,
+      name: reservation.customerName,
+      programId: null,
+      status: "succeeded",
+      subtotalCents: totalCents,
+      discountCents: 0,
+      bumpsCents: 0,
+      taxCents: 0,
+      totalCents,
+      currency: "usd",
+      paymentMethod: "card",
+      metadata: {
+        kind: "booking",
+        stripeSessionId: session.id,
+        stripePaymentIntent:
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null,
+        stripeCustomer:
+          typeof session.customer === "string"
+            ? session.customer
+            : session.customer?.id ?? null,
+        bookingReservationId: reservation.id,
+        bookingServiceId: service.id,
+        serviceTitle: service.title,
+        startsAt: reservation.startsAt.toISOString(),
+      } as Record<string, unknown>,
+      paidAt: now,
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  if (!order) {
+    const existing = await findOrderBySessionId(tenantId, session.id);
+    if (existing) return { orderId: existing.id, kind: "booking" as const, createdNewAccount: false };
+    throw new Error("order_conflict_unresolved");
+  }
+
+  await db
+    .update(schema.bookingReservations)
+    .set({
+      status: "scheduled",
+      stripeSessionId: session.id,
+      paidAt: now,
+      expiresAt: null,
+      updatedAt: now,
+    })
+    .where(and(eq(schema.bookingReservations.id, reservation.id), eq(schema.bookingReservations.tenantId, tenantId)));
+
+  const [tenant] = await db
+    .select({ branding: schema.tenants.branding })
+    .from(schema.tenants)
+    .where(eq(schema.tenants.id, tenantId))
+    .limit(1);
+  const siteName = tenant?.branding?.siteName || "tu reserva";
+  const when = formatInZone(reservation.startsAt, service.timezone, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const [owner] = await db
+    .select({ email: schema.users.email })
+    .from(schema.users)
+    .where(and(eq(schema.users.tenantId, tenantId), sql`${schema.users.role} IN ('admin', 'superadmin')`))
+    .orderBy(schema.users.createdAt)
+    .limit(1);
+  const notifyTo = service.notificationEmail || owner?.email;
+
+  if (notifyTo) {
+    sendTenantEmail({
+      tenantId,
+      to: notifyTo,
+      replyTo: buyerEmail,
+      subject: `Nueva reserva pagada: ${service.title}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.5">
+          <h2>Nueva reserva pagada</h2>
+          <p><strong>${esc(service.title)}</strong></p>
+          <p><strong>Fecha:</strong> ${esc(when)} (${esc(service.timezone)})</p>
+          <p><strong>Pago:</strong> $${service.priceUsd} ${esc(service.currency)}</p>
+          <p><strong>Nombre:</strong> ${esc(reservation.customerName)}</p>
+          <p><strong>Email:</strong> <a href="mailto:${esc(buyerEmail)}">${esc(buyerEmail)}</a></p>
+          ${reservation.customerPhone ? `<p><strong>Telefono:</strong> ${esc(reservation.customerPhone)}</p>` : ""}
+          ${reservation.notes ? `<p><strong>Notas:</strong><br>${esc(reservation.notes)}</p>` : ""}
+        </div>
+      `,
+      text: `Nueva reserva pagada: ${service.title}\nFecha: ${when}\nPago: $${service.priceUsd} ${service.currency}\nNombre: ${reservation.customerName}\nEmail: ${buyerEmail}`,
+    }).catch((err) => console.error("[stripe.finalize booking] notify email:", err));
+  }
+
+  sendTenantEmail({
+    tenantId,
+    to: buyerEmail,
+    subject: `Tu reserva en ${siteName}`,
+    html: `
+      <div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.5">
+        <h2>Pago recibido y reserva confirmada</h2>
+        <p>Hola ${esc(reservation.customerName)}, tu horario quedo reservado.</p>
+        <p><strong>${esc(service.title)}</strong></p>
+        <p><strong>Fecha:</strong> ${esc(when)} (${esc(service.timezone)})</p>
+        <p><strong>Pago:</strong> $${service.priceUsd} ${esc(service.currency)}</p>
+        ${service.locationLabel ? `<p><strong>Ubicacion:</strong> ${esc(service.locationLabel)}</p>` : ""}
+        ${service.confirmationText ? `<p>${esc(service.confirmationText)}</p>` : ""}
+      </div>
+    `,
+    text: `Pago recibido y reserva confirmada\n${service.title}\nFecha: ${when}\nPago: $${service.priceUsd} ${service.currency}`,
+  }).catch((err) => console.error("[stripe.finalize booking] customer email:", err));
+
+  await db
+    .insert(schema.activity)
+    .values({
+      tenantId,
+      kind: "purchase",
+      icon: "💳",
+      text: `${reservation.customerName.split(" ")[0]} agendó ${service.title} · $${service.priceUsd}`,
+      color: "var(--accent)",
+      refId: reservation.id,
+    })
+    .catch(() => undefined);
+
+  return {
+    orderId: order.id,
+    kind: "booking" as const,
+    createdNewAccount: false,
   };
 }
 

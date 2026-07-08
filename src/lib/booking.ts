@@ -98,6 +98,7 @@ export async function calculateAvailableSlots(opts: {
       and(
         eq(schema.bookingReservations.serviceId, service.id),
         ne(schema.bookingReservations.status, "cancelled"),
+        or(ne(schema.bookingReservations.status, "pending_payment"), gt(schema.bookingReservations.expiresAt, now)),
         gte(schema.bookingReservations.startsAt, queryStart),
         lte(schema.bookingReservations.startsAt, queryEnd),
       ),
@@ -125,6 +126,7 @@ export async function calculateAvailableSlots(opts: {
 }
 
 export async function hasBookingConflict(serviceId: string, startsAt: Date, endsAt: Date): Promise<boolean> {
+  const now = new Date();
   const [conflict] = await db
     .select({ id: schema.bookingReservations.id })
     .from(schema.bookingReservations)
@@ -132,6 +134,7 @@ export async function hasBookingConflict(serviceId: string, startsAt: Date, ends
       and(
         eq(schema.bookingReservations.serviceId, serviceId),
         ne(schema.bookingReservations.status, "cancelled"),
+        or(ne(schema.bookingReservations.status, "pending_payment"), gt(schema.bookingReservations.expiresAt, now)),
         or(
           and(gte(schema.bookingReservations.startsAt, startsAt), lt(schema.bookingReservations.startsAt, endsAt)),
           and(gt(schema.bookingReservations.endsAt, startsAt), lte(schema.bookingReservations.endsAt, endsAt)),

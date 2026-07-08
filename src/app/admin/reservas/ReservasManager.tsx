@@ -17,6 +17,9 @@ export type BookingServiceAdminRow = {
   description: string | null;
   hostName: string | null;
   hostAvatarUrl: string | null;
+  currency: string;
+  priceUsd: number;
+  requiresPayment: boolean;
   durationMinutes: number;
   bufferMinutes: number;
   minNoticeHours: number;
@@ -62,6 +65,9 @@ function emptyService(): BookingServiceAdminRow {
     description: "Selecciona una fecha y horario disponible. Recibiras confirmacion por correo.",
     hostName: "",
     hostAvatarUrl: "",
+    currency: "USD",
+    priceUsd: 0,
+    requiresPayment: false,
     durationMinutes: 30,
     bufferMinutes: 10,
     minNoticeHours: 2,
@@ -437,6 +443,7 @@ export function ReservasManager({
                     </div>
                     <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 6 }}>
                       {service.durationMinutes} min · {service.locationType}
+                      {service.requiresPayment && service.priceUsd > 0 ? ` · $${service.priceUsd} ${service.currency}` : ""}
                     </div>
                     <div className="mono" style={{ color: "var(--muted)", fontSize: 10, marginTop: 4 }}>
                       /reservas?servicio={service.slug}
@@ -494,6 +501,29 @@ export function ReservasManager({
                 <Field label="Descripcion">
                   <textarea value={draft.description ?? ""} onChange={(e) => patch("description", e.target.value)} style={{ ...inputStyle, minHeight: 96 }} />
                 </Field>
+              </div>
+
+              <div style={{ ...panelStyle, display: "grid", gap: 14 }}>
+                <div>
+                  <h3 style={{ fontSize: 17 }}>Cobro del servicio</h3>
+                  <p style={{ color: "var(--muted)", fontSize: 12 }}>
+                    Si activas pago, el visitante elige horario, deja sus datos y pasa a Stripe antes de confirmar la reserva.
+                  </p>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
+                  <Field label="Precio">
+                    <input type="number" min={0} max={100000} value={draft.priceUsd} onChange={(e) => patch("priceUsd", Number(e.target.value))} style={inputStyle} />
+                  </Field>
+                  <Field label="Moneda">
+                    <select value={draft.currency} onChange={(e) => patch("currency", e.target.value)} style={inputStyle}>
+                      <option value="USD">USD</option>
+                    </select>
+                  </Field>
+                  <label className="row" style={{ gap: 8, alignItems: "center", fontSize: 13, fontWeight: 700 }}>
+                    <input type="checkbox" checked={draft.requiresPayment} onChange={(e) => patch("requiresPayment", e.target.checked)} />
+                    Requiere pago para confirmar
+                  </label>
+                </div>
               </div>
 
               <div style={{ ...panelStyle, display: "grid", gap: 14 }}>
@@ -625,6 +655,7 @@ export function ReservasManager({
                   <div style={{ fontSize: 12 }}>{r.serviceTitle}</div>
                   <div className="mono" style={{ fontSize: 11 }}>{new Date(r.startsAt).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}</div>
                   <select value={r.status} onChange={(e) => updateReservation(r.id, e.target.value)} style={inputStyle}>
+                    <option value="pending_payment">Pendiente de pago</option>
                     <option value="scheduled">Agendada</option>
                     <option value="confirmed">Confirmada</option>
                     <option value="completed">Completada</option>

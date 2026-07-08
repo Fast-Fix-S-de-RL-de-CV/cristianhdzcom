@@ -8,7 +8,7 @@ import { getTenantCtx } from "@/lib/tenant";
 export const dynamic = "force-dynamic";
 
 const Body = z.object({
-  status: z.enum(["scheduled", "confirmed", "completed", "cancelled", "no_show"]),
+  status: z.enum(["pending_payment", "scheduled", "confirmed", "completed", "cancelled", "no_show"]),
 });
 
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {

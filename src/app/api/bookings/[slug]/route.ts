@@ -4,6 +4,8 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { calculateAvailableSlots, hasBookingConflict } from "@/lib/booking";
 import { sendTenantEmail } from "@/lib/email";
+import { usdToMxnCents } from "@/lib/fx";
+import { getStripeForTenant, requestOrigin } from "@/lib/stripe";
 import { getTenantCtx } from "@/lib/tenant";
 import { formatInZone, resolveTimezone } from "@/lib/timezone";
 
@@ -57,6 +59,9 @@ export async function GET(_req: Request, routeCtx: { params: Promise<{ slug: str
       description: service.description,
       hostName: service.hostName,
       hostAvatarUrl: service.hostAvatarUrl,
+      currency: service.currency,
+      priceUsd: service.priceUsd,
+      requiresPayment: service.requiresPayment,
       durationMinutes: service.durationMinutes,
       maxDaysAhead: service.maxDaysAhead,
       timezone: service.timezone,
@@ -97,6 +102,9 @@ export async function POST(req: Request, routeCtx: { params: Promise<{ slug: str
   if (service.requirePhone && !data.phone) {
     return NextResponse.json({ error: "phone_required" }, { status: 400 });
   }
+  if (service.requiresPayment && service.priceUsd > 0 && !data.email) {
+    return NextResponse.json({ error: "email_required" }, { status: 400 });
+  }
 
   const questions = Array.isArray(service.questions) ? service.questions : [];
   const answers = Array.isArray(data.answers) ? data.answers : [];
@@ -123,6 +131,15 @@ export async function POST(req: Request, routeCtx: { params: Promise<{ slug: str
     return NextResponse.json({ error: "slot_unavailable" }, { status: 409 });
   }
 
+  const requiresPayment = service.requiresPayment && service.priceUsd > 0;
+  const stripeClient = requiresPayment ? await getStripeForTenant(ctx.tenant.id) : null;
+  if (requiresPayment && !stripeClient?.stripe && process.env.ALLOW_DEMO_CHECKOUT !== "1") {
+    return NextResponse.json(
+      { error: "payments_not_configured", message: "Este sitio aun no tiene pagos configurados." },
+      { status: 400 },
+    );
+  }
+
   const [reservation] = await db
     .insert(schema.bookingReservations)
     .values({
@@ -136,18 +153,92 @@ export async function POST(req: Request, routeCtx: { params: Promise<{ slug: str
       customerPhone: data.phone ?? null,
       notes: data.notes ?? null,
       answers,
-      status: "scheduled",
+      status: requiresPayment ? "pending_payment" : "scheduled",
+      expiresAt: requiresPayment ? new Date(Date.now() + 30 * 60 * 1000) : null,
     })
     .returning();
 
+  if (requiresPayment) {
+    if (process.env.ALLOW_DEMO_CHECKOUT === "1" && !stripeClient?.stripe) {
+      await db
+        .update(schema.bookingReservations)
+        .set({ status: "scheduled", paidAt: new Date(), expiresAt: null, updatedAt: new Date() })
+        .where(eq(schema.bookingReservations.id, reservation.id));
+      await sendReservationEmails({ tenantId: ctx.tenant.id, siteName: ctx.branding.siteName, service, reservation: { ...reservation, status: "scheduled" } });
+      return NextResponse.json({ reservation: { id: reservation.id, startsAt: reservation.startsAt }, demo: true });
+    }
+
+    try {
+      const origin = requestOrigin(req);
+      const session = await stripeClient!.stripe!.checkout.sessions.create({
+        mode: "payment",
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: "mxn",
+              unit_amount: usdToMxnCents(service.priceUsd),
+              product_data: {
+                name: service.title,
+                description: service.subtitle ?? service.description?.slice(0, 240) ?? undefined,
+                images: service.hostAvatarUrl ? [service.hostAvatarUrl] : undefined,
+              },
+            },
+          },
+        ],
+        customer_email: data.email,
+        success_url: `${origin}${ctx.tp("/api/checkout/finish")}?session_id={CHECKOUT_SESSION_ID}&next=${encodeURIComponent(ctx.tp(`/reservas?servicio=${service.slug}&booking=paid`))}`,
+        cancel_url: `${origin}${ctx.tp(`/reservas?servicio=${service.slug}&cancelled=1`)}`,
+        metadata: {
+          kind: "booking",
+          tenantId: ctx.tenant.id,
+          bookingReservationId: reservation.id,
+          bookingServiceId: service.id,
+          buyerName: data.name,
+          buyerEmail: data.email ?? "",
+          serviceTitle: service.title,
+        },
+      });
+      await db
+        .update(schema.bookingReservations)
+        .set({ stripeSessionId: session.id, updatedAt: new Date() })
+        .where(eq(schema.bookingReservations.id, reservation.id));
+      return NextResponse.json({ sessionId: session.id, url: session.url });
+    } catch (e) {
+      await db
+        .update(schema.bookingReservations)
+        .set({ status: "cancelled", updatedAt: new Date() })
+        .where(eq(schema.bookingReservations.id, reservation.id))
+        .catch(() => undefined);
+      console.error("[bookings] checkout:", e);
+      return NextResponse.json({ error: "checkout_failed" }, { status: 500 });
+    }
+  }
+
+  await sendReservationEmails({ tenantId: ctx.tenant.id, siteName: ctx.branding.siteName, service, reservation });
+
+  return NextResponse.json({ reservation: { id: reservation.id, startsAt: reservation.startsAt } });
+}
+
+async function sendReservationEmails({
+  tenantId,
+  siteName,
+  service,
+  reservation,
+}: {
+  tenantId: string;
+  siteName: string;
+  service: typeof schema.bookingServices.$inferSelect;
+  reservation: typeof schema.bookingReservations.$inferSelect;
+}) {
   const [owner] = await db
     .select({ email: schema.users.email })
     .from(schema.users)
-    .where(and(eq(schema.users.tenantId, ctx.tenant.id), inArray(schema.users.role, ["admin", "superadmin"])))
+    .where(and(eq(schema.users.tenantId, tenantId), inArray(schema.users.role, ["admin", "superadmin"])))
     .orderBy(asc(schema.users.createdAt))
     .limit(1);
   const notifyTo = service.notificationEmail || owner?.email;
-  const when = formatInZone(startsAt, service.timezone, {
+  const when = formatInZone(reservation.startsAt, service.timezone, {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -158,34 +249,34 @@ export async function POST(req: Request, routeCtx: { params: Promise<{ slug: str
 
   if (notifyTo) {
     sendTenantEmail({
-      tenantId: ctx.tenant.id,
+      tenantId,
       to: notifyTo,
-      replyTo: data.email,
+      replyTo: reservation.customerEmail ?? undefined,
       subject: `Nueva reserva: ${service.title}`,
       html: `
         <div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.5">
           <h2>Nueva reserva</h2>
           <p><strong>${esc(service.title)}</strong></p>
           <p><strong>Fecha:</strong> ${esc(when)} (${esc(service.timezone)})</p>
-          <p><strong>Nombre:</strong> ${esc(data.name)}</p>
-          ${data.email ? `<p><strong>Email:</strong> <a href="mailto:${esc(data.email)}">${esc(data.email)}</a></p>` : ""}
-          ${data.phone ? `<p><strong>Teléfono:</strong> ${esc(data.phone)}</p>` : ""}
-          ${data.notes ? `<p><strong>Notas:</strong><br>${esc(data.notes)}</p>` : ""}
+          <p><strong>Nombre:</strong> ${esc(reservation.customerName)}</p>
+          ${reservation.customerEmail ? `<p><strong>Email:</strong> <a href="mailto:${esc(reservation.customerEmail)}">${esc(reservation.customerEmail)}</a></p>` : ""}
+          ${reservation.customerPhone ? `<p><strong>Telefono:</strong> ${esc(reservation.customerPhone)}</p>` : ""}
+          ${reservation.notes ? `<p><strong>Notas:</strong><br>${esc(reservation.notes)}</p>` : ""}
         </div>
       `,
-      text: `Nueva reserva: ${service.title}\nFecha: ${when}\nNombre: ${data.name}\nEmail: ${data.email || "—"}\nTelefono: ${data.phone || "—"}`,
+      text: `Nueva reserva: ${service.title}\nFecha: ${when}\nNombre: ${reservation.customerName}\nEmail: ${reservation.customerEmail || "—"}\nTelefono: ${reservation.customerPhone || "—"}`,
     }).catch((err) => console.error("[bookings] notify email:", err));
   }
 
-  if (data.email) {
+  if (reservation.customerEmail) {
     sendTenantEmail({
-      tenantId: ctx.tenant.id,
-      to: data.email,
-      subject: `Tu reserva en ${ctx.branding.siteName}`,
+      tenantId,
+      to: reservation.customerEmail,
+      subject: `Tu reserva en ${siteName}`,
       html: `
         <div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.5">
           <h2>Reserva confirmada</h2>
-          <p>Hola ${esc(data.name)}, tu horario quedó reservado.</p>
+          <p>Hola ${esc(reservation.customerName)}, tu horario quedo reservado.</p>
           <p><strong>${esc(service.title)}</strong></p>
           <p><strong>Fecha:</strong> ${esc(when)} (${esc(service.timezone)})</p>
           ${service.locationLabel ? `<p><strong>Ubicación:</strong> ${esc(service.locationLabel)}</p>` : ""}
@@ -195,6 +286,4 @@ export async function POST(req: Request, routeCtx: { params: Promise<{ slug: str
       text: `Reserva confirmada\n${service.title}\nFecha: ${when}`,
     }).catch((err) => console.error("[bookings] customer email:", err));
   }
-
-  return NextResponse.json({ reservation: { id: reservation.id, startsAt: reservation.startsAt } });
 }

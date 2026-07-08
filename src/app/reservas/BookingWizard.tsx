@@ -13,6 +13,9 @@ type PublicService = {
   description: string | null;
   hostName: string | null;
   hostAvatarUrl: string | null;
+  currency: string;
+  priceUsd: number;
+  requiresPayment: boolean;
   durationMinutes: number;
   timezone: string;
   locationType: string;
@@ -71,7 +74,9 @@ export function BookingWizard({
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [done, setDone] = useState(false);
+  const [paidDone, setPaidDone] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "" });
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
@@ -79,6 +84,10 @@ export function BookingWizard({
     const params = new URLSearchParams(window.location.search);
     const slug = params.get("servicio");
     if (slug && services.some((s) => s.slug === slug)) setServiceSlug(slug);
+    if (params.get("booking") === "paid") {
+      setPaidDone(true);
+      setDone(true);
+    }
   }, [services]);
 
   useEffect(() => {
@@ -118,23 +127,39 @@ export function BookingWizard({
   async function submit() {
     if (!selectedService || !selectedSlot) return;
     setError("");
+    setSubmitting(true);
     const payloadAnswers = (selectedService.questions || []).map((q) => ({ id: q.id, label: q.label, answer: answers[q.id] || "" }));
-    const res = await fetch(tp(`/api/bookings/${selectedService.slug}`), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        utc: selectedSlot.utc,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || selectedService.timezone,
-        answers: payloadAnswers,
-      }),
-    });
-    if (!res.ok) {
+    try {
+      const res = await fetch(tp(`/api/bookings/${selectedService.slug}`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          utc: selectedSlot.utc,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || selectedService.timezone,
+          answers: payloadAnswers,
+        }),
+      });
       const data = await res.json().catch(() => ({}));
-      setError(data.error === "slot_unavailable" ? "Ese horario ya no esta disponible. Elige otro." : "No se pudo completar la reserva.");
-      return;
+      if (!res.ok) {
+        setError(
+          data.error === "slot_unavailable"
+            ? "Ese horario ya no esta disponible. Elige otro."
+            : data.error === "payments_not_configured"
+              ? "Este servicio aun no tiene pagos configurados."
+              : "No se pudo completar la reserva.",
+        );
+        return;
+      }
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setPaidDone(selectedService.requiresPayment && selectedService.priceUsd > 0);
+      setDone(true);
+    } finally {
+      setSubmitting(false);
     }
-    setDone(true);
   }
 
   return (
@@ -164,6 +189,11 @@ export function BookingWizard({
           <p style={{ color: "var(--muted)", fontSize: 13 }}>{selectedService.hostName || tenant.siteName}</p>
           <h1 style={{ fontSize: 28, lineHeight: 1.12, margin: "6px 0 18px" }}>{selectedService.title}</h1>
           <div style={{ display: "grid", gap: 10, color: "var(--muted)", fontSize: 14, marginBottom: 22 }}>
+            {selectedService.requiresPayment && selectedService.priceUsd > 0 ? (
+              <span style={{ display: "flex", gap: 8, alignItems: "center", color: "var(--ink)", fontWeight: 800 }}>
+                ${selectedService.priceUsd} {selectedService.currency}
+              </span>
+            ) : null}
             <span style={{ display: "flex", gap: 8, alignItems: "center" }}><Clock size={16} /> {selectedService.durationMinutes} min</span>
             <span style={{ display: "flex", gap: 8, alignItems: "center" }}><Calendar size={16} /> {selectedService.timezone}</span>
             {selectedService.locationLabel ? <span style={{ display: "flex", gap: 8, alignItems: "center" }}><MapPin size={16} /> {selectedService.locationLabel}</span> : null}
@@ -183,9 +213,9 @@ export function BookingWizard({
             <div style={{ display: "grid", placeItems: "center", minHeight: 520, textAlign: "center" }}>
               <div>
                 <CheckCircle2 size={58} color={active} style={{ margin: "0 auto 18px" }} />
-                <h2 style={{ fontSize: 30 }}>Reserva confirmada</h2>
+                <h2 style={{ fontSize: 30 }}>{paidDone ? "Pago recibido" : "Reserva confirmada"}</h2>
                 <p style={{ color: "var(--muted)", marginTop: 8 }}>
-                  Guardamos tu horario. Si dejaste correo, recibiras la confirmacion ahi.
+                  {paidDone ? "Tu horario quedo confirmado. Recibiras los detalles por correo." : "Guardamos tu horario. Si dejaste correo, recibiras la confirmacion ahi."}
                 </p>
               </div>
             </div>
@@ -200,7 +230,7 @@ export function BookingWizard({
               </p>
               <div style={{ display: "grid", gap: 12 }}>
                 <Input icon={<User size={16} />} placeholder="Nombre" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
-                <Input icon={<Mail size={16} />} placeholder={selectedService.requireEmail ? "Email requerido" : "Email"} value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
+                <Input icon={<Mail size={16} />} placeholder={selectedService.requireEmail || (selectedService.requiresPayment && selectedService.priceUsd > 0) ? "Email requerido" : "Email"} value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
                 <Input icon={<Phone size={16} />} placeholder={selectedService.requirePhone ? "Telefono requerido" : "Telefono"} value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
                 {(selectedService.questions || []).map((q) => (
                   <label key={q.id} style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 600 }}>
@@ -214,8 +244,8 @@ export function BookingWizard({
                 ))}
                 <textarea placeholder="Notas adicionales" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ ...fieldStyle, minHeight: 90 }} />
                 {error ? <p style={{ color: "var(--red)", fontSize: 13 }}>{error}</p> : null}
-                <button className="btn btn-primary" onClick={submit} disabled={!form.name || (selectedService.requireEmail && !form.email) || (selectedService.requirePhone && !form.phone)} style={{ justifyContent: "center", padding: "13px 18px" }}>
-                  Confirmar reserva
+                <button className="btn btn-primary" onClick={submit} disabled={submitting || !form.name || ((selectedService.requireEmail || (selectedService.requiresPayment && selectedService.priceUsd > 0)) && !form.email) || (selectedService.requirePhone && !form.phone)} style={{ justifyContent: "center", padding: "13px 18px" }}>
+                  {submitting ? "Procesando..." : selectedService.requiresPayment && selectedService.priceUsd > 0 ? `Pagar $${selectedService.priceUsd} ${selectedService.currency}` : "Confirmar reserva"}
                 </button>
               </div>
             </div>

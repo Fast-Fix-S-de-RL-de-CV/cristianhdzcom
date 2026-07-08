@@ -37,6 +37,9 @@ export default async function ReservasPage({
     description: s.description,
     hostName: s.hostName,
     hostAvatarUrl: s.hostAvatarUrl,
+    currency: s.currency,
+    priceUsd: s.priceUsd,
+    requiresPayment: s.requiresPayment,
     durationMinutes: s.durationMinutes,
     timezone: s.timezone,
     locationType: s.locationType,
@@ -92,6 +95,9 @@ function BookingServicesLanding({
     description: string | null;
     hostName: string | null;
     hostAvatarUrl: string | null;
+    currency: string;
+    priceUsd: number;
+    requiresPayment: boolean;
     durationMinutes: number;
     timezone: string;
     locationType: string;
@@ -314,11 +320,16 @@ function ServiceVisual({
 function ServiceMeta({
   service,
 }: {
-  service: { durationMinutes: number; locationType: string; locationLabel: string | null; timezone: string };
+  service: { durationMinutes: number; locationType: string; locationLabel: string | null; timezone: string; currency?: string; priceUsd?: number; requiresPayment?: boolean };
 }) {
   const location = service.locationLabel || (service.locationType === "virtual" ? "Virtual" : service.locationType);
   return (
     <div style={{ display: "grid", gap: 8, color: "var(--muted)", fontSize: 13 }}>
+      {service.requiresPayment && service.priceUsd ? (
+        <span style={{ display: "flex", gap: 8, alignItems: "center", color: "var(--ink)", fontWeight: 800 }}>
+          ${service.priceUsd} {service.currency || "USD"}
+        </span>
+      ) : null}
       <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <Clock size={15} /> {service.durationMinutes} min
       </span>

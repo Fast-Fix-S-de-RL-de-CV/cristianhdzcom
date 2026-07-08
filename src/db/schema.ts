@@ -797,6 +797,9 @@ export const bookingServices = pgTable(
     description: text("description"),
     hostName: varchar("host_name", { length: 120 }),
     hostAvatarUrl: text("host_avatar_url"),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+    priceUsd: integer("price_usd").notNull().default(0),
+    requiresPayment: boolean("requires_payment").notNull().default(false),
     durationMinutes: integer("duration_minutes").notNull().default(30),
     bufferMinutes: integer("buffer_minutes").notNull().default(10),
     minNoticeHours: integer("min_notice_hours").notNull().default(2),
@@ -836,6 +839,9 @@ export const bookingReservations = pgTable(
     notes: text("notes"),
     answers: jsonb("answers").$type<Array<{ id: string; label: string; answer: string }>>().notNull().default([]),
     status: varchar("status", { length: 30 }).notNull().default("scheduled"),
+    stripeSessionId: varchar("stripe_session_id", { length: 120 }),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
     reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -843,6 +849,9 @@ export const bookingReservations = pgTable(
   (t) => ({
     serviceTimeIdx: index("booking_reservations_service_time_idx").on(t.serviceId, t.startsAt),
     tenantIdx: index("booking_reservations_tenant_idx").on(t.tenantId, t.createdAt),
+    stripeSessionIdx: uniqueIndex("booking_reservations_stripe_session_idx")
+      .on(t.stripeSessionId)
+      .where(sql`stripe_session_id IS NOT NULL`),
   }),
 );
 
