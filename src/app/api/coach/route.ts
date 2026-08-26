@@ -29,7 +29,10 @@ export async function POST(req: Request) {
   // Gather context: progress, current module, recent activity.
   const ctx = await buildCoachContext(user.id, tctx.tenant.id);
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // La llave Anthropic es de la PLATAFORMA: solo el tenant de la casa la usa.
+  // Otros tenants caen al coach de plantillas (sin costo). IA para tenants
+  // será feature de pago con billing propio.
+  const apiKey = tctx.tenant.slug === "cristianhdz" ? process.env.ANTHROPIC_API_KEY : undefined;
   if (apiKey) {
     try {
       const reply = await callClaude(apiKey, user, ctx, message);

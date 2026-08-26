@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   const ctx = await getTenantCtx();
   if (!ctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = ctx.tenant.slug === "cristianhdz" ? process.env.ANTHROPIC_API_KEY : undefined;
   if (!apiKey) {
     return NextResponse.json(
       { error: "anthropic_api_key_missing", message: "Configura ANTHROPIC_API_KEY en el servidor." },

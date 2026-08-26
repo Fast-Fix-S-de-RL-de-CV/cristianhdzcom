@@ -77,7 +77,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params;
   const tctx = await getTenantCtx();
   if (!tctx) return NextResponse.json({ error: "tenant_not_found" }, { status: 404 });
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Llave Anthropic de PLATAFORMA: solo el tenant de la casa (IA para otros
+  // tenants sera feature de pago con billing propio).
+  const apiKey = tctx.tenant.slug === "cristianhdz" ? process.env.ANTHROPIC_API_KEY : undefined;
   if (!apiKey) {
     return NextResponse.json(
       { error: "anthropic_api_key_missing", message: "Configura ANTHROPIC_API_KEY en .env" },
