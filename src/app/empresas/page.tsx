@@ -47,6 +47,7 @@ export default async function EmpresasPage() {
     isCtaCard: s.isCtaCard,
     showLiveBadge: s.showLiveBadge,
     coverVideoUrl: s.coverVideoUrl,
+    coverUrl: s.coverUrl,
   }));
 
   const realCount = services.filter((s) => !s.isCtaCard).length;

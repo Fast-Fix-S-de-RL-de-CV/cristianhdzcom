@@ -67,7 +67,7 @@ export default async function HomePage() {
         ),
       )
       .orderBy(asc(schema.services.sortOrder))
-      .limit(12),
+      .limit(24),
     // Site settings del tenant — controla el hero y el contenido del home.
     db
       .select()
